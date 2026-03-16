@@ -935,7 +935,6 @@
 
   <script>
     const $ = (id) => document.getElementById(id);
-    const dbKeyUsers = "skillswap_users";
     const dbKeySession = "skillswap_session";
     const dbKeyProfilePrefix = "skillswap_profile_";
     const dbKeyCfg = "skill_chat_cfg";
@@ -973,6 +972,7 @@
     const pickerSkillsList = $("pickerSkillsList");
 
     let currentUser = null;
+  let currentUserRecord = null;
     let socket = null;
     let selectedCategory = "All";
     let selectedConversationId = "";
@@ -989,20 +989,9 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    function readUsers() {
-      try {
-        return JSON.parse(localStorage.getItem(dbKeyUsers) || "{}");
-      } catch {
-        return {};
-      }
-    }
-
-    function writeUsers(users) {
-      localStorage.setItem(dbKeyUsers, JSON.stringify(users));
-    }
-
     function loadSession() {
       currentUser = localStorage.getItem(dbKeySession) || null;
+      currentUserRecord = null;
     }
 
     function setSession(email) {
@@ -1047,9 +1036,7 @@
     function latestRequestKey(user) { return `${dbKeyLatestRequestPrefix}${user}`; }
 
     function getCurrentUserRecord() {
-      if (!currentUser) return null;
-      const users = readUsers();
-      return users[currentUser] || null;
+      return currentUserRecord;
     }
 
     function getProfile(user = currentUser) {
@@ -1064,6 +1051,51 @@
     function saveProfile(profile) {
       if (!currentUser) return;
       localStorage.setItem(profileKey(currentUser), JSON.stringify(profile));
+    }
+
+    function normalizeProfileFromUser(user) {
+      if (!user) return null;
+      const profile = user.profile || {};
+      return {
+        fullName: profile.full_name || user.name || "",
+        bio: profile.bio || "",
+        city: profile.city || "",
+        language: profile.language || "",
+        teachSkills: Array.isArray(profile.teach_skills) ? profile.teach_skills : [],
+        learnSkills: Array.isArray(profile.learn_skills) ? profile.learn_skills : [],
+        marketplaceMessage: profile.marketplace_message || ""
+      };
+    }
+
+    async function loadCurrentUserFromApi() {
+      if (!currentUser) return;
+      const result = await api(`/users/${encodeURIComponent(currentUser)}`);
+      currentUserRecord = result.user;
+      const normalized = normalizeProfileFromUser(result.user);
+      if (normalized) {
+        saveProfile(normalized);
+      }
+    }
+
+    async function persistProfileToApi(profile) {
+      if (!currentUser) return;
+      const result = await api(`/users/${encodeURIComponent(currentUser)}/profile`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: profile.fullName,
+          bio: profile.bio,
+          city: profile.city,
+          language: profile.language,
+          teach_skills: profile.teachSkills || [],
+          learn_skills: profile.learnSkills || [],
+          marketplace_message: profile.marketplaceMessage || ""
+        })
+      });
+      currentUserRecord = result.user;
+      const normalized = normalizeProfileFromUser(result.user);
+      if (normalized) {
+        saveProfile(normalized);
+      }
     }
 
     function getInitials(text) {
@@ -1220,7 +1252,13 @@
       document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === viewId));
     }
 
-    function ensureOnboardingOrDashboard() {
+    async function ensureOnboardingOrDashboard() {
+      try {
+        await loadCurrentUserFromApi();
+      } catch (error) {
+        log(`No se pudo cargar el usuario desde backend: ${error.message}`);
+      }
+
       const profile = getProfile();
       if (!profile || !profile.teachSkills?.length || !profile.learnSkills?.length) {
         authScreen.classList.add("hidden");
@@ -1234,7 +1272,7 @@
       authScreen.classList.add("hidden");
       dashboard.classList.remove("hidden");
       hydrateProfileUI();
-      refreshAll();
+      await refreshAll();
     }
 
     function hydrateProfileUI() {
@@ -1282,7 +1320,7 @@
       renderTopBar();
     }
 
-    function signup() {
+    async function signup() {
       const name = $("signupName").value.trim();
       const email = $("signupEmail").value.trim().toLowerCase();
       const pass = $("signupPass").value.trim();
@@ -1290,32 +1328,44 @@
         alert("Completa nombre, correo y una contrasena de al menos 4 caracteres.");
         return;
       }
-      const users = readUsers();
-      if (users[email]) {
-        alert("Ese correo ya esta registrado.");
+
+      try {
+        const result = await api("/users/register", {
+          method: "POST",
+          body: JSON.stringify({ email, name, password: pass })
+        });
+        currentUserRecord = result.user;
+      } catch (error) {
+        alert(error.message);
         return;
       }
-      users[email] = { name, pass };
-      writeUsers(users);
+
       setSession(email);
       onboardingTeach = new Set();
       onboardingLearn = new Set();
       renderSelectedSummary("teach");
       renderSelectedSummary("learn");
-      ensureOnboardingOrDashboard();
+      await ensureOnboardingOrDashboard();
       log("Cuenta creada.");
     }
 
-    function login() {
+    async function login() {
       const email = $("loginEmail").value.trim().toLowerCase();
       const pass = $("loginPass").value.trim();
-      const users = readUsers();
-      if (!users[email] || users[email].pass !== pass) {
-        alert("Correo o contrasena incorrectos.");
+
+      try {
+        const result = await api("/users/login", {
+          method: "POST",
+          body: JSON.stringify({ email, password: pass })
+        });
+        currentUserRecord = result.user;
+      } catch (error) {
+        alert(error.message);
         return;
       }
+
       setSession(email);
-      ensureOnboardingOrDashboard();
+      await ensureOnboardingOrDashboard();
       log("Sesion iniciada.");
     }
 
@@ -1338,8 +1388,14 @@
         marketplaceMessage: `Hola, puedo ensenar ${Array.from(onboardingTeach).join(", ")} y quiero aprender ${Array.from(onboardingLearn).join(", ")}.`
       };
       saveProfile(profile);
+      try {
+        await persistProfileToApi(profile);
+      } catch (error) {
+        alert(`No se pudo guardar el perfil en la base de datos: ${error.message}`);
+        return;
+      }
       hydrateProfileUI();
-      ensureOnboardingOrDashboard();
+      await ensureOnboardingOrDashboard();
       await publishRequest(true);
     }
 
@@ -1600,7 +1656,7 @@
       $("chatInput").value = "";
     }
 
-    function saveProfileFromDashboard() {
+    async function saveProfileFromDashboard() {
       const previous = getProfile() || {};
       const profile = {
         ...previous,
@@ -1613,6 +1669,12 @@
         marketplaceMessage: previous.marketplaceMessage || $("publishIntroMessage").value.trim()
       };
       saveProfile(profile);
+      try {
+        await persistProfileToApi(profile);
+      } catch (error) {
+        alert(`No se pudo guardar el perfil en la base de datos: ${error.message}`);
+        return;
+      }
       hydrateProfileUI();
       log("Perfil actualizado.");
     }
@@ -1638,8 +1700,8 @@
 
     $("showLoginTab").onclick = () => setAuthMode("login");
     $("showSignupTab").onclick = () => setAuthMode("signup");
-    $("signupBtn").onclick = signup;
-    $("loginBtn").onclick = login;
+    $("signupBtn").onclick = () => { signup(); };
+    $("loginBtn").onclick = () => { login(); };
     $("openTeachPickerBtn").onclick = () => openSkillPicker("teach");
     $("openLearnPickerBtn").onclick = () => openSkillPicker("learn");
     $("savePickerBtn").onclick = closeSkillPicker;
@@ -1652,25 +1714,29 @@
     $("connectWsBtn").onclick = connectWs;
     $("disconnectWsBtn").onclick = disconnectWs;
     $("sendWsMessageBtn").onclick = sendWsMessage;
-    $("saveProfileBtn").onclick = saveProfileFromDashboard;
+    $("saveProfileBtn").onclick = () => { saveProfileFromDashboard(); };
     $("logoutBtn").onclick = clearSession;
     $("saveCfgBtn").onclick = saveCfg;
     $("toggleTechBtn").onclick = toggleTech;
 
-    loadCfg();
-    loadSession();
-    renderSelectedSummary("teach");
-    renderSelectedSummary("learn");
-    renderDashboardCategories();
+    async function initializeApp() {
+      loadCfg();
+      loadSession();
+      renderSelectedSummary("teach");
+      renderSelectedSummary("learn");
+      renderDashboardCategories();
 
-    if (currentUser) {
-      ensureOnboardingOrDashboard();
-    } else {
-      authScreen.classList.remove("hidden");
-      onboardingModal.classList.add("hidden");
-      skillPickerOverlay.classList.add("hidden");
-      dashboard.classList.add("hidden");
+      if (currentUser) {
+        await ensureOnboardingOrDashboard();
+      } else {
+        authScreen.classList.remove("hidden");
+        onboardingModal.classList.add("hidden");
+        skillPickerOverlay.classList.add("hidden");
+        dashboard.classList.add("hidden");
+      }
     }
+
+    initializeApp();
   </script>
 </body>
 </html>

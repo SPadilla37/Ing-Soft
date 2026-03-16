@@ -1,5 +1,6 @@
 import json
 import os
+from hashlib import sha256
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional
@@ -8,7 +9,7 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import DateTime, ForeignKey, String, Text, create_engine, or_, select
+from sqlalchemy import DateTime, ForeignKey, String, Text, create_engine, inspect, or_, select, text
 from sqlalchemy.orm import Mapped, Session, declarative_base, mapped_column, sessionmaker
 
 
@@ -47,6 +48,27 @@ class MarketplaceAcceptRequest(BaseModel):
     accepter_user_id: str = Field(min_length=1, max_length=120)
 
 
+class UserRegisterPayload(BaseModel):
+    email: str = Field(min_length=3, max_length=120)
+    name: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=4, max_length=200)
+
+
+class UserLoginPayload(BaseModel):
+    email: str = Field(min_length=3, max_length=120)
+    password: str = Field(min_length=4, max_length=200)
+
+
+class UserProfileUpdatePayload(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    bio: Optional[str] = Field(default=None, max_length=2000)
+    city: Optional[str] = Field(default=None, max_length=120)
+    language: Optional[str] = Field(default=None, max_length=80)
+    teach_skills: Optional[List[str]] = Field(default=None)
+    learn_skills: Optional[List[str]] = Field(default=None)
+    marketplace_message: Optional[str] = Field(default=None, max_length=500)
+
+
 Base = declarative_base()
 
 
@@ -54,7 +76,16 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(120), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), default="")
+    password_hash: Mapped[str] = mapped_column(String(128), default="")
+    bio: Mapped[str] = mapped_column(Text, default="")
+    city: Mapped[str] = mapped_column(String(120), default="")
+    language: Mapped[str] = mapped_column(String(80), default="")
+    teach_skills: Mapped[str] = mapped_column(Text, default="[]")
+    learn_skills: Mapped[str] = mapped_column(Text, default="[]")
+    marketplace_message: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
 class MessageRequestModel(Base):
@@ -118,7 +149,71 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 def ensure_user(session: Session, user_id: str) -> None:
     user = session.get(User, user_id)
     if not user:
-        session.add(User(id=user_id))
+        now = datetime.now(timezone.utc)
+        session.add(User(id=user_id, created_at=now, updated_at=now))
+
+
+def hash_password(password: str) -> str:
+    return sha256(password.encode("utf-8")).hexdigest()
+
+
+def decode_skills(raw_skills: str) -> List[str]:
+    try:
+        parsed = json.loads(raw_skills or "[]")
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    return [str(skill).strip() for skill in parsed if str(skill).strip()]
+
+
+def encode_skills(skills: List[str]) -> str:
+    normalized = [str(skill).strip() for skill in skills if str(skill).strip()]
+    return json.dumps(normalized)
+
+
+def serialize_user(user: User) -> dict:
+    return {
+        "id": user.id,
+        "name": user.name,
+        "created_at": user.created_at.isoformat() if user.created_at else utc_now_iso(),
+        "updated_at": user.updated_at.isoformat() if user.updated_at else utc_now_iso(),
+        "profile": {
+            "full_name": user.name,
+            "bio": user.bio or "",
+            "city": user.city or "",
+            "language": user.language or "",
+            "teach_skills": decode_skills(user.teach_skills),
+            "learn_skills": decode_skills(user.learn_skills),
+            "marketplace_message": user.marketplace_message or "",
+        },
+    }
+
+
+def ensure_users_table_columns() -> None:
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
+    if "users" not in table_names:
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("users")}
+    columns_to_add = {
+        "name": "VARCHAR(120)",
+        "password_hash": "VARCHAR(128)",
+        "bio": "TEXT",
+        "city": "VARCHAR(120)",
+        "language": "VARCHAR(80)",
+        "teach_skills": "TEXT",
+        "learn_skills": "TEXT",
+        "marketplace_message": "TEXT",
+        "updated_at": "TIMESTAMP",
+    }
+
+    with engine.begin() as connection:
+        for column_name, column_type in columns_to_add.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(text(f"ALTER TABLE users ADD COLUMN {column_name} {column_type}"))
 
 
 def serialize_request(request: MessageRequestModel) -> dict:
@@ -213,6 +308,7 @@ manager = ConnectionManager()
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
+    ensure_users_table_columns()
     with SessionLocal() as session:
         ensure_user(session, PUBLIC_MARKETPLACE_USER)
         session.commit()
@@ -221,6 +317,86 @@ def on_startup() -> None:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "time": utc_now_iso()}
+
+
+@app.post("/users/register")
+def register_user(payload: UserRegisterPayload) -> dict:
+    email = payload.email.strip().lower()
+    with SessionLocal() as session:
+        existing = session.get(User, email)
+        if existing and existing.password_hash:
+            raise HTTPException(status_code=409, detail="Ese correo ya esta registrado")
+
+        now = datetime.now(timezone.utc)
+        if not existing:
+            existing = User(
+                id=email,
+                name=payload.name.strip(),
+                password_hash=hash_password(payload.password),
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(existing)
+        else:
+            existing.name = payload.name.strip()
+            existing.password_hash = hash_password(payload.password)
+            existing.updated_at = now
+
+        session.commit()
+        session.refresh(existing)
+        return {"user": serialize_user(existing)}
+
+
+@app.post("/users/login")
+def login_user(payload: UserLoginPayload) -> dict:
+    email = payload.email.strip().lower()
+    with SessionLocal() as session:
+        user = session.get(User, email)
+        if not user or not user.password_hash:
+            raise HTTPException(status_code=401, detail="Correo o contrasena incorrectos")
+        if user.password_hash != hash_password(payload.password):
+            raise HTTPException(status_code=401, detail="Correo o contrasena incorrectos")
+
+        return {"user": serialize_user(user)}
+
+
+@app.get("/users/{user_id}")
+def get_user(user_id: str) -> dict:
+    with SessionLocal() as session:
+        user = session.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        return {"user": serialize_user(user)}
+
+
+@app.put("/users/{user_id}/profile")
+def update_user_profile(user_id: str, payload: UserProfileUpdatePayload) -> dict:
+    with SessionLocal() as session:
+        user = session.get(User, user_id)
+        if not user:
+            now = datetime.now(timezone.utc)
+            user = User(id=user_id, created_at=now, updated_at=now)
+            session.add(user)
+
+        if payload.name is not None:
+            user.name = payload.name.strip()
+        if payload.bio is not None:
+            user.bio = payload.bio.strip()
+        if payload.city is not None:
+            user.city = payload.city.strip()
+        if payload.language is not None:
+            user.language = payload.language.strip()
+        if payload.teach_skills is not None:
+            user.teach_skills = encode_skills(payload.teach_skills)
+        if payload.learn_skills is not None:
+            user.learn_skills = encode_skills(payload.learn_skills)
+        if payload.marketplace_message is not None:
+            user.marketplace_message = payload.marketplace_message.strip()
+
+        user.updated_at = datetime.now(timezone.utc)
+        session.commit()
+        session.refresh(user)
+        return {"user": serialize_user(user)}
 
 
 @app.post("/message-requests")
