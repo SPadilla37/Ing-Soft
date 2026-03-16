@@ -728,24 +728,16 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .public-profile-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 70;
-      background: rgba(2, 7, 14, 0.78);
-      backdrop-filter: blur(10px);
+    .public-profile-view {
       display: grid;
-      place-items: center;
-      padding: 1rem;
     }
 
     .public-profile-card {
-      width: min(1180px, 96vw);
-      max-height: calc(100vh - 2rem);
-      overflow: auto;
+      width: 100%;
+      min-height: calc(100vh - 11rem);
       border-radius: 32px;
-      padding: 1.6rem;
-      background: linear-gradient(135deg, rgba(63, 129, 208, 0.28) 0%, rgba(16, 21, 31, 0.95) 38%, rgba(51, 124, 201, 0.18) 100%);
+      padding: 1.8rem;
+      background: radial-gradient(circle at 18% 0%, rgba(76, 154, 255, 0.28), transparent 32%), linear-gradient(135deg, rgba(41, 88, 139, 0.28) 0%, rgba(13, 18, 27, 0.96) 36%, rgba(45, 112, 184, 0.2) 100%);
       border: 1px solid rgba(124, 170, 239, 0.18);
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
     }
@@ -759,8 +751,8 @@
 
     .public-profile-hero {
       display: flex;
-      align-items: center;
-      gap: 1.2rem;
+      align-items: flex-start;
+      gap: 1.4rem;
     }
 
     .public-profile-avatar {
@@ -812,8 +804,14 @@
       color: var(--muted);
     }
 
+    .public-profile-section-title {
+      margin: 1.8rem 0 1rem;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 2rem;
+    }
+
     .public-profile-skills {
-      margin-top: 1.6rem;
+      margin-top: 0;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 1rem;
@@ -833,7 +831,14 @@
     }
 
     .public-profile-language-row {
+      margin-top: 1.4rem;
+    }
+
+    .public-profile-subactions {
       margin-top: 1rem;
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
     }
 
     @media (max-width: 1100px) {
@@ -1001,47 +1006,6 @@
         <button id="savePickerBtn" class="primary-btn" type="button">Save</button>
         <button id="clearPickerBtn" class="picker-clear" type="button">Clear all</button>
         <button id="cancelPickerBtn" class="ghost-btn" type="button">Cancelar</button>
-      </div>
-    </div>
-  </section>
-
-  <section id="publicProfileOverlay" class="public-profile-overlay hidden">
-    <div class="public-profile-card">
-      <div class="public-profile-top">
-        <div class="public-profile-hero">
-          <div id="publicProfileAvatar" class="public-profile-avatar">P</div>
-          <div>
-            <h2 id="publicProfileName" class="public-profile-name">Pedro</h2>
-            <div id="publicProfileBio" class="public-profile-bio">Descripcion publica del perfil.</div>
-          </div>
-        </div>
-
-        <div class="public-profile-actions">
-          <button id="publicProfilePrimaryBtn" class="primary-btn" type="button">Edit Profile</button>
-          <button id="closePublicProfileBtn" class="ghost-btn" type="button">Cerrar</button>
-        </div>
-      </div>
-
-      <div class="public-profile-panel">
-        <h3>Perfil publico</h3>
-        <p id="publicProfileSummary">Resumen del perfil visible para otros usuarios.</p>
-      </div>
-
-      <div class="public-profile-panel public-profile-language-row">
-        <h3>Languages</h3>
-        <div id="publicProfileLanguages" class="summary-row"></div>
-      </div>
-
-      <div class="public-profile-skills">
-        <div class="public-skill-card">
-          <h4>Skills you teach</h4>
-          <div id="publicProfileTeachChips" class="summary-row"></div>
-        </div>
-
-        <div class="public-skill-card">
-          <h4>Skills you're learning</h4>
-          <div id="publicProfileLearnChips" class="summary-row"></div>
-        </div>
       </div>
     </div>
   </section>
@@ -1240,6 +1204,52 @@
           </div>
         </div>
       </section>
+
+      <section id="publicProfileView" class="view public-profile-view">
+        <div class="public-profile-card">
+          <div class="public-profile-top">
+            <div class="public-profile-hero">
+              <div id="publicProfileAvatar" class="public-profile-avatar">P</div>
+              <div>
+                <h2 id="publicProfileName" class="public-profile-name">Pedro</h2>
+                <div id="publicProfileBio" class="public-profile-bio">Descripcion publica del perfil.</div>
+                <div class="public-profile-subactions">
+                  <button id="publicProfilePrimaryBtn" class="primary-btn" type="button">Edit Profile</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="public-profile-actions">
+              <button id="closePublicProfileBtn" class="ghost-btn" type="button">Volver</button>
+            </div>
+          </div>
+
+          <div class="public-profile-panel public-profile-language-row">
+            <h3>Languages</h3>
+            <p id="publicProfileSummary">Resumen del perfil visible para otros usuarios.</p>
+            <div id="publicProfileLanguages" class="summary-row"></div>
+          </div>
+
+          <div class="public-profile-panel">
+            <h3>Rating</h3>
+            <p>No reviews yet</p>
+          </div>
+
+          <h3 class="public-profile-section-title">Skills</h3>
+
+          <div class="public-profile-skills">
+            <div class="public-skill-card">
+              <h4>Skills you teach</h4>
+              <div id="publicProfileTeachChips" class="summary-row"></div>
+            </div>
+
+            <div class="public-skill-card">
+              <h4>Skills you're learning</h4>
+              <div id="publicProfileLearnChips" class="summary-row"></div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </section>
 
@@ -1265,7 +1275,6 @@
     const authScreen = $("authScreen");
     const onboardingModal = $("onboardingModal");
     const skillPickerOverlay = $("skillPickerOverlay");
-    const publicProfileOverlay = $("publicProfileOverlay");
     const dashboard = $("dashboard");
     const debugShell = $("debugShell");
     const logEl = $("log");
@@ -1316,6 +1325,7 @@
     let pickerCategory = "All";
     let latestOwnRequest = null;
     let publicProfileUserId = "";
+    let publicProfileReturnView = "matchesView";
 
     function log(message) {
       const line = `[${new Date().toLocaleTimeString()}] ${message}`;
@@ -1349,7 +1359,6 @@
       authScreen.classList.remove("hidden");
       onboardingModal.classList.add("hidden");
       skillPickerOverlay.classList.add("hidden");
-      publicProfileOverlay.classList.add("hidden");
       dashboard.classList.add("hidden");
       activateView("matchesView");
     }
@@ -1523,17 +1532,18 @@
       return result.user;
     }
 
-    async function openPublicProfile(userId) {
+    async function openPublicProfile(userId, returnView = "matchesView") {
       try {
         const user = await fetchProfileForPublicView(userId);
         const normalized = normalizeProfileFromUser(user);
         publicProfileUserId = user.id;
+        publicProfileReturnView = returnView;
         publicProfileAvatar.textContent = getInitials(normalized.fullName || user.name || user.id);
         publicProfileName.textContent = normalized.fullName || user.name || user.id;
         publicProfileBio.textContent = normalized.bio || "Sin descripcion publica todavia.";
         publicProfileSummary.textContent = user.id === currentUser
-          ? "Esta es la vista publica de tu perfil. Otros usuarios veran esta informacion cuando entren desde Matches."
-          : `Asi se ve el perfil publico de ${normalized.fullName || user.name || user.id}.`;
+          ? "Estos son los idiomas visibles en tu perfil publico."
+          : `Idiomas visibles en el perfil publico de ${normalized.fullName || user.name || user.id}.`;
 
         renderSummaryChips(publicProfileLanguages, normalized.languages || []);
         renderSummaryChips(publicProfileTeachChips, normalized.teachSkills || []);
@@ -1542,26 +1552,24 @@
         if (user.id === currentUser) {
           publicProfilePrimaryBtn.textContent = "Edit Profile";
           publicProfilePrimaryBtn.onclick = () => {
-            publicProfileOverlay.classList.add("hidden");
             activateView("profileView");
           };
         } else {
           publicProfilePrimaryBtn.textContent = "Volver a Matches";
           publicProfilePrimaryBtn.onclick = () => {
-            publicProfileOverlay.classList.add("hidden");
-            activateView("matchesView");
+            activateView(publicProfileReturnView);
           };
         }
 
-        publicProfileOverlay.classList.remove("hidden");
+        activateView("publicProfileView");
       } catch (error) {
         alert(`No se pudo cargar el perfil publico: ${error.message}`);
       }
     }
 
     function closePublicProfile() {
-      publicProfileOverlay.classList.add("hidden");
       publicProfileUserId = "";
+      activateView(publicProfileReturnView || "matchesView");
     }
 
     function updateProfileTriggerTexts() {
@@ -2081,7 +2089,7 @@
     }
 
     function showRequestDetails(request) {
-      openPublicProfile(request.from_user_id);
+      openPublicProfile(request.from_user_id, "matchesView");
     }
 
     async function loadMarketplace() {
@@ -2367,17 +2375,12 @@
     $("sendWsMessageBtn").onclick = sendWsMessage;
     $("saveProfileBtn").onclick = () => { saveProfileFromDashboard(); };
     $("viewPublicProfileBtn").onclick = () => {
-      openPublicProfile(currentUser);
+      openPublicProfile(currentUser, "profileView");
     };
     $("changeAvatarBtn").onclick = () => {
       alert("Por ahora el avatar se genera automaticamente con tu inicial.");
     };
     $("closePublicProfileBtn").onclick = closePublicProfile;
-    publicProfileOverlay.addEventListener("click", (event) => {
-      if (event.target === publicProfileOverlay) {
-        closePublicProfile();
-      }
-    });
     $("logoutBtn").onclick = clearSession;
     $("saveCfgBtn").onclick = saveCfg;
     $("toggleTechBtn").onclick = toggleTech;
