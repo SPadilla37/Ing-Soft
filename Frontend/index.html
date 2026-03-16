@@ -877,7 +877,6 @@
                 <label>Conversation ID</label>
                 <input id="conversationId" placeholder="Selecciona una conversacion" />
               </div>
-              <button id="connectWsBtn" class="primary-btn" type="button">Conectar</button>
               <button id="disconnectWsBtn" class="danger-btn" type="button">Cerrar</button>
               <button id="deleteConversationBtn" class="ghost-btn" type="button">Borrar este chat (solo para mi)</button>
             </div>
@@ -980,6 +979,7 @@
     let currentUser = null;
     let currentUserRecord = null;
     let socket = null;
+    let connectedConversationId = "";
     let selectedCategory = "All";
     let selectedConversationId = "";
     let onboardingTeach = new Set();
@@ -1011,6 +1011,7 @@
       currentUser = null;
       currentUserRecord = null;
       selectedConversationId = "";
+      connectedConversationId = "";
       latestOwnRequest = null;
       if (socket) {
         socket.close();
@@ -1642,7 +1643,7 @@
         activateView("chatView");
         await loadMarketplace();
         await loadConversations();
-        setChatStatus("Conversacion creada. Puedes conectar el chat.", "ok");
+        connectWs(true);
         log(`Solicitud aceptada. Conversacion: ${selectedConversationId}`);
       } catch (error) {
         setChatStatus(`No se pudo aceptar la solicitud: ${error.message}`, "error");
@@ -1677,6 +1678,7 @@
           selectedConversationId = conversation.id;
           $("conversationId").value = conversation.id;
           renderConversations();
+          connectWs(true);
         };
         conversationsList.appendChild(item);
       });
@@ -1697,6 +1699,7 @@
         if (socket && socket.readyState === WebSocket.OPEN) {
           socket.close();
         }
+        connectedConversationId = "";
 
         if (selectedConversationId === conversationId) {
           selectedConversationId = "";
@@ -1715,7 +1718,22 @@
       try {
         const result = await api(`/conversations/${encodeURIComponent(currentUser)}`);
         currentConversations = result.conversations;
+        if (selectedConversationId) {
+          const exists = currentConversations.some((conversation) => conversation.id === selectedConversationId);
+          if (!exists) {
+            selectedConversationId = "";
+            $("conversationId").value = "";
+            if (socket && socket.readyState === WebSocket.OPEN) {
+              socket.close();
+            }
+            connectedConversationId = "";
+          }
+        }
         renderConversations();
+
+        if (selectedConversationId) {
+          connectWs(true);
+        }
       } catch (error) {
         log(`Error cargando conversaciones: ${error.message}`);
       }
@@ -1742,17 +1760,31 @@
       return `${protocol}${host}/ws/chat/${encodeURIComponent(conversationId)}?user_id=${encodeURIComponent(userId)}`;
     }
 
-    function connectWs() {
+    function connectWs(autoConnect = false) {
       const conversationId = $("conversationId").value.trim();
       if (!conversationId) {
-        alert("Selecciona una conversacion primero.");
+        if (!autoConnect) {
+          alert("Selecciona una conversacion primero.");
+        }
         return;
       }
+
+      const alreadyConnected = socket
+        && socket.readyState === WebSocket.OPEN
+        && connectedConversationId === conversationId;
+      if (alreadyConnected) {
+        setChatStatus(`Ya estas conectado al chat ${conversationId}.`, "ok");
+        return;
+      }
+
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.close();
       }
+
+      setChatStatus("Conectando chat...", "info");
       socket = new WebSocket(wsUrl(cfg().apiBase, conversationId, currentUser));
       socket.onopen = () => {
+        connectedConversationId = conversationId;
         setChatStatus(`Conectado al chat ${conversationId}.`, "ok");
         log(`WS conectado a ${conversationId}`);
       };
@@ -1768,10 +1800,12 @@
         }
       };
       socket.onerror = () => {
+        connectedConversationId = "";
         setChatStatus("Error en la conexion del chat.", "error");
         log("WS error");
       };
       socket.onclose = () => {
+        connectedConversationId = "";
         setChatStatus("Chat desconectado.", "info");
         log("WS cerrado");
       };
@@ -1782,6 +1816,7 @@
         socket.close();
         socket = null;
       }
+      connectedConversationId = "";
       setChatStatus("Chat desconectado.", "info");
     }
 
@@ -1853,7 +1888,6 @@
     $("publishRequestBtn").onclick = () => publishRequest(false);
     $("deleteRequestBtn").onclick = deleteLatestRequest;
     $("loadConversationsBtn").onclick = loadConversations;
-    $("connectWsBtn").onclick = connectWs;
     $("disconnectWsBtn").onclick = disconnectWs;
     $("deleteConversationBtn").onclick = deleteSelectedConversation;
     $("sendWsMessageBtn").onclick = sendWsMessage;
