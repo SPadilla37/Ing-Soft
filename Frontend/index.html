@@ -599,6 +599,7 @@
       flex-wrap: wrap;
       gap: 0.35rem;
       margin-top: 0.2rem;
+      align-items: center;
     }
 
     .star-rate-btn {
@@ -614,6 +615,28 @@
 
     .star-rate-btn:hover {
       background: rgba(255, 213, 106, 0.2);
+    }
+
+    .star-picker-btn {
+      border: 0;
+      background: transparent;
+      color: rgba(255, 213, 106, 0.4);
+      font-size: 1.25rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0.05rem;
+    }
+
+    .star-picker-btn.active {
+      color: #ffd56a;
+      text-shadow: 0 0 8px rgba(255, 213, 106, 0.35);
+    }
+
+    .rating-value-tag {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-right: 0.45rem;
+      min-width: 95px;
     }
 
     .panel-grid,
@@ -2348,23 +2371,52 @@
           const ratingInput = document.createElement("div");
           ratingInput.className = "rating-input";
 
+          let selectedRating = null;
+
+          const ratingTag = document.createElement("span");
+          ratingTag.className = "rating-value-tag";
+          ratingTag.textContent = "Selecciona: 0";
+          ratingInput.appendChild(ratingTag);
+
+          const pickerButtons = [];
           for (let rating = 1; rating <= 5; rating += 1) {
-            const rateBtn = document.createElement("button");
-            rateBtn.className = "star-rate-btn";
-            rateBtn.type = "button";
-            rateBtn.title = `Calificar con ${rating} estrella${rating === 1 ? "" : "s"}`;
-            rateBtn.textContent = starText(rating, 5);
-            rateBtn.onclick = () => rateMatch(match.id, rating);
-            ratingInput.appendChild(rateBtn);
+            const starBtn = document.createElement("button");
+            starBtn.className = "star-picker-btn";
+            starBtn.type = "button";
+            starBtn.textContent = "★";
+            starBtn.title = `${rating} estrella${rating === 1 ? "" : "s"}`;
+            starBtn.onclick = () => {
+              selectedRating = rating;
+              ratingTag.textContent = `Selecciona: ${selectedRating}`;
+              pickerButtons.forEach((btn, index) => {
+                btn.classList.toggle("active", index < selectedRating);
+              });
+              submitRatingBtn.disabled = false;
+            };
+            pickerButtons.push(starBtn);
+            ratingInput.appendChild(starBtn);
           }
 
-          const clearBtn = document.createElement("button");
-          clearBtn.className = "star-rate-btn";
-          clearBtn.type = "button";
-          clearBtn.title = "Calificar con 0 estrellas";
-          clearBtn.textContent = "Sin estrellas";
-          clearBtn.onclick = () => rateMatch(match.id, 0);
-          ratingInput.appendChild(clearBtn);
+          const zeroBtn = document.createElement("button");
+          zeroBtn.className = "star-rate-btn";
+          zeroBtn.type = "button";
+          zeroBtn.textContent = "0";
+          zeroBtn.title = "0 estrellas";
+          zeroBtn.onclick = () => {
+            selectedRating = 0;
+            ratingTag.textContent = "Selecciona: 0";
+            pickerButtons.forEach((btn) => btn.classList.remove("active"));
+            submitRatingBtn.disabled = false;
+          };
+          ratingInput.appendChild(zeroBtn);
+
+          const submitRatingBtn = document.createElement("button");
+          submitRatingBtn.className = "primary-btn";
+          submitRatingBtn.type = "button";
+          submitRatingBtn.textContent = "Calificar";
+          submitRatingBtn.disabled = true;
+          submitRatingBtn.onclick = () => rateMatch(match.id, selectedRating ?? 0);
+          ratingInput.appendChild(submitRatingBtn);
 
           actions.appendChild(ratingInput);
         }
