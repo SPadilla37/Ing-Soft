@@ -1,0 +1,117 @@
+# ============================================
+# VARIABLES DE ENTORNO Y SECRETOS
+# ============================================
+.env
+.env.local
+.env.*.local
+!.env.example
+estructura.env
+*.key
+*.pem
+*.cert
+secrets/
+
+# ============================================
+# DEPENDENCIAS DE NODE.JS
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.pnp
+.pnp.js
+
+# ============================================
+# LOGS
+# ============================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+
+# ============================================
+# ARCHIVOS DEL SISTEMA OPERATIVO
+# ============================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.stackdump
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================
+# IDEs Y EDITORES
+# ============================================
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ IDEA / WebStorm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ============================================
+# TESTING Y COBERTURA
+# ============================================
+coverage/
+.nyc_output/
+*.lcov
+.jest/
+.md
+# ============================================
+# TEMPORALES Y CACHE
+# ============================================
+tmp/
+temp/
+*.tmp
+Untitled
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+dist/
+build/
+out/
+
+# ============================================
+# OTROS
+# ============================================
+*.pid
+*.seed
+*.pid.lock
+.npm
+.eslintcache
+.stylelintcache
+.dbml
+!README.md
