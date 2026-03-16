@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 import os
 from datetime import datetime, timezone
@@ -29,7 +27,7 @@ class RequestStatus(str, Enum):
 
 class MessageRequestCreate(BaseModel):
     from_user_id: str = Field(min_length=1, max_length=120)
-    to_user_id: str | None = Field(default=None, min_length=1, max_length=120)
+    to_user_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
     offered_skill: str = Field(min_length=1, max_length=120)
     requested_skill: str = Field(min_length=1, max_length=120)
     intro_message: str = Field(default="", max_length=500)
