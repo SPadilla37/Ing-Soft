@@ -62,7 +62,7 @@ class MessageRequestModel(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     from_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
-    to_user_id: Mapped[Optional[str]] = mapped_column(String(120), ForeignKey("users.id"), index=True, nullable=True)
+    to_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True, nullable=True)
     offered_skill: Mapped[str] = mapped_column(String(120))
     requested_skill: Mapped[str] = mapped_column(String(120))
     intro_message: Mapped[str] = mapped_column(Text, default="")
@@ -104,7 +104,7 @@ def normalize_database_url(url: str) -> str:
     return url
 
 
-default_db = "sqlite:///./skillswap.db"
+default_db = "sqlite:////tmp/skillswap.db" if os.getenv("RENDER") else "sqlite:///./skillswap.db"
 database_url = normalize_database_url(os.getenv("DATABASE_URL", default_db))
 
 engine_kwargs: Dict[str, object] = {"pool_pre_ping": True}
