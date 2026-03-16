@@ -3,90 +3,367 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Skill Exchange - Mensajeria</title>
+  <title>SkillSwap - Mensajeria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #f4f7f2;
-      --ink: #1f2a1f;
-      --card: #ffffff;
-      --accent: #2f7d4b;
-      --accent-2: #d8892b;
-      --line: #d9e1d3;
+      --nav-bg: rgba(255, 255, 255, 0.92);
+      --ink: #131629;
+      --muted: #d7defa;
+      --hero-a: #2141d9;
+      --hero-b: #5377ff;
+      --hero-c: #7897ff;
+      --accent: #f6a505;
+      --accent-2: #102b7f;
+      --success: #17a668;
+      --danger: #cc3551;
+      --surface: #f3f6ff;
+      --card: rgba(255, 255, 255, 0.14);
+      --card-line: rgba(255, 255, 255, 0.26);
+      --log-bg: #0b1220;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
+    html,
     body {
       margin: 0;
-      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at 20% 0%, #dff3d6 0%, transparent 40%),
-        radial-gradient(circle at 90% 20%, #f6e3c8 0%, transparent 35%),
-        var(--bg);
+      min-height: 100%;
     }
 
-    .wrap {
-      width: min(1100px, 95vw);
-      margin: 2rem auto;
-      display: grid;
+    body {
+      font-family: "Manrope", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: linear-gradient(150deg, #ecf1ff 0%, #f9fbff 52%, #edf5ff 100%);
+    }
+
+    .shell {
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .glow {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(70px);
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow.a {
+      width: 340px;
+      height: 340px;
+      background: #84a4ff;
+      top: 40px;
+      left: -100px;
+    }
+
+    .glow.b {
+      width: 390px;
+      height: 390px;
+      background: #ffd27c;
+      right: -120px;
+      top: 360px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(10px);
+      background: var(--nav-bg);
+      border-bottom: 1px solid rgba(14, 29, 90, 0.08);
+    }
+
+    .topbar-inner {
+      width: min(1180px, 94vw);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.8rem 0;
       gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+      color: inherit;
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      font-size: 1.35rem;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: linear-gradient(135deg, #3f5fff 0%, #2741d2 100%);
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      color: #2a3253;
+      font-weight: 600;
+      font-size: 0.94rem;
+    }
+
+    .nav-links span {
+      opacity: 0.82;
+    }
+
+    .cta {
+      border: 0;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f9b420 0%, #f48f00 100%);
+      color: #18203a;
+      font-family: inherit;
+      font-weight: 800;
+      padding: 0.66rem 1rem;
+      cursor: pointer;
+    }
+
+    .content {
+      width: min(1180px, 94vw);
+      margin: 1.2rem auto 2.2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero {
+      position: relative;
+      background: linear-gradient(118deg, var(--hero-a) 0%, var(--hero-b) 54%, var(--hero-c) 100%);
+      color: white;
+      border-radius: 24px;
+      padding: clamp(1.3rem, 4vw, 2.3rem);
+      overflow: hidden;
+      box-shadow: 0 24px 45px rgba(25, 53, 159, 0.28);
+      animation: fadeUp 500ms ease;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: -25% auto auto -20%;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.26) 0%, transparent 65%);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -70px;
+      bottom: -70px;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 197, 84, 0.7) 0%, rgba(255, 197, 84, 0) 72%);
     }
 
     h1 {
       margin: 0;
-      font-size: clamp(1.5rem, 3vw, 2.2rem);
-      letter-spacing: 0.03em;
+      line-height: 1.05;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: clamp(2rem, 4.5vw, 4.1rem);
+      letter-spacing: 0.01em;
+      max-width: 12ch;
     }
 
-    .sub {
-      margin: 0.25rem 0 0;
-      opacity: 0.8;
+    h1 .warm {
+      color: #ffcb4d;
     }
 
-    .grid {
+    .hero p {
+      margin: 0.8rem 0 0;
+      max-width: 56ch;
+      color: #e7edff;
+      font-size: clamp(1rem, 1.8vw, 1.55rem);
+      line-height: 1.45;
+    }
+
+    .flow-chip {
+      margin-top: 1rem;
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+      border-radius: 999px;
+      padding: 0.45rem 0.65rem;
+      font-weight: 700;
+      font-size: 0.83rem;
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .flow-chip span {
+      border-radius: 999px;
+      padding: 0.23rem 0.54rem;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .panel {
+      margin-top: 1.15rem;
+      background: var(--card);
+      border: 1px solid var(--card-line);
+      border-radius: 20px;
+      padding: 0.95rem;
+      backdrop-filter: blur(5px);
+    }
+
+    .panel h2 {
+      margin: 0 0 0.8rem;
+      font-size: 1.45rem;
+      font-family: "Space Grotesk", sans-serif;
+      color: #f6f9ff;
+    }
+
+    .how-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.8rem;
+    }
+
+    .how-card {
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: rgba(5, 24, 95, 0.19);
+      padding: 0.9rem;
+      transform: translateY(12px);
+      opacity: 0;
+      animation: fadeUp 520ms ease forwards;
+    }
+
+    .how-card:nth-child(2) {
+      animation-delay: 80ms;
+    }
+
+    .how-card:nth-child(3) {
+      animation-delay: 160ms;
+    }
+
+    .how-card strong {
+      display: block;
+      margin-bottom: 0.4rem;
+      color: #fff;
+      font-size: 1.02rem;
+    }
+
+    .how-card p {
+      margin: 0;
+      color: #dbe5ff;
+      font-size: 0.93rem;
+      line-height: 1.4;
+    }
+
+    .workspace {
+      margin-top: 1.15rem;
+      display: grid;
       gap: 1rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 20px;
+      background: white;
+      border: 1px solid #dce4ff;
+      box-shadow: 0 8px 24px rgba(16, 37, 120, 0.08);
       padding: 1rem;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+      animation: fadeUp 480ms ease;
+    }
+
+    .card h3 {
+      margin: 0;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.26rem;
+      letter-spacing: 0.01em;
+      color: #1a2450;
+    }
+
+    .card small {
+      display: block;
+      margin-top: 0.25rem;
+      color: #6b74a1;
+      font-weight: 600;
     }
 
     label {
       display: block;
-      margin-top: 0.6rem;
-      font-size: 0.9rem;
+      margin-top: 0.7rem;
+      font-size: 0.91rem;
       font-weight: 700;
+      color: #233061;
     }
 
-    input, select, textarea, button {
+    input,
+    textarea,
+    button {
       width: 100%;
-      border-radius: 10px;
-      border: 1px solid #b8c7b5;
-      padding: 0.6rem 0.7rem;
+      border-radius: 12px;
+      border: 1px solid #c5d2fd;
+      padding: 0.68rem 0.75rem;
+      margin-top: 0.35rem;
       font: inherit;
-      background: #fff;
+      background: #f9fbff;
+      transition: 140ms ease;
     }
 
-    textarea { min-height: 80px; resize: vertical; }
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #6483ff;
+      box-shadow: 0 0 0 3px rgba(100, 131, 255, 0.16);
+      background: white;
+    }
 
     button {
       border: none;
-      background: var(--accent);
-      color: #fff;
-      font-weight: 700;
       cursor: pointer;
-      margin-top: 0.8rem;
+      margin-top: 0.74rem;
+      color: white;
+      font-weight: 800;
+      background: linear-gradient(135deg, #2f53f0 0%, #1b3ed9 100%);
     }
 
-    button.secondary { background: var(--accent-2); }
-    button.ghost { background: #5b6d57; }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 16px rgba(43, 77, 216, 0.22);
+    }
+
+    button.secondary {
+      background: linear-gradient(135deg, #f7b41e 0%, #eb8a00 100%);
+      color: #21283f;
+    }
+
+    button.ghost {
+      background: linear-gradient(135deg, #3552ca 0%, #223897 100%);
+      color: #eef3ff;
+    }
+
+    button.danger {
+      background: linear-gradient(135deg, #e24c5e 0%, #b62140 100%);
+    }
 
     .row {
       display: grid;
@@ -95,135 +372,308 @@
     }
 
     .list {
-      margin-top: 0.7rem;
-      display: grid;
-      gap: 0.6rem;
+      margin-top: 0.8rem;
       max-height: 280px;
       overflow: auto;
+      display: grid;
+      gap: 0.65rem;
+      padding-right: 0.15rem;
     }
 
     .item {
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 0.6rem;
-      background: #fefefe;
+      border: 1px solid #d9e2ff;
+      border-radius: 14px;
+      background: #f8faff;
+      padding: 0.75rem;
+      font-size: 0.95rem;
+      color: #1f2b5e;
+    }
+
+    .item b {
+      color: #182455;
     }
 
     .pill {
-      font-size: 0.75rem;
-      padding: 0.2rem 0.5rem;
+      display: inline-flex;
+      align-items: center;
       border-radius: 999px;
-      background: #e8f7e8;
-      border: 1px solid #cce8cc;
+      padding: 0.12rem 0.54rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #dcebff;
+      color: #2444b0;
+      border: 1px solid #bfd4ff;
     }
 
-    .log {
-      background: #18231b;
-      color: #deffe1;
-      border-radius: 12px;
-      padding: 0.8rem;
-      min-height: 180px;
-      max-height: 300px;
-      overflow: auto;
-      font-family: Consolas, monospace;
-      font-size: 0.85rem;
-      white-space: pre-wrap;
+    .wide {
+      grid-column: 1 / -1;
+    }
+
+    .chat-toolbar {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 0.6rem;
+      align-items: end;
     }
 
     .chat-box {
-      max-height: 260px;
+      margin-top: 0.75rem;
+      max-height: 280px;
       overflow: auto;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 0.6rem;
-      background: #fafdfa;
+      border-radius: 14px;
+      border: 1px solid #cdd8ff;
+      background: linear-gradient(180deg, #f7faff 0%, #edf3ff 100%);
+      padding: 0.65rem;
+      display: grid;
+      gap: 0.5rem;
     }
 
     .chat-msg {
-      margin: 0.35rem 0;
-      padding: 0.4rem 0.55rem;
-      border-radius: 8px;
-      background: #eaf4e8;
+      max-width: 88%;
+      border-radius: 12px;
+      background: white;
+      border: 1px solid #d7e1ff;
+      padding: 0.48rem 0.6rem;
+      box-shadow: 0 2px 8px rgba(27, 66, 181, 0.08);
+      color: #1a2453;
+    }
+
+    .chat-msg.mine {
+      margin-left: auto;
+      background: #e5f4ee;
+      border-color: #b7e9d4;
+    }
+
+    .chat-msg .meta {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.77rem;
+      font-weight: 800;
+      color: #3d56c4;
+    }
+
+    .debug-toggle {
+      margin-top: 0.3rem;
+      width: auto;
+      padding: 0.45rem 0.8rem;
+      font-size: 0.86rem;
+      background: linear-gradient(135deg, #6b79b8 0%, #3d4e98 100%);
+    }
+
+    .log-wrap {
+      display: none;
+      margin-top: 0.75rem;
+      border-top: 1px dashed #d4def8;
+      padding-top: 0.75rem;
+    }
+
+    .log-wrap.show {
+      display: block;
+    }
+
+    .log {
+      min-height: 160px;
+      max-height: 260px;
+      overflow: auto;
+      border-radius: 12px;
+      padding: 0.8rem;
+      white-space: pre-wrap;
+      background: var(--log-bg);
+      color: #d9ffe2;
+      font-family: Consolas, monospace;
+      font-size: 0.86rem;
+      border: 1px solid #13243f;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 1030px) {
+      .workspace {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .wide {
+        grid-column: span 2;
+      }
+    }
+
+    @media (max-width: 780px) {
+      .topbar-inner {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .nav-links {
+        order: 3;
+      }
+
+      .hero {
+        border-radius: 20px;
+      }
+
+      .how-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .wide {
+        grid-column: auto;
+      }
+
+      .row,
+      .chat-toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-msg {
+        max-width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header class="card">
-      <h1>Plataforma de Intercambio - Mensajeria</h1>
-      <p class="sub">Flujo: solicitud -> aceptar/rechazar -> chat WebSocket</p>
+  <div class="shell">
+    <div class="glow a"></div>
+    <div class="glow b"></div>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#">
+          <span class="brand-mark">S</span>
+          <span>SkillSwap</span>
+        </a>
+        <nav class="nav-links" aria-label="menu principal">
+          <span>Discover</span>
+          <span>My Swaps</span>
+          <span>Messages</span>
+          <span>Guidelines</span>
+          <span>FAQ</span>
+        </nav>
+        <button class="cta" type="button">Get Started</button>
+      </div>
     </header>
 
-    <section class="grid">
-      <article class="card">
-        <h3>1) Configuracion</h3>
-        <label>URL Backend (Render)</label>
-        <input id="apiBase" value="https://ing-soft-5shh.onrender.com" />
-        <label>Tu usuario actual</label>
-        <input id="currentUser" value="SPadilla37" />
-        <button id="saveCfg" class="ghost">Guardar configuracion local</button>
-      </article>
+    <main class="content">
+      <section class="hero">
+        <h1>Learn. Teach. <span class="warm">Connect.</span></h1>
+        <p>Conecta con personas, intercambia habilidades y abre un chat seguro solo cuando la solicitud haya sido aceptada.</p>
+        <div class="flow-chip">
+          Flujo:
+          <span>solicitud</span>
+          <span>aceptar/rechazar</span>
+          <span>chat WebSocket</span>
+        </div>
 
-      <article class="card">
-        <h3>2) Enviar solicitud de chat</h3>
-        <label>Receptor</label>
-        <input id="toUser" placeholder="ej: maria22" />
-        <div class="row">
-          <div>
-            <label>Habilidad que ofreces</label>
-            <input id="offeredSkill" placeholder="Python" />
-          </div>
-          <div>
-            <label>Habilidad que buscas</label>
-            <input id="requestedSkill" placeholder="Figma" />
+        <div class="panel">
+          <h2>Como Funciona</h2>
+          <div class="how-grid">
+            <article class="how-card">
+              <strong>1. Envia solicitud</strong>
+              <p>Define a quien escribir y que habilidad ofreces a cambio de la que quieres aprender.</p>
+            </article>
+            <article class="how-card">
+              <strong>2. Respuesta del receptor</strong>
+              <p>La otra persona puede aceptar para habilitar el chat, o rechazar si no hay match.</p>
+            </article>
+            <article class="how-card">
+              <strong>3. Conversacion en vivo</strong>
+              <p>Si se acepta, se abre una conversacion en tiempo real con WebSocket entre ambos usuarios.</p>
+            </article>
           </div>
         </div>
-        <label>Mensaje inicial</label>
-        <textarea id="introMessage" placeholder="Hola, te puedo ayudar con..."></textarea>
-        <button id="sendRequest">Enviar solicitud</button>
-      </article>
+      </section>
 
-      <article class="card">
-        <h3>3) Solicitudes recibidas</h3>
-        <button id="loadIncoming" class="secondary">Cargar solicitudes</button>
-        <div id="incomingList" class="list"></div>
-      </article>
+      <section class="workspace">
+        <article class="card">
+          <h3>1) Configuracion</h3>
+          <small>Conecta tu frontend con Render</small>
+          <label>URL Backend (Render)</label>
+          <input id="apiBase" value="https://ing-soft-5shh.onrender.com" />
+          <label>Tu usuario actual</label>
+          <input id="currentUser" value="SPadilla37" />
+          <button id="saveCfg" class="ghost">Guardar configuracion local</button>
+        </article>
 
-      <article class="card">
-        <h3>4) Conversaciones</h3>
-        <button id="loadConversations" class="secondary">Cargar conversaciones</button>
-        <div id="conversationsList" class="list"></div>
-      </article>
-
-      <article class="card" style="grid-column: 1 / -1;">
-        <h3>5) Chat WebSocket</h3>
-        <div class="row">
-          <div>
-            <label>Conversation ID</label>
-            <input id="conversationId" placeholder="pega el conversation id" />
+        <article class="card">
+          <h3>2) Enviar solicitud de chat</h3>
+          <small>Propon tu intercambio de habilidades</small>
+          <label>Receptor</label>
+          <input id="toUser" placeholder="ej: maria22" />
+          <div class="row">
+            <div>
+              <label>Habilidad que ofreces</label>
+              <input id="offeredSkill" placeholder="Python" />
+            </div>
+            <div>
+              <label>Habilidad que buscas</label>
+              <input id="requestedSkill" placeholder="Figma" />
+            </div>
           </div>
-          <div style="display: flex; align-items: end; gap: 0.4rem;">
+          <label>Mensaje inicial</label>
+          <textarea id="introMessage" placeholder="Hola, te puedo ayudar con..."></textarea>
+          <button id="sendRequest">Enviar solicitud</button>
+        </article>
+
+        <article class="card">
+          <h3>3) Solicitudes recibidas</h3>
+          <small>Acepta o rechaza para seguir al chat</small>
+          <button id="loadIncoming" class="secondary">Cargar solicitudes</button>
+          <div id="incomingList" class="list"></div>
+        </article>
+
+        <article class="card">
+          <h3>4) Conversaciones</h3>
+          <small>Revisa tus chats habilitados</small>
+          <button id="loadConversations" class="secondary">Cargar conversaciones</button>
+          <div id="conversationsList" class="list"></div>
+        </article>
+
+        <article class="card wide">
+          <h3>5) Chat WebSocket</h3>
+          <small>Mensajeria en tiempo real</small>
+          <div class="chat-toolbar">
+            <div>
+              <label>Conversation ID</label>
+              <input id="conversationId" placeholder="pega el conversation id" />
+            </div>
             <button id="connectWs">Conectar WS</button>
-            <button id="disconnectWs" class="ghost">Cerrar WS</button>
+            <button id="disconnectWs" class="danger">Cerrar WS</button>
           </div>
-        </div>
-        <div id="chatBox" class="chat-box"></div>
-        <div class="row">
-          <input id="chatInput" placeholder="Escribe mensaje..." />
-          <button id="sendWsMessage">Enviar WS</button>
-        </div>
-      </article>
+          <div id="chatBox" class="chat-box"></div>
+          <div class="row">
+            <input id="chatInput" placeholder="Escribe mensaje..." />
+            <button id="sendWsMessage">Enviar WS</button>
+          </div>
+        </article>
 
-      <article class="card" style="grid-column: 1 / -1;">
-        <h3>Log</h3>
-        <div id="log" class="log"></div>
-      </article>
-    </section>
+        <article class="card wide">
+          <h3>Registro tecnico</h3>
+          <small>Oculto por defecto para modo demo</small>
+          <button id="toggleDebug" class="debug-toggle" type="button">Mostrar/Ocultar debug</button>
+          <div id="logWrap" class="log-wrap">
+            <div id="log" class="log"></div>
+          </div>
+        </article>
+      </section>
+    </main>
   </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
     const logEl = $("log");
+    const logWrap = $("logWrap");
     const chatBox = $("chatBox");
     let socket = null;
 
@@ -287,7 +737,7 @@
         acceptBtn.onclick = () => respondRequest(request.id, "accepted");
 
         const rejectBtn = document.createElement("button");
-        rejectBtn.className = "secondary";
+        rejectBtn.className = "danger";
         rejectBtn.textContent = "Rechazar";
         rejectBtn.onclick = () => respondRequest(request.id, "rejected");
 
@@ -321,8 +771,18 @@
 
     function addChatMessage(msg) {
       const div = document.createElement("div");
-      div.className = "chat-msg";
-      div.textContent = `${msg.from_user_id}: ${msg.content}`;
+      const mine = msg.from_user_id === cfg().currentUser;
+      div.className = `chat-msg${mine ? " mine" : ""}`;
+
+      const meta = document.createElement("span");
+      meta.className = "meta";
+      meta.textContent = `${msg.from_user_id}${msg.sent_at ? ` - ${new Date(msg.sent_at).toLocaleTimeString()}` : ""}`;
+
+      const content = document.createElement("span");
+      content.textContent = msg.content;
+
+      div.appendChild(meta);
+      div.appendChild(content);
       chatBox.appendChild(div);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
@@ -454,6 +914,10 @@
       $("chatInput").value = "";
     }
 
+    function toggleDebug() {
+      logWrap.classList.toggle("show");
+    }
+
     $("saveCfg").onclick = saveCfg;
     $("sendRequest").onclick = sendRequest;
     $("loadIncoming").onclick = loadIncoming;
@@ -461,6 +925,7 @@
     $("connectWs").onclick = connectWs;
     $("disconnectWs").onclick = disconnectWs;
     $("sendWsMessage").onclick = sendWsMessage;
+    $("toggleDebug").onclick = toggleDebug;
 
     loadCfg();
     log("Listo. Configura tu URL de Render y prueba el flujo.");
