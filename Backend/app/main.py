@@ -216,12 +216,44 @@ def encode_skills(skills: List[str]) -> str:
     return json.dumps(normalized)
 
 
-def serialize_user(user: User) -> dict:
+def calculate_received_rating(session: Session, user_id: str) -> dict:
+    matches = session.execute(
+        select(MatchModel).where(
+            or_(
+                MatchModel.user_a_id == user_id,
+                MatchModel.user_b_id == user_id,
+            )
+        )
+    ).scalars().all()
+
+    ratings: List[int] = []
+    for match in matches:
+        if match.user_a_id == user_id and match.rating_by_b is not None:
+            ratings.append(int(match.rating_by_b))
+        elif match.user_b_id == user_id and match.rating_by_a is not None:
+            ratings.append(int(match.rating_by_a))
+
+    if not ratings:
+        return {"average": None, "count": 0}
+
+    average = round(sum(ratings) / len(ratings), 2)
+    return {"average": average, "count": len(ratings)}
+
+
+def serialize_user(user: User, session: Session | None = None) -> dict:
+    rating_info = {"average": None, "count": 0}
+    if session is not None:
+        rating_info = calculate_received_rating(session, user.id)
+
     return {
         "id": user.id,
         "name": user.name,
         "created_at": user.created_at.isoformat() if user.created_at else utc_now_iso(),
         "updated_at": user.updated_at.isoformat() if user.updated_at else utc_now_iso(),
+        "rating": {
+            "average": rating_info["average"],
+            "count": rating_info["count"],
+        },
         "profile": {
             "full_name": user.name,
             "bio": user.bio or "",
@@ -563,7 +595,7 @@ def register_user(payload: UserRegisterPayload) -> dict:
 
         session.commit()
         session.refresh(existing)
-        return {"user": serialize_user(existing)}
+        return {"user": serialize_user(existing, session)}
 
 
 @app.post("/users/login")
@@ -576,7 +608,7 @@ def login_user(payload: UserLoginPayload) -> dict:
         if user.password_hash != hash_password(payload.password):
             raise HTTPException(status_code=401, detail="Correo o contrasena incorrectos")
 
-        return {"user": serialize_user(user)}
+        return {"user": serialize_user(user, session)}
 
 
 @app.get("/users/{user_id}")
@@ -585,7 +617,7 @@ def get_user(user_id: str) -> dict:
         user = session.get(User, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        return {"user": serialize_user(user)}
+        return {"user": serialize_user(user, session)}
 
 
 @app.put("/users/{user_id}/profile")
@@ -615,7 +647,7 @@ def update_user_profile(user_id: str, payload: UserProfileUpdatePayload) -> dict
         user.updated_at = datetime.now(timezone.utc)
         session.commit()
         session.refresh(user)
-        return {"user": serialize_user(user)}
+        return {"user": serialize_user(user, session)}
 
 
 @app.post("/message-requests")

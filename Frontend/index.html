@@ -581,6 +581,41 @@
     .match-card h3 { font-size: 1.3rem; }
     .strong-list { color: white; font-size: 0.98rem; font-weight: 700; line-height: 1.4; }
 
+    .stars-line {
+      color: #ffd56a;
+      letter-spacing: 0.08rem;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .stars-detail {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 0.2rem;
+    }
+
+    .rating-input {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.2rem;
+    }
+
+    .star-rate-btn {
+      border: 1px solid rgba(255, 213, 106, 0.35);
+      background: rgba(255, 213, 106, 0.12);
+      color: #ffe39a;
+      border-radius: 12px;
+      padding: 0.45rem 0.55rem;
+      font-weight: 800;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .star-rate-btn:hover {
+      background: rgba(255, 213, 106, 0.2);
+    }
+
     .panel-grid,
     .profile-grid,
     .chat-layout {
@@ -1274,7 +1309,7 @@
 
           <div class="public-profile-panel">
             <h3>Rating</h3>
-            <p>No reviews yet</p>
+            <p id="publicProfileRating">No reviews yet</p>
           </div>
 
           <h3 class="public-profile-section-title">Skills</h3>
@@ -1348,6 +1383,7 @@
     const publicProfileBio = $("publicProfileBio");
     const publicProfileSummary = $("publicProfileSummary");
     const publicProfileLanguages = $("publicProfileLanguages");
+    const publicProfileRating = $("publicProfileRating");
     const publicProfileTeachChips = $("publicProfileTeachChips");
     const publicProfileLearnChips = $("publicProfileLearnChips");
     const publicProfilePrimaryBtn = $("publicProfilePrimaryBtn");
@@ -1584,6 +1620,8 @@
       try {
         const user = await fetchProfileForPublicView(userId);
         const normalized = normalizeProfileFromUser(user);
+        const averageRating = user?.rating?.average;
+        const ratingCount = user?.rating?.count || 0;
         publicProfileUserId = user.id;
         publicProfileReturnView = returnView;
         publicProfileAvatar.textContent = getInitials(normalized.fullName || user.name || user.id);
@@ -1596,6 +1634,12 @@
         renderSummaryChips(publicProfileLanguages, normalized.languages || []);
         renderSummaryChips(publicProfileTeachChips, normalized.teachSkills || []);
         renderSummaryChips(publicProfileLearnChips, normalized.learnSkills || []);
+        if (averageRating === null || averageRating === undefined || !ratingCount) {
+          publicProfileRating.innerHTML = "<span class=\"stars-detail\">No reviews yet</span>";
+        } else {
+          const averageValue = Number(averageRating);
+          publicProfileRating.innerHTML = `<span class="stars-line">${starText(averageValue, 5)}</span><div class="stars-detail">${averageValue.toFixed(2)} / 5 (${ratingCount} calificaciones)</div>`;
+        }
 
         if (user.id === currentUser) {
           publicProfilePrimaryBtn.textContent = "Edit Profile";
@@ -2218,11 +2262,17 @@
       return match.my_finalized ? "En proceso · Esperando al otro usuario" : "En proceso";
     }
 
+    function starText(value, max = 5) {
+      const safeMax = Math.max(1, Number(max) || 5);
+      const safeValue = Math.max(0, Math.min(safeMax, Math.round(Number(value) || 0)));
+      return "★".repeat(safeValue) + "☆".repeat(safeMax - safeValue);
+    }
+
     function renderRatingStars(match) {
       if (match.my_rating !== null && match.my_rating !== undefined) {
-        return `Tu calificacion: ${match.my_rating}/5`;
+        return `<span class="stars-line">${starText(match.my_rating, 5)}</span><div class="stars-detail">Tu calificacion: ${match.my_rating}/5</div>`;
       }
-      return "Aun no calificas este match";
+      return "<span class=\"stars-detail\">Aun no calificas este match</span>";
     }
 
     function renderMyMatches(items) {
@@ -2295,14 +2345,28 @@
         }
 
         if (match.status === "completed" && match.can_rate) {
-          for (let rating = 0; rating <= 5; rating += 1) {
+          const ratingInput = document.createElement("div");
+          ratingInput.className = "rating-input";
+
+          for (let rating = 1; rating <= 5; rating += 1) {
             const rateBtn = document.createElement("button");
-            rateBtn.className = "ghost-btn";
+            rateBtn.className = "star-rate-btn";
             rateBtn.type = "button";
-            rateBtn.textContent = `${rating}★`;
+            rateBtn.title = `Calificar con ${rating} estrella${rating === 1 ? "" : "s"}`;
+            rateBtn.textContent = starText(rating, 5);
             rateBtn.onclick = () => rateMatch(match.id, rating);
-            actions.appendChild(rateBtn);
+            ratingInput.appendChild(rateBtn);
           }
+
+          const clearBtn = document.createElement("button");
+          clearBtn.className = "star-rate-btn";
+          clearBtn.type = "button";
+          clearBtn.title = "Calificar con 0 estrellas";
+          clearBtn.textContent = "Sin estrellas";
+          clearBtn.onclick = () => rateMatch(match.id, 0);
+          ratingInput.appendChild(clearBtn);
+
+          actions.appendChild(ratingInput);
         }
 
         card.appendChild(actions);
