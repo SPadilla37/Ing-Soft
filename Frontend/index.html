@@ -547,6 +547,24 @@
       gap: 0.7rem;
     }
 
+    .incoming-shell {
+      border-radius: 24px;
+      padding: 1rem 1.1rem;
+      background: linear-gradient(135deg, rgba(23, 95, 163, 0.22) 0%, rgba(15, 22, 35, 0.92) 100%);
+      border: 1px solid rgba(93, 147, 230, 0.18);
+    }
+
+      .incoming-shell h2,
+    .incoming-shell h3 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .incoming-shell p {
+      margin: 0.35rem 0 0.9rem;
+      color: var(--muted);
+    }
+
     .match-head { display: flex; align-items: center; gap: 0.8rem; }
     .match-avatar {
       width: 58px;
@@ -1023,6 +1041,7 @@
 
       <div class="nav-list">
         <button class="nav-btn active" data-view="matchesView" type="button">Matches <span id="matchesCountBadge">0</span></button>
+        <button class="nav-btn" data-view="incomingMatchesView" type="button">Te dieron match <span id="incomingMatchesCountBadge">0</span></button>
         <button class="nav-btn" data-view="publishView" type="button">Publicar</button>
         <button class="nav-btn" data-view="chatView" type="button">Chat <span id="chatCountBadge">0</span></button>
         <button class="nav-btn" data-view="profileView" type="button">Perfil</button>
@@ -1072,6 +1091,15 @@
         </div>
 
         <div id="marketplaceGrid" class="cards-grid"></div>
+      </section>
+
+      <section id="incomingMatchesView" class="view">
+        <div class="incoming-shell">
+          <h2>Te dieron match</h2>
+          <p>Aqui aparecen las personas que ya mostraron interes en ti. Si respondes, se crea el chat.</p>
+        </div>
+
+        <div id="incomingMatchesGrid" class="cards-grid"></div>
       </section>
 
       <section id="publishView" class="view">
@@ -1284,6 +1312,7 @@
     const logEl = $("log");
     const chatBox = $("chatBox");
     const marketplaceGrid = $("marketplaceGrid");
+    const incomingMatchesGrid = $("incomingMatchesGrid");
     const conversationsList = $("conversationsList");
     const dashboardCategoryChips = $("dashboardCategoryChips");
     const teachSummary = $("teachSummary");
@@ -1325,6 +1354,7 @@
     let profileLearnDraft = new Set();
     let profileLanguagesDraft = new Set();
     let currentMarketplace = [];
+    let currentIncomingMatches = [];
     let currentConversations = [];
     let pickerMode = "teach";
     let pickerSource = "onboarding";
@@ -2055,6 +2085,7 @@
       }
       filtered.forEach((request) => {
         const author = displayUserName(request, "from");
+        const matchState = request.viewer_match_state || "none";
         const card = document.createElement("article");
         card.className = "match-card";
         card.innerHTML = `
@@ -2081,15 +2112,26 @@
         const actions = document.createElement("div");
         actions.className = "card-actions";
         const acceptBtn = document.createElement("button");
-        acceptBtn.className = "primary-btn";
+        acceptBtn.className = matchState === "matched" ? "secondary-btn" : "primary-btn";
         acceptBtn.type = "button";
-        acceptBtn.textContent = "Match";
-        acceptBtn.onclick = () => acceptRequest(request.id);
+        if (matchState === "matched") {
+          acceptBtn.textContent = "Abrir chat";
+          acceptBtn.onclick = () => openMatchedConversation(request.viewer_conversation_id);
+        } else if (matchState === "received" || matchState === "mutual-pending") {
+          acceptBtn.textContent = "Responder match";
+          acceptBtn.onclick = () => acceptRequest(request.id);
+        } else if (matchState === "sent") {
+          acceptBtn.textContent = "Interes enviado";
+          acceptBtn.disabled = true;
+        } else {
+          acceptBtn.textContent = "Match";
+          acceptBtn.onclick = () => acceptRequest(request.id);
+        }
         const detailsBtn = document.createElement("button");
         detailsBtn.className = "ghost-btn";
         detailsBtn.type = "button";
         detailsBtn.textContent = "Go to profile";
-        detailsBtn.onclick = () => showRequestDetails(request);
+        detailsBtn.onclick = () => showRequestDetails(request, "matchesView");
         actions.appendChild(acceptBtn);
         actions.appendChild(detailsBtn);
         card.appendChild(actions);
@@ -2097,8 +2139,81 @@
       });
     }
 
-    function showRequestDetails(request) {
-      openPublicProfile(request.from_user_id, "matchesView");
+    function renderIncomingMatches(items) {
+      incomingMatchesGrid.innerHTML = "";
+      $("incomingMatchesCountBadge").textContent = String(items.length);
+      if (!items.length) {
+        const empty = document.createElement("div");
+        empty.className = "surface-card";
+        empty.innerHTML = "<h3>Aun no recibes matches</h3><p>Cuando alguien te marque como interes, aparecera aqui para que respondas rapido.</p>";
+        incomingMatchesGrid.appendChild(empty);
+        return;
+      }
+
+      items.forEach((item) => {
+        const request = item.request;
+        const author = displayUserName(request, "from");
+        const card = document.createElement("article");
+        card.className = "match-card";
+        card.innerHTML = `
+          <div class="match-head">
+            <div class="match-avatar">${getInitials(author)}</div>
+            <div>
+              <h3>${author}</h3>
+              <div class="muted">Quiere hacer match contigo</div>
+            </div>
+          </div>
+          <div>
+            <div class="muted">Te puede ensenar</div>
+            <div class="strong-list">${request.offered_skill}</div>
+          </div>
+          <div>
+            <div class="muted">Quiere aprender</div>
+            <div class="strong-list">${request.requested_skill}</div>
+          </div>
+          <div>
+            <div class="muted">Mensaje</div>
+            <div>${request.intro_message || "Sin descripcion"}</div>
+          </div>
+        `;
+
+        const actions = document.createElement("div");
+        actions.className = "card-actions";
+
+        const respondBtn = document.createElement("button");
+        respondBtn.className = "primary-btn";
+        respondBtn.type = "button";
+        respondBtn.textContent = "Responder match";
+        respondBtn.onclick = () => acceptRequest(request.id);
+
+        const profileBtn = document.createElement("button");
+        profileBtn.className = "ghost-btn";
+        profileBtn.type = "button";
+        profileBtn.textContent = "Go to profile";
+        profileBtn.onclick = () => showRequestDetails(request, "incomingMatchesView");
+
+        actions.appendChild(respondBtn);
+        actions.appendChild(profileBtn);
+        card.appendChild(actions);
+        incomingMatchesGrid.appendChild(card);
+      });
+    }
+
+    async function openMatchedConversation(conversationId) {
+      if (!conversationId) {
+        setChatStatus("Ese match aun no tiene chat disponible.", "info");
+        return;
+      }
+
+      selectedConversationId = conversationId;
+      $("conversationId").value = conversationId;
+      activateView("chatView");
+      await loadConversations();
+      connectWs(true);
+    }
+
+    function showRequestDetails(request, returnView = "matchesView") {
+      openPublicProfile(request.from_user_id, returnView);
     }
 
     async function loadMarketplace() {
@@ -2115,22 +2230,43 @@
       }
     }
 
+    async function loadIncomingMatches() {
+      if (!currentUser) return;
+      try {
+        const result = await api(`/matches/${encodeURIComponent(currentUser)}/incoming`);
+        currentIncomingMatches = result.incoming || [];
+        renderIncomingMatches(currentIncomingMatches);
+      } catch (error) {
+        currentIncomingMatches = [];
+        renderIncomingMatches(currentIncomingMatches);
+        log(`Error cargando matches recibidos: ${error.message}`);
+      }
+    }
+
     async function acceptRequest(requestId) {
       try {
         const result = await api(`/marketplace/requests/${requestId}/accept`, {
           method: "POST",
           body: JSON.stringify({ accepter_user_id: currentUser })
         });
-        selectedConversationId = result.conversation_id || "";
-        $("conversationId").value = selectedConversationId;
-        activateView("chatView");
         await loadMarketplace();
-        await loadConversations();
-        connectWs(true);
-        log(`Solicitud aceptada. Conversacion: ${selectedConversationId}`);
+        await loadIncomingMatches();
+        if (result.matched && result.conversation_id) {
+          selectedConversationId = result.conversation_id;
+          $("conversationId").value = selectedConversationId;
+          activateView("chatView");
+          await loadConversations();
+          connectWs(true);
+          setChatStatus("Hubo match mutuo. Chat habilitado.", "ok");
+          log(`Match mutuo. Conversacion: ${selectedConversationId}`);
+          return;
+        }
+
+        setChatStatus("Interes enviado. El chat se abrira solo si la otra persona tambien hace match.", "info");
+        log(`Interes enviado para la solicitud ${requestId}`);
       } catch (error) {
-        setChatStatus(`No se pudo aceptar la solicitud: ${error.message}`, "error");
-        log(`Error aceptando solicitud: ${error.message}`);
+        setChatStatus(`No se pudo procesar el match: ${error.message}`, "error");
+        log(`Error procesando match: ${error.message}`);
       }
     }
 
@@ -2347,6 +2483,7 @@
       await loadLatestOwnRequest();
       renderLatestRequest();
       await loadMarketplace();
+      await loadIncomingMatches();
       await loadConversations();
       const profile = getProfile() || {};
       $("mySkillsPreview").textContent = String((profile.teachSkills || []).length + (profile.learnSkills || []).length);

@@ -135,6 +135,26 @@ class HiddenConversationModel(Base):
     hidden_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
+class MatchIntentModel(Base):
+    __tablename__ = "match_intents"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    from_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
+    to_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
+    request_id: Mapped[str] = mapped_column(String(36), ForeignKey("message_requests.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+class MatchModel(Base):
+    __tablename__ = "matches"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_a_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
+    user_b_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
+    conversation_id: Mapped[str] = mapped_column(String(36), ForeignKey("conversations.id"), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
 def normalize_database_url(url: str) -> str:
     if url.startswith("postgres://"):
         return url.replace("postgres://", "postgresql+psycopg://", 1)
@@ -251,6 +271,76 @@ def serialize_request_with_names(session: Session, request: MessageRequestModel)
     serialized = serialize_request(request)
     serialized["from_user_name"] = get_user_display_name(session, request.from_user_id)
     serialized["to_user_name"] = get_user_display_name(session, request.to_user_id)
+    return serialized
+
+
+def canonical_match_pair(user_one_id: str, user_two_id: str) -> tuple[str, str]:
+    return tuple(sorted([user_one_id, user_two_id]))
+
+
+def get_match_for_users(session: Session, user_one_id: str, user_two_id: str) -> MatchModel | None:
+    user_a_id, user_b_id = canonical_match_pair(user_one_id, user_two_id)
+    return session.execute(
+        select(MatchModel).where(
+            MatchModel.user_a_id == user_a_id,
+            MatchModel.user_b_id == user_b_id,
+        )
+    ).scalars().first()
+
+
+def get_match_intent(session: Session, from_user_id: str, to_user_id: str) -> MatchIntentModel | None:
+    return session.execute(
+        select(MatchIntentModel).where(
+            MatchIntentModel.from_user_id == from_user_id,
+            MatchIntentModel.to_user_id == to_user_id,
+        )
+    ).scalars().first()
+
+
+def create_match_conversation(session: Session, user_one_id: str, user_two_id: str, request: MessageRequestModel) -> str:
+    now = datetime.now(timezone.utc)
+    anchor_request = MessageRequestModel(
+        id=str(uuid4()),
+        from_user_id=user_one_id,
+        to_user_id=user_two_id,
+        offered_skill=request.offered_skill,
+        requested_skill=request.requested_skill,
+        intro_message=request.intro_message,
+        status=RequestStatus.accepted.value,
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(anchor_request)
+    session.flush()
+    return create_conversation_for_request(session, anchor_request)
+
+
+def serialize_request_for_viewer(
+    session: Session,
+    request: MessageRequestModel,
+    viewer_user_id: str | None,
+) -> dict:
+    serialized = serialize_request_with_names(session, request)
+    serialized["viewer_match_state"] = "none"
+    serialized["viewer_conversation_id"] = None
+
+    if not viewer_user_id or viewer_user_id == request.from_user_id:
+        return serialized
+
+    existing_match = get_match_for_users(session, viewer_user_id, request.from_user_id)
+    if existing_match:
+        serialized["viewer_match_state"] = "matched"
+        serialized["viewer_conversation_id"] = existing_match.conversation_id
+        return serialized
+
+    sent_intent = get_match_intent(session, viewer_user_id, request.from_user_id)
+    if sent_intent:
+        serialized["viewer_match_state"] = "sent"
+
+    received_intent = get_match_intent(session, request.from_user_id, viewer_user_id)
+    if received_intent:
+        serialized["viewer_match_state"] = "received" if serialized["viewer_match_state"] == "none" else "mutual-pending"
+
     return serialized
 
 
@@ -490,7 +580,7 @@ def list_marketplace_requests(
             stmt.order_by(MessageRequestModel.created_at.desc())
         ).scalars().all()
 
-        return {"requests": [serialize_request_with_names(session, item) for item in requests]}
+        return {"requests": [serialize_request_for_viewer(session, item, viewer_user_id) for item in requests]}
 
 
 @app.post("/marketplace/requests/{request_id}/accept")
@@ -510,18 +600,93 @@ def accept_marketplace_request(request_id: str, payload: MarketplaceAcceptReques
             raise HTTPException(status_code=400, detail="No puedes aceptar tu propia solicitud")
 
         ensure_user(session, payload.accepter_user_id)
-        request.to_user_id = payload.accepter_user_id
-        request.status = RequestStatus.accepted.value
-        request.updated_at = datetime.now(timezone.utc)
+        existing_match = get_match_for_users(session, payload.accepter_user_id, request.from_user_id)
+        if existing_match:
+            return {
+                "request": serialize_request_for_viewer(session, request, payload.accepter_user_id),
+                "matched": True,
+                "conversation_id": existing_match.conversation_id,
+                "match_state": "matched",
+            }
 
-        conversation_id = create_conversation_for_request(session, request)
+        existing_intent = get_match_intent(session, payload.accepter_user_id, request.from_user_id)
+        reverse_intent = get_match_intent(session, request.from_user_id, payload.accepter_user_id)
+
+        if not existing_intent:
+            session.add(
+                MatchIntentModel(
+                    id=str(uuid4()),
+                    from_user_id=payload.accepter_user_id,
+                    to_user_id=request.from_user_id,
+                    request_id=request.id,
+                    created_at=datetime.now(timezone.utc),
+                )
+            )
+
+        matched = reverse_intent is not None
+        conversation_id = None
+        match_state = "sent"
+
+        if matched:
+            conversation_id = create_match_conversation(session, payload.accepter_user_id, request.from_user_id, request)
+            user_a_id, user_b_id = canonical_match_pair(payload.accepter_user_id, request.from_user_id)
+            session.add(
+                MatchModel(
+                    id=str(uuid4()),
+                    user_a_id=user_a_id,
+                    user_b_id=user_b_id,
+                    conversation_id=conversation_id,
+                    created_at=datetime.now(timezone.utc),
+                )
+            )
+            match_state = "matched"
+
         session.commit()
-        session.refresh(request)
 
         return {
-            "request": serialize_request_with_names(session, request),
+            "request": serialize_request_for_viewer(session, request, payload.accepter_user_id),
+            "matched": matched,
+            "match_state": match_state,
             "conversation_id": conversation_id,
         }
+
+
+@app.get("/matches/{user_id}/incoming")
+def get_incoming_match_intents(user_id: str) -> dict:
+    with SessionLocal() as session:
+        intents = session.execute(
+            select(MatchIntentModel)
+            .where(MatchIntentModel.to_user_id == user_id)
+            .order_by(MatchIntentModel.created_at.desc())
+        ).scalars().all()
+
+        items = []
+        for intent in intents:
+            existing_match = get_match_for_users(session, intent.from_user_id, intent.to_user_id)
+            if existing_match:
+                continue
+
+            request = session.execute(
+                select(MessageRequestModel)
+                .where(
+                    MessageRequestModel.from_user_id == intent.from_user_id,
+                    MessageRequestModel.status == RequestStatus.pending.value,
+                    MessageRequestModel.to_user_id == PUBLIC_MARKETPLACE_USER,
+                )
+                .order_by(MessageRequestModel.created_at.desc())
+            ).scalars().first()
+            if not request:
+                continue
+
+            items.append(
+                {
+                    "intent_id": intent.id,
+                    "created_at": intent.created_at.isoformat(),
+                    "request": serialize_request_for_viewer(session, request, user_id),
+                }
+            )
+
+        return {"incoming": items}
 
 
 @app.delete("/message-requests/{request_id}")
