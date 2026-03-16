@@ -476,6 +476,10 @@
       background: linear-gradient(135deg, rgba(32, 54, 89, 0.78) 0%, rgba(21, 25, 35, 0.82) 100%);
     }
 
+    .top-shell.user-only {
+      justify-content: flex-end;
+    }
+
     .search-shell { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.8rem; }
     .search-shell input { margin-top: 0; }
 
@@ -1297,6 +1301,8 @@
     const publishStatus = $("publishStatus");
     const chatStatus = $("chatStatus");
     const profileAvatarLarge = $("profileAvatarLarge");
+    const topShell = document.querySelector(".top-shell");
+    const searchShell = document.querySelector(".search-shell");
     const publicProfileAvatar = $("publicProfileAvatar");
     const publicProfileName = $("publicProfileName");
     const publicProfileBio = $("publicProfileBio");
@@ -1779,6 +1785,9 @@
     function activateView(viewId) {
       document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
       document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === viewId));
+      const showSearch = viewId === "matchesView";
+      searchShell.classList.toggle("hidden", !showSearch);
+      topShell.classList.toggle("user-only", !showSearch);
     }
 
     async function ensureOnboardingOrDashboard() {
