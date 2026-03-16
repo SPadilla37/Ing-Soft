@@ -10,44 +10,35 @@
   <style>
     :root {
       --bg-a: #09101d;
-      --bg-b: #13263d;
+      --bg-b: #12243d;
       --panel: rgba(255, 255, 255, 0.08);
       --panel-line: rgba(255, 255, 255, 0.14);
-      --panel-soft: rgba(255, 255, 255, 0.06);
-      --text: #f7fbff;
-      --muted: #aebbd2;
-      --blue: #4ea3ff;
-      --blue-strong: #3a8fe4;
-      --green: #1faa77;
-      --orange: #f7ab1a;
-      --danger: #dd4864;
-      --shell: #0b1422;
+      --text: #f6fbff;
+      --muted: #b2c0d8;
+      --blue: #4ca5ff;
+      --blue-strong: #388dde;
+      --green: #1ea874;
+      --orange: #f5ab1e;
+      --danger: #de4c68;
       --shell-line: rgba(130, 164, 255, 0.15);
       --card-grad: linear-gradient(180deg, rgba(93, 140, 255, 0.22), rgba(255, 255, 255, 0.03));
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
-    html,
-    body {
+    html, body {
       margin: 0;
       min-height: 100%;
-      background: radial-gradient(circle at 20% 0%, #225586 0%, transparent 35%), linear-gradient(160deg, var(--bg-a) 0%, var(--bg-b) 52%, #101828 100%);
+      background: radial-gradient(circle at 20% 0%, #235788 0%, transparent 35%), linear-gradient(160deg, var(--bg-a) 0%, var(--bg-b) 52%, #0f1726 100%);
       color: var(--text);
       font-family: "Manrope", "Segoe UI", sans-serif;
     }
 
-    button,
-    input,
-    textarea {
+    button, input, textarea {
       font: inherit;
     }
 
-    .hidden {
-      display: none !important;
-    }
+    .hidden { display: none !important; }
 
     .auth-screen {
       min-height: 100vh;
@@ -58,8 +49,7 @@
       overflow: hidden;
     }
 
-    .auth-screen::before,
-    .auth-screen::after {
+    .auth-screen::before, .auth-screen::after {
       content: "";
       position: absolute;
       border-radius: 999px;
@@ -93,14 +83,7 @@
       z-index: 1;
     }
 
-    .welcome-panel,
-    .auth-panel,
-    .modal-card,
-    .sidebar,
-    .top-shell,
-    .surface-card,
-    .chat-shell,
-    .debug-shell {
+    .glass {
       border: 1px solid var(--panel-line);
       background: var(--panel);
       backdrop-filter: blur(10px);
@@ -114,10 +97,11 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      min-height: 630px;
+      min-height: 650px;
     }
 
-    .brand-row {
+    .brand-row,
+    .sidebar-brand {
       display: flex;
       align-items: center;
       gap: 0.7rem;
@@ -144,9 +128,7 @@
       max-width: 8ch;
     }
 
-    .welcome-copy h1 span {
-      color: var(--orange);
-    }
+    .welcome-copy h1 span { color: var(--orange); }
 
     .welcome-copy p {
       margin: 1rem 0 0;
@@ -170,22 +152,13 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
 
-    .auth-point strong {
-      display: block;
-      font-size: 0.98rem;
-      margin-bottom: 0.3rem;
-    }
-
-    .auth-point span {
-      color: #cad8f4;
-      font-size: 0.88rem;
-      line-height: 1.45;
-    }
+    .auth-point strong { display: block; font-size: 0.98rem; margin-bottom: 0.3rem; }
+    .auth-point span { color: #cad8f4; font-size: 0.88rem; line-height: 1.45; }
 
     .auth-panel {
       border-radius: 30px;
       padding: 1.1rem;
-      min-height: 630px;
+      min-height: 650px;
       display: flex;
       flex-direction: column;
       gap: 1rem;
@@ -224,17 +197,14 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    .form-shell h2 {
+    .form-shell h2, .modal-card h2, .surface-card h2, .surface-card h3 {
       margin: 0;
-      font-size: 1.65rem;
       font-family: "Space Grotesk", sans-serif;
     }
 
-    .form-shell p {
-      margin: 0.5rem 0 0.8rem;
+    .form-shell p, .muted, .surface-card p, .surface-card small {
       color: var(--muted);
       line-height: 1.5;
-      font-size: 0.95rem;
     }
 
     label {
@@ -245,10 +215,7 @@
       color: #eaf1ff;
     }
 
-    input,
-    textarea,
-    button,
-    select {
+    input, textarea, button {
       width: 100%;
       margin-top: 0.35rem;
       border-radius: 14px;
@@ -258,55 +225,30 @@
       color: white;
     }
 
-    input::placeholder,
-    textarea::placeholder {
-      color: #d4ddf4;
-      opacity: 0.8;
-    }
+    input::placeholder, textarea::placeholder { color: #d4ddf4; opacity: 0.8; }
 
-    input:focus,
-    textarea:focus {
+    input:focus, textarea:focus {
       outline: none;
       border-color: rgba(103, 168, 255, 0.8);
       box-shadow: 0 0 0 3px rgba(75, 150, 255, 0.18);
     }
 
-    textarea {
-      min-height: 110px;
-      resize: vertical;
-    }
+    textarea { min-height: 110px; resize: vertical; }
 
-    .primary-btn,
-    .secondary-btn,
-    .danger-btn,
-    .ghost-btn,
-    .mini-btn {
+    .primary-btn, .secondary-btn, .danger-btn, .ghost-btn, .mini-btn {
       border: 0;
       font-weight: 800;
       cursor: pointer;
     }
 
-    .primary-btn {
-      background: linear-gradient(135deg, #49a5ff 0%, #3a86df 100%);
-      color: white;
-    }
-
-    .secondary-btn {
-      background: linear-gradient(135deg, #ffbe2e 0%, #f39a05 100%);
-      color: #1b2235;
-    }
-
-    .danger-btn {
-      background: linear-gradient(135deg, #e64d67 0%, #b92442 100%);
-      color: white;
-    }
-
+    .primary-btn { background: linear-gradient(135deg, #49a5ff 0%, #3a86df 100%); color: white; }
+    .secondary-btn { background: linear-gradient(135deg, #ffbe2e 0%, #f39a05 100%); color: #1b2235; }
+    .danger-btn { background: linear-gradient(135deg, #e64d67 0%, #b92442 100%); color: white; }
     .ghost-btn {
       background: rgba(255, 255, 255, 0.06);
       color: #eaf1ff;
       border: 1px solid rgba(255, 255, 255, 0.14);
     }
-
     .mini-btn {
       padding: 0.72rem 0.9rem;
       border-radius: 12px;
@@ -316,6 +258,115 @@
       width: auto;
       margin-top: 0;
     }
+
+    .auth-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 7, 14, 0.72);
+      backdrop-filter: blur(8px);
+      display: grid;
+      place-items: center;
+      z-index: 40;
+      padding: 1rem;
+      overflow: auto;
+    }
+
+    .modal-card {
+      width: min(640px, 94vw);
+      max-height: calc(100vh - 2rem);
+      overflow: auto;
+      border-radius: 28px;
+      padding: 1.2rem;
+      background: linear-gradient(180deg, rgba(56, 105, 148, 0.6) 0%, rgba(25, 35, 51, 0.88) 100%);
+    }
+
+    .modal-card p { margin: 0.5rem 0 0; text-align: center; color: #dbe7f9; }
+
+    .field-grid { display: grid; gap: 0.9rem; margin-top: 1rem; }
+
+    .selector-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.9rem;
+      margin-top: 1rem;
+    }
+
+    .select-card {
+      border-radius: 18px;
+      padding: 0.9rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .select-card h3 { margin: 0; font-size: 1rem; color: #f2f7ff; }
+    .select-card small { display: block; margin-top: 0.3rem; color: #d4def5; }
+
+    .summary-row,
+    .chip-row,
+    .card-actions {
+      display: flex;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+    }
+
+    .summary-chip,
+    .chip,
+    .skill-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 0.45rem 0.78rem;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e5efff;
+      cursor: pointer;
+      font-weight: 700;
+      width: auto;
+      margin-top: 0;
+    }
+
+    .chip.active,
+    .skill-chip.active { background: linear-gradient(135deg, #4ea3ff 0%, #3d8be1 100%); border-color: transparent; }
+
+    .picker-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 7, 14, 0.72);
+      backdrop-filter: blur(8px);
+      z-index: 60;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+    }
+
+    .picker-card {
+      width: min(700px, 96vw);
+      max-height: calc(100vh - 2rem);
+      overflow: auto;
+      border-radius: 28px;
+      padding: 1rem;
+      background: linear-gradient(180deg, rgba(24, 31, 40, 0.96) 0%, rgba(31, 46, 66, 0.96) 100%);
+      border: 1px solid rgba(157, 180, 222, 0.18);
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.28);
+    }
+
+    .picker-card input { margin-top: 0; }
+
+    .skills-list {
+      margin-top: 0.8rem;
+      max-height: 360px;
+      overflow: auto;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 0.8rem 0;
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    .category-block { display: grid; gap: 0.45rem; }
+    .category-block strong { color: #eff5ff; font-size: 0.97rem; }
+    .skills-wrap { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .picker-actions { display: flex; gap: 0.65rem; margin-top: 0.9rem; }
 
     .dashboard {
       min-height: 100vh;
@@ -335,9 +386,12 @@
     }
 
     .sidebar {
+      border: 1px solid var(--panel-line);
+      background: linear-gradient(180deg, rgba(7, 10, 17, 0.92) 0%, rgba(17, 25, 39, 0.9) 100%);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.25);
       border-radius: 26px;
       padding: 1.1rem 0.85rem;
-      background: linear-gradient(180deg, rgba(7, 10, 17, 0.92) 0%, rgba(17, 25, 39, 0.9) 100%);
       position: sticky;
       top: 0.9rem;
       height: calc(100vh - 1.8rem);
@@ -346,22 +400,7 @@
       gap: 1rem;
     }
 
-    .sidebar-brand {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      font-family: "Space Grotesk", sans-serif;
-      font-weight: 700;
-      font-size: 1.15rem;
-      padding: 0.35rem 0.45rem;
-    }
-
-    .nav-list {
-      display: grid;
-      gap: 0.4rem;
-      margin-top: 0.5rem;
-    }
-
+    .nav-list { display: grid; gap: 0.4rem; margin-top: 0.5rem; }
     .nav-btn {
       border: 0;
       width: 100%;
@@ -376,12 +415,7 @@
       align-items: center;
       justify-content: space-between;
     }
-
-    .nav-btn.active {
-      background: linear-gradient(135deg, #4aa2ff 0%, #3d8be1 100%);
-      color: white;
-      box-shadow: 0 10px 25px rgba(44, 136, 231, 0.24);
-    }
+    .nav-btn.active { background: linear-gradient(135deg, #4aa2ff 0%, #3d8be1 100%); color: white; box-shadow: 0 10px 25px rgba(44, 136, 231, 0.24); }
 
     .sidebar-note {
       margin-top: auto;
@@ -394,10 +428,17 @@
       line-height: 1.5;
     }
 
-    .main-shell {
-      display: grid;
-      gap: 1rem;
-      min-width: 0;
+    .main-shell { display: grid; gap: 1rem; min-width: 0; }
+
+    .top-shell,
+    .surface-card,
+    .chat-shell,
+    .conversation-list,
+    .debug-shell {
+      border: 1px solid var(--panel-line);
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.25);
     }
 
     .top-shell {
@@ -410,25 +451,10 @@
       background: linear-gradient(135deg, rgba(32, 54, 89, 0.78) 0%, rgba(21, 25, 35, 0.82) 100%);
     }
 
-    .search-shell {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      align-items: center;
-      gap: 0.8rem;
-    }
+    .search-shell { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.8rem; }
+    .search-shell input { margin-top: 0; }
 
-    .search-shell input {
-      margin-top: 0;
-    }
-
-    .top-user {
-      display: flex;
-      align-items: center;
-      gap: 0.8rem;
-      white-space: nowrap;
-    }
-
+    .top-user { display: flex; align-items: center; gap: 0.8rem; white-space: nowrap; }
     .avatar {
       width: 42px;
       height: 42px;
@@ -440,30 +466,16 @@
       font-size: 1.15rem;
     }
 
-    .view {
-      display: none;
-      gap: 1rem;
-    }
+    .view { display: none; gap: 1rem; }
+    .view.active { display: grid; }
 
-    .view.active {
-      display: grid;
-    }
-
-    .surface-card {
+    .surface-card,
+    .conversation-list,
+    .chat-shell,
+    .debug-shell {
       border-radius: 24px;
       padding: 1rem;
       background: linear-gradient(180deg, rgba(26, 38, 60, 0.92) 0%, rgba(20, 28, 44, 0.92) 100%);
-    }
-
-    .surface-card h2,
-    .surface-card h3 {
-      margin: 0;
-      font-family: "Space Grotesk", sans-serif;
-    }
-
-    .surface-card p,
-    .surface-card small {
-      color: var(--muted);
     }
 
     .hero-strip {
@@ -473,40 +485,22 @@
       border: 1px solid rgba(92, 145, 230, 0.2);
     }
 
-    .hero-strip h2 {
-      margin: 0;
-      font-size: clamp(1.35rem, 3vw, 2.2rem);
+    .hero-strip h2 { margin: 0; font-size: clamp(1.35rem, 3vw, 2.2rem); }
+    .hero-strip p { margin: 0.45rem 0 0; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.8rem;
     }
 
-    .hero-strip p {
-      margin: 0.45rem 0 0;
+    .stat-box {
+      border-radius: 18px;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
-
-    .chip-row {
-      display: flex;
-      gap: 0.6rem;
-      flex-wrap: wrap;
-      margin-top: 0.9rem;
-    }
-
-    .chip,
-    .skill-chip {
-      border-radius: 999px;
-      padding: 0.55rem 0.9rem;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #e5efff;
-      cursor: pointer;
-      font-weight: 700;
-      width: auto;
-      margin-top: 0;
-    }
-
-    .chip.active,
-    .skill-chip.active {
-      background: linear-gradient(135deg, #4ea3ff 0%, #3d8be1 100%);
-      border-color: transparent;
-    }
+    .stat-box strong { display: block; font-size: 1.7rem; margin-top: 0.25rem; }
 
     .cards-grid {
       display: grid;
@@ -524,12 +518,7 @@
       gap: 0.7rem;
     }
 
-    .match-head {
-      display: flex;
-      align-items: center;
-      gap: 0.8rem;
-    }
-
+    .match-head { display: flex; align-items: center; gap: 0.8rem; }
     .match-avatar {
       width: 58px;
       height: 58px;
@@ -542,165 +531,22 @@
       border: 1px solid rgba(255, 255, 255, 0.14);
     }
 
-    .match-card h3 {
-      font-size: 1.3rem;
-    }
+    .match-card h3 { font-size: 1.3rem; }
+    .strong-list { color: white; font-size: 0.98rem; font-weight: 700; line-height: 1.4; }
 
-    .muted {
-      color: var(--muted);
-      font-size: 0.94rem;
-      line-height: 1.45;
-    }
-
-    .strong-list {
-      color: white;
-      font-size: 0.98rem;
-      font-weight: 700;
-      line-height: 1.4;
-    }
-
-    .card-actions {
-      display: flex;
-      gap: 0.6rem;
-      flex-wrap: wrap;
-    }
-
-    .card-actions button {
-      flex: 1;
-      min-width: 120px;
-    }
-
-    .panel-grid {
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 1rem;
-    }
-
-    .stack {
-      display: grid;
-      gap: 1rem;
-    }
-
-    .auth-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(2, 7, 14, 0.72);
-      backdrop-filter: blur(8px);
-      display: grid;
-      place-items: center;
-      z-index: 40;
-      padding: 1rem;
-    }
-
-    .modal-card {
-      width: min(620px, 94vw);
-      border-radius: 28px;
-      padding: 1.2rem;
-      background: linear-gradient(180deg, rgba(56, 105, 148, 0.6) 0%, rgba(25, 35, 51, 0.88) 100%);
-    }
-
-    .modal-card h2 {
-      margin: 0;
-      text-align: center;
-      font-family: "Space Grotesk", sans-serif;
-      font-size: clamp(1.5rem, 3.6vw, 2.6rem);
-    }
-
-    .modal-card p {
-      margin: 0.5rem 0 0;
-      text-align: center;
-      color: #dbe7f9;
-    }
-
-    .field-grid {
-      display: grid;
-      gap: 0.9rem;
-      margin-top: 1rem;
-    }
-
-    .select-card {
-      border-radius: 18px;
-      padding: 0.85rem;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-    }
-
-    .select-card h3 {
-      margin: 0;
-      font-size: 1rem;
-      color: #f2f7ff;
-    }
-
-    .select-card small {
-      display: block;
-      margin-top: 0.3rem;
-      color: #d4def5;
-    }
-
-    .skills-scroll {
-      margin-top: 0.7rem;
-      max-height: 220px;
-      overflow: auto;
-      display: grid;
-      gap: 0.55rem;
-      padding-right: 0.2rem;
-    }
-
-    .category-block {
-      display: grid;
-      gap: 0.45rem;
-    }
-
-    .category-block strong {
-      color: #eff5ff;
-      font-size: 0.97rem;
-    }
-
-    .skills-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.45rem;
-    }
-
-    .summary-row {
-      display: flex;
-      gap: 0.55rem;
-      flex-wrap: wrap;
-      margin-top: 0.75rem;
-    }
-
-    .summary-chip {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      padding: 0.38rem 0.7rem;
-      background: rgba(78, 163, 255, 0.16);
-      border: 1px solid rgba(78, 163, 255, 0.26);
-      font-size: 0.84rem;
-      font-weight: 700;
-    }
-
+    .panel-grid,
+    .profile-grid,
     .chat-layout {
       display: grid;
-      grid-template-columns: 320px minmax(0, 1fr);
       gap: 1rem;
     }
 
-    .conversation-list,
-    .chat-shell {
-      border-radius: 22px;
-      padding: 1rem;
-      background: linear-gradient(180deg, rgba(20, 28, 44, 0.92) 0%, rgba(14, 20, 31, 0.95) 100%);
-    }
+    .panel-grid,
+    .profile-grid { grid-template-columns: 1.1fr 0.9fr; }
+    .chat-layout { grid-template-columns: 320px minmax(0, 1fr); }
+    .stack { display: grid; gap: 1rem; }
 
-    .list {
-      display: grid;
-      gap: 0.65rem;
-      margin-top: 0.8rem;
-      max-height: 520px;
-      overflow: auto;
-    }
-
+    .list { display: grid; gap: 0.65rem; margin-top: 0.8rem; max-height: 520px; overflow: auto; }
     .list-item {
       border-radius: 16px;
       padding: 0.85rem;
@@ -708,10 +554,14 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
       cursor: pointer;
     }
+    .list-item.active { border-color: rgba(78, 163, 255, 0.5); background: rgba(78, 163, 255, 0.12); }
 
-    .list-item.active {
-      border-color: rgba(78, 163, 255, 0.5);
-      background: rgba(78, 163, 255, 0.12);
+    .chat-controls {
+      display: grid;
+      grid-template-columns: 1fr 150px 150px;
+      gap: 0.65rem;
+      align-items: end;
+      margin-top: 0.85rem;
     }
 
     .chat-box {
@@ -732,65 +582,9 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    .chat-msg.mine {
-      margin-left: auto;
-      background: rgba(31, 170, 119, 0.18);
-      border-color: rgba(31, 170, 119, 0.3);
-    }
-
-    .chat-meta {
-      display: block;
-      margin-bottom: 0.25rem;
-      color: #cfe0ff;
-      font-size: 0.77rem;
-      font-weight: 800;
-    }
-
-    .chat-controls {
-      display: grid;
-      grid-template-columns: 1fr 150px 150px;
-      gap: 0.65rem;
-      align-items: end;
-      margin-top: 0.85rem;
-    }
-
-    .composer {
-      display: grid;
-      grid-template-columns: 1fr 170px;
-      gap: 0.65rem;
-      margin-top: 0.75rem;
-    }
-
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.8rem;
-    }
-
-    .stat-box {
-      border-radius: 18px;
-      padding: 1rem;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .stat-box strong {
-      display: block;
-      font-size: 1.7rem;
-      margin-top: 0.25rem;
-    }
-
-    .profile-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-
-    .debug-shell {
-      border-radius: 20px;
-      padding: 1rem;
-      background: rgba(255, 255, 255, 0.05);
-    }
+    .chat-msg.mine { margin-left: auto; background: rgba(31, 170, 119, 0.18); border-color: rgba(31, 170, 119, 0.3); }
+    .chat-meta { display: block; margin-bottom: 0.25rem; color: #cfe0ff; font-size: 0.77rem; font-weight: 800; }
+    .composer { display: grid; grid-template-columns: 1fr 170px; gap: 0.65rem; margin-top: 0.75rem; }
 
     .debug-shell pre {
       margin: 0.8rem 0 0;
@@ -810,56 +604,43 @@
       .auth-card,
       .panel-grid,
       .profile-grid,
-      .chat-layout {
-        grid-template-columns: 1fr;
-      }
-
+      .chat-layout,
       .dashboard {
         grid-template-columns: 1fr;
       }
 
-      .sidebar {
-        position: static;
-        height: auto;
-      }
+      .sidebar { position: static; height: auto; }
     }
 
     @media (max-width: 760px) {
       .auth-points,
       .stats-row,
       .composer,
-      .chat-controls {
+      .chat-controls,
+      .search-shell,
+      .picker-actions {
         grid-template-columns: 1fr;
-      }
-
-      .top-shell {
         flex-direction: column;
-        align-items: stretch;
       }
 
-      .search-shell {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
+      .top-shell { flex-direction: column; align-items: stretch; }
+      .search-shell { align-items: stretch; }
       .card-actions,
       .chip-row,
-      .summary-row {
-        flex-direction: column;
-      }
-
+      .summary-row { flex-direction: column; }
       .card-actions button,
       .chip,
-      .skill-chip {
-        width: 100%;
-      }
+      .skill-chip,
+      .picker-actions button,
+      .mini-btn { width: 100%; }
+      .chat-msg { max-width: 100%; }
     }
   </style>
 </head>
 <body>
   <section id="authScreen" class="auth-screen">
     <div class="auth-card">
-      <div class="welcome-panel">
+      <div class="welcome-panel glass">
         <div>
           <div class="brand-row">
             <span class="brand-mark">S</span>
@@ -886,7 +667,7 @@
         </div>
       </div>
 
-      <div class="auth-panel">
+      <div class="auth-panel glass">
         <div class="tab-row">
           <button id="showLoginTab" class="tab-btn active" type="button">Iniciar sesion</button>
           <button id="showSignupTab" class="tab-btn" type="button">Crear cuenta</button>
@@ -894,9 +675,9 @@
 
         <div id="loginPane" class="form-shell">
           <h2>Welcome back</h2>
-          <p>Ingresa con tu usuario para continuar en tu dashboard de intercambios.</p>
-          <label>Usuario</label>
-          <input id="loginUser" placeholder="ej: Pedro" />
+          <p>Ingresa con tu correo para continuar en tu dashboard de intercambios.</p>
+          <label>Correo</label>
+          <input id="loginEmail" type="email" placeholder="correo@ejemplo.com" />
           <label>Contrasena</label>
           <input id="loginPass" type="password" placeholder="Tu contrasena" />
           <button id="loginBtn" class="primary-btn" type="button">Entrar</button>
@@ -904,9 +685,11 @@
 
         <div id="signupPane" class="form-shell hidden">
           <h2>Create your account</h2>
-          <p>Crea tu cuenta y luego completa el perfil con las habilidades que ensenas y quieres aprender.</p>
-          <label>Usuario</label>
-          <input id="signupUser" placeholder="ej: Pedro" />
+          <p>Crea tu cuenta con nombre, correo y contrasena. Luego completas el perfil con tus habilidades.</p>
+          <label>Nombre</label>
+          <input id="signupName" placeholder="Pedro" />
+          <label>Correo</label>
+          <input id="signupEmail" type="email" placeholder="correo@ejemplo.com" />
           <label>Contrasena</label>
           <input id="signupPass" type="password" placeholder="Minimo 4 caracteres" />
           <button id="signupBtn" class="primary-btn" type="button">Crear cuenta</button>
@@ -916,7 +699,7 @@
   </section>
 
   <section id="onboardingModal" class="auth-modal hidden">
-    <div class="modal-card">
+    <div class="modal-card glass">
       <h2>Set Up Your Profile</h2>
       <p>Completa tu perfil inicial para entrar en el marketplace de intercambio.</p>
 
@@ -939,23 +722,36 @@
         </div>
       </div>
 
-      <div class="field-grid">
+      <div class="selector-row">
         <div class="select-card">
           <h3>Skills you want to teach</h3>
           <small>Selecciona una o varias habilidades que ofreces.</small>
           <div id="teachSummary" class="summary-row"></div>
-          <div id="teachCatalog" class="skills-scroll"></div>
+          <button id="openTeachPickerBtn" class="ghost-btn" type="button">Elegir habilidades para ofrecer</button>
         </div>
 
         <div class="select-card">
           <h3>Skills you want to learn</h3>
           <small>Selecciona las habilidades que quieres recibir.</small>
           <div id="learnSummary" class="summary-row"></div>
-          <div id="learnCatalog" class="skills-scroll"></div>
+          <button id="openLearnPickerBtn" class="ghost-btn" type="button">Elegir habilidades para aprender</button>
         </div>
       </div>
 
       <button id="completeOnboardingBtn" class="primary-btn" type="button">Continue</button>
+    </div>
+  </section>
+
+  <section id="skillPickerOverlay" class="picker-overlay hidden">
+    <div class="picker-card">
+      <h2 id="pickerTitle">Seleccionar habilidades</h2>
+      <input id="pickerSearchInput" placeholder="Search skills..." />
+      <div id="pickerCategoryChips" class="chip-row" style="margin-top: 0.8rem;"></div>
+      <div id="pickerSkillsList" class="skills-list"></div>
+      <div class="picker-actions">
+        <button id="savePickerBtn" class="primary-btn" type="button">Save</button>
+        <button id="cancelPickerBtn" class="ghost-btn" type="button">Cancelar</button>
+      </div>
     </div>
   </section>
 
@@ -998,7 +794,7 @@
         <div class="hero-strip">
           <h2>People matching your skill exchange</h2>
           <p>Estas son las solicitudes activas del marketplace. Usa el buscador y los filtros para encontrar un intercambio y aceptar si te interesa.</p>
-          <div id="categoryChips" class="chip-row"></div>
+          <div id="dashboardCategoryChips" class="chip-row" style="margin-top: 0.9rem;"></div>
         </div>
 
         <div class="stats-row">
@@ -1016,7 +812,7 @@
           </div>
         </div>
 
-        <div class="cards-grid" id="marketplaceGrid"></div>
+        <div id="marketplaceGrid" class="cards-grid"></div>
       </section>
 
       <section id="publishView" class="view">
@@ -1121,14 +917,13 @@
             <div class="surface-card">
               <h3>Tus habilidades guardadas</h3>
               <div id="profileTeachChips" class="summary-row"></div>
-              <div id="profileLearnChips" class="summary-row"></div>
+              <div id="profileLearnChips" class="summary-row" style="margin-top: 0.75rem;"></div>
             </div>
-            <div class="debug-shell hidden" id="debugShell">
+            <div id="debugShell" class="debug-shell hidden">
               <h3>Debug tecnico</h3>
               <label>URL Backend</label>
               <input id="apiBase" value="https://ing-soft-5shh.onrender.com" />
               <button id="saveCfgBtn" class="ghost-btn" type="button">Guardar configuracion tecnica</button>
-              <button id="toggleDebugBtn" class="ghost-btn" type="button">Mostrar/Ocultar log</button>
               <pre id="log"></pre>
             </div>
             <button id="toggleTechBtn" class="ghost-btn" type="button">Mostrar/Ocultar ajustes tecnicos</button>
@@ -1147,31 +942,35 @@
     const dbKeyLatestRequestPrefix = "skillswap_latest_request_";
 
     const skillsCatalog = {
+      "All": [],
       "Creative & Arts": ["Graphic Design", "UI/UX Design", "Illustration", "Animation", "Photography"],
       "Tech & Development": ["Python", "JavaScript", "React", "SQL", "Data Analysis"],
       "Language & Communication": ["English", "Spanish", "Public Speaking", "Writing", "French"],
       "Business & Marketing": ["Marketing", "Branding", "Sales", "SEO", "Storytelling"],
       "Career & Soft Skills": ["Leadership", "Productivity", "Interview Prep", "Negotiation", "Teamwork"],
-      "Lifestyle": ["Cooking", "Fitness", "Guitar", "Gardening", "Chess"]
+      "Lifestyle, Games & Hobbies": ["Cooking", "Fitness", "Guitar", "Gardening", "Chess"]
     };
 
     const authScreen = $("authScreen");
     const onboardingModal = $("onboardingModal");
+    const skillPickerOverlay = $("skillPickerOverlay");
     const dashboard = $("dashboard");
     const debugShell = $("debugShell");
     const logEl = $("log");
     const chatBox = $("chatBox");
     const marketplaceGrid = $("marketplaceGrid");
     const conversationsList = $("conversationsList");
-    const categoryChips = $("categoryChips");
-    const teachCatalog = $("teachCatalog");
-    const learnCatalog = $("learnCatalog");
+    const dashboardCategoryChips = $("dashboardCategoryChips");
     const teachSummary = $("teachSummary");
     const learnSummary = $("learnSummary");
     const teachPreview = $("teachPreview");
     const learnPreview = $("learnPreview");
     const profileTeachChips = $("profileTeachChips");
     const profileLearnChips = $("profileLearnChips");
+    const pickerTitle = $("pickerTitle");
+    const pickerSearchInput = $("pickerSearchInput");
+    const pickerCategoryChips = $("pickerCategoryChips");
+    const pickerSkillsList = $("pickerSkillsList");
 
     let currentUser = null;
     let socket = null;
@@ -1181,9 +980,10 @@
     let onboardingLearn = new Set();
     let currentMarketplace = [];
     let currentConversations = [];
+    let pickerMode = "teach";
+    let pickerCategory = "All";
 
     function log(message) {
-      if (!logEl) return;
       const line = `[${new Date().toLocaleTimeString()}] ${message}`;
       logEl.textContent += `${line}\n`;
       logEl.scrollTop = logEl.scrollHeight;
@@ -1205,9 +1005,9 @@
       currentUser = localStorage.getItem(dbKeySession) || null;
     }
 
-    function setSession(username) {
-      localStorage.setItem(dbKeySession, username);
-      currentUser = username;
+    function setSession(email) {
+      localStorage.setItem(dbKeySession, email);
+      currentUser = email;
     }
 
     function clearSession() {
@@ -1220,14 +1020,13 @@
       }
       authScreen.classList.remove("hidden");
       onboardingModal.classList.add("hidden");
+      skillPickerOverlay.classList.add("hidden");
       dashboard.classList.add("hidden");
       activateView("matchesView");
     }
 
     function cfg() {
-      return {
-        apiBase: $("apiBase").value.trim().replace(/\/$/, "")
-      };
+      return { apiBase: $("apiBase").value.trim().replace(/\/$/, "") };
     }
 
     function saveCfg() {
@@ -1244,12 +1043,13 @@
       } catch {}
     }
 
-    function profileKey(user) {
-      return `${dbKeyProfilePrefix}${user}`;
-    }
+    function profileKey(user) { return `${dbKeyProfilePrefix}${user}`; }
+    function latestRequestKey(user) { return `${dbKeyLatestRequestPrefix}${user}`; }
 
-    function latestRequestKey(user) {
-      return `${dbKeyLatestRequestPrefix}${user}`;
+    function getCurrentUserRecord() {
+      if (!currentUser) return null;
+      const users = readUsers();
+      return users[currentUser] || null;
     }
 
     function getProfile(user = currentUser) {
@@ -1285,64 +1085,25 @@
     }
 
     function setAuthMode(mode) {
-      const loginTab = $("showLoginTab");
-      const signupTab = $("showSignupTab");
-      const loginPane = $("loginPane");
-      const signupPane = $("signupPane");
-
       const isLogin = mode === "login";
-      loginTab.classList.toggle("active", isLogin);
-      signupTab.classList.toggle("active", !isLogin);
-      loginPane.classList.toggle("hidden", !isLogin);
-      signupPane.classList.toggle("hidden", isLogin);
-    }
-
-    function renderSkillCatalog(target, selectedSet, type) {
-      target.innerHTML = "";
-      Object.entries(skillsCatalog).forEach(([category, skills]) => {
-        const block = document.createElement("div");
-        block.className = "category-block";
-        const title = document.createElement("strong");
-        title.textContent = category;
-        block.appendChild(title);
-
-        const wrap = document.createElement("div");
-        wrap.className = "skills-wrap";
-
-        skills.forEach((skill) => {
-          const chip = document.createElement("button");
-          chip.type = "button";
-          chip.className = `skill-chip${selectedSet.has(skill) ? " active" : ""}`;
-          chip.textContent = skill;
-          chip.onclick = () => {
-            if (selectedSet.has(skill)) {
-              selectedSet.delete(skill);
-            } else {
-              selectedSet.add(skill);
-            }
-            renderSkillCatalog(target, selectedSet, type);
-            renderSelectedSummary(type);
-          };
-          wrap.appendChild(chip);
-        });
-
-        block.appendChild(wrap);
-        target.appendChild(block);
-      });
+      $("showLoginTab").classList.toggle("active", isLogin);
+      $("showSignupTab").classList.toggle("active", !isLogin);
+      $("loginPane").classList.toggle("hidden", !isLogin);
+      $("signupPane").classList.toggle("hidden", isLogin);
     }
 
     function renderSelectedSummary(type) {
       const target = type === "teach" ? teachSummary : learnSummary;
-      const selectedSet = type === "teach" ? onboardingTeach : onboardingLearn;
+      const selected = type === "teach" ? onboardingTeach : onboardingLearn;
       target.innerHTML = "";
-      if (!selectedSet.size) {
+      if (!selected.size) {
         const chip = document.createElement("span");
         chip.className = "summary-chip";
         chip.textContent = "Sin seleccion";
         target.appendChild(chip);
         return;
       }
-      Array.from(selectedSet).forEach((skill) => {
+      Array.from(selected).forEach((skill) => {
         const chip = document.createElement("span");
         chip.className = "summary-chip";
         chip.textContent = skill;
@@ -1350,37 +1111,113 @@
       });
     }
 
-    function renderCategoryFilters() {
-      categoryChips.innerHTML = "";
-      ["All", ...Object.keys(skillsCatalog)].forEach((category) => {
+    function renderPickerCategories() {
+      pickerCategoryChips.innerHTML = "";
+      Object.keys(skillsCatalog).forEach((category) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = `chip${pickerCategory === category ? " active" : ""}`;
+        chip.textContent = category;
+        chip.onclick = () => {
+          pickerCategory = category;
+          renderPickerCategories();
+          renderPickerSkills();
+        };
+        pickerCategoryChips.appendChild(chip);
+      });
+    }
+
+    function renderPickerSkills() {
+      const selected = pickerMode === "teach" ? onboardingTeach : onboardingLearn;
+      const query = pickerSearchInput.value.trim().toLowerCase();
+      pickerSkillsList.innerHTML = "";
+
+      Object.entries(skillsCatalog)
+        .filter(([category]) => category !== "All")
+        .filter(([category]) => pickerCategory === "All" || category === pickerCategory)
+        .forEach(([category, skills]) => {
+          const filteredSkills = skills.filter((skill) => skill.toLowerCase().includes(query));
+          if (!filteredSkills.length) return;
+
+          const block = document.createElement("div");
+          block.className = "category-block";
+          const title = document.createElement("strong");
+          title.textContent = category;
+          block.appendChild(title);
+
+          const wrap = document.createElement("div");
+          wrap.className = "skills-wrap";
+          filteredSkills.forEach((skill) => {
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = `skill-chip${selected.has(skill) ? " active" : ""}`;
+            chip.textContent = skill;
+            chip.onclick = () => {
+              if (selected.has(skill)) {
+                selected.delete(skill);
+              } else {
+                selected.add(skill);
+              }
+              renderPickerSkills();
+              renderSelectedSummary(pickerMode);
+            };
+            wrap.appendChild(chip);
+          });
+
+          block.appendChild(wrap);
+          pickerSkillsList.appendChild(block);
+        });
+
+      if (!pickerSkillsList.children.length) {
+        const empty = document.createElement("div");
+        empty.className = "muted";
+        empty.textContent = "No hay habilidades para esa busqueda.";
+        pickerSkillsList.appendChild(empty);
+      }
+    }
+
+    function openSkillPicker(mode) {
+      pickerMode = mode;
+      pickerCategory = "All";
+      pickerSearchInput.value = "";
+      pickerTitle.textContent = mode === "teach" ? "Selecciona habilidades para ofrecer" : "Selecciona habilidades para aprender";
+      renderPickerCategories();
+      renderPickerSkills();
+      skillPickerOverlay.classList.remove("hidden");
+    }
+
+    function closeSkillPicker() {
+      skillPickerOverlay.classList.add("hidden");
+    }
+
+    function renderDashboardCategories() {
+      dashboardCategoryChips.innerHTML = "";
+      Object.keys(skillsCatalog).forEach((category) => {
         const chip = document.createElement("button");
         chip.type = "button";
         chip.className = `chip${selectedCategory === category ? " active" : ""}`;
         chip.textContent = category;
         chip.onclick = () => {
           selectedCategory = category;
-          renderCategoryFilters();
+          renderDashboardCategories();
           renderMarketplace(currentMarketplace);
         };
-        categoryChips.appendChild(chip);
+        dashboardCategoryChips.appendChild(chip);
       });
     }
 
     function renderTopBar() {
-      const profile = getProfile() || { fullName: currentUser, city: "", language: "" };
-      $("topAvatar").textContent = getInitials(profile.fullName || currentUser);
-      $("topUsername").textContent = profile.fullName || currentUser;
-      const meta = [profile.city, profile.language].filter(Boolean).join(" · ");
-      $("topMeta").textContent = meta || currentUser;
+      const profile = getProfile() || {};
+      const userRecord = getCurrentUserRecord() || {};
+      const visibleName = profile.fullName || userRecord.name || currentUser;
+      $("topAvatar").textContent = getInitials(visibleName);
+      $("topUsername").textContent = visibleName;
+      $("topMeta").textContent = [profile.city, profile.language].filter(Boolean).join(" · ") || currentUser;
     }
 
     function activateView(viewId) {
-      document.querySelectorAll(".view").forEach((view) => {
-        view.classList.toggle("active", view.id === viewId);
-      });
-      document.querySelectorAll(".nav-btn").forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.view === viewId);
-      });
+      document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
+      document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === viewId));
     }
 
     function ensureOnboardingOrDashboard() {
@@ -1388,6 +1225,8 @@
       if (!profile || !profile.teachSkills?.length || !profile.learnSkills?.length) {
         authScreen.classList.add("hidden");
         dashboard.classList.add("hidden");
+        const record = getCurrentUserRecord();
+        $("fullName").value = record?.name || "";
         onboardingModal.classList.remove("hidden");
         return;
       }
@@ -1444,24 +1283,23 @@
     }
 
     function signup() {
-      const user = $("signupUser").value.trim();
+      const name = $("signupName").value.trim();
+      const email = $("signupEmail").value.trim().toLowerCase();
       const pass = $("signupPass").value.trim();
-      if (!user || pass.length < 4) {
-        alert("Completa usuario y una contrasena de al menos 4 caracteres.");
+      if (!name || !email || pass.length < 4) {
+        alert("Completa nombre, correo y una contrasena de al menos 4 caracteres.");
         return;
       }
       const users = readUsers();
-      if (users[user]) {
-        alert("Ese usuario ya existe.");
+      if (users[email]) {
+        alert("Ese correo ya esta registrado.");
         return;
       }
-      users[user] = { pass };
+      users[email] = { name, pass };
       writeUsers(users);
-      setSession(user);
+      setSession(email);
       onboardingTeach = new Set();
       onboardingLearn = new Set();
-      renderSkillCatalog(teachCatalog, onboardingTeach, "teach");
-      renderSkillCatalog(learnCatalog, onboardingLearn, "learn");
       renderSelectedSummary("teach");
       renderSelectedSummary("learn");
       ensureOnboardingOrDashboard();
@@ -1469,14 +1307,14 @@
     }
 
     function login() {
-      const user = $("loginUser").value.trim();
+      const email = $("loginEmail").value.trim().toLowerCase();
       const pass = $("loginPass").value.trim();
       const users = readUsers();
-      if (!users[user] || users[user].pass !== pass) {
-        alert("Usuario o contrasena incorrectos.");
+      if (!users[email] || users[email].pass !== pass) {
+        alert("Correo o contrasena incorrectos.");
         return;
       }
-      setSession(user);
+      setSession(email);
       ensureOnboardingOrDashboard();
       log("Sesion iniciada.");
     }
@@ -1486,12 +1324,10 @@
       const bio = $("bio").value.trim();
       const city = $("city").value.trim();
       const language = $("language").value.trim();
-
       if (!fullName || !bio || !city || !language || !onboardingTeach.size || !onboardingLearn.size) {
         alert("Completa todos los datos y selecciona habilidades para ofrecer y aprender.");
         return;
       }
-
       const profile = {
         fullName,
         bio,
@@ -1575,7 +1411,6 @@
       const filtered = requests.filter(marketplaceMatchesCategory);
       $("marketplaceTotal").textContent = String(filtered.length);
       $("matchesCountBadge").textContent = String(filtered.length);
-
       if (!filtered.length) {
         const card = document.createElement("div");
         card.className = "surface-card";
@@ -1583,7 +1418,6 @@
         marketplaceGrid.appendChild(card);
         return;
       }
-
       filtered.forEach((request) => {
         const card = document.createElement("article");
         card.className = "match-card";
@@ -1608,22 +1442,18 @@
             <div>${request.intro_message || "Sin descripcion"}</div>
           </div>
         `;
-
         const actions = document.createElement("div");
         actions.className = "card-actions";
-
         const acceptBtn = document.createElement("button");
         acceptBtn.className = "primary-btn";
         acceptBtn.type = "button";
         acceptBtn.textContent = "Match";
         acceptBtn.onclick = () => acceptRequest(request.id);
-
         const detailsBtn = document.createElement("button");
         detailsBtn.className = "ghost-btn";
         detailsBtn.type = "button";
         detailsBtn.textContent = "Go to profile";
         detailsBtn.onclick = () => showRequestDetails(request);
-
         actions.appendChild(acceptBtn);
         actions.appendChild(detailsBtn);
         card.appendChild(actions);
@@ -1670,7 +1500,6 @@
       conversationsList.innerHTML = "";
       $("conversationTotal").textContent = String(currentConversations.length);
       $("chatCountBadge").textContent = String(currentConversations.length);
-
       if (!currentConversations.length) {
         const empty = document.createElement("div");
         empty.className = "list-item";
@@ -1678,7 +1507,6 @@
         conversationsList.appendChild(empty);
         return;
       }
-
       currentConversations.forEach((conversation) => {
         const item = document.createElement("div");
         item.className = `list-item${selectedConversationId === conversation.id ? " active" : ""}`;
@@ -1710,14 +1538,11 @@
     function addChatMessage(message) {
       const row = document.createElement("div");
       row.className = `chat-msg${message.from_user_id === currentUser ? " mine" : ""}`;
-
       const meta = document.createElement("span");
       meta.className = "chat-meta";
       meta.textContent = `${message.from_user_id}${message.sent_at ? ` · ${new Date(message.sent_at).toLocaleTimeString()}` : ""}`;
-
       const body = document.createElement("div");
       body.textContent = message.content;
-
       row.appendChild(meta);
       row.appendChild(body);
       chatBox.appendChild(row);
@@ -1796,14 +1621,10 @@
       debugShell.classList.toggle("hidden");
     }
 
-    function toggleDebugLog() {
-      logEl.classList.toggle("hidden");
-    }
-
     async function refreshAll() {
       renderTopBar();
       hydrateProfileUI();
-      renderCategoryFilters();
+      renderDashboardCategories();
       renderLatestRequest();
       await loadMarketplace();
       await loadConversations();
@@ -1819,6 +1640,11 @@
     $("showSignupTab").onclick = () => setAuthMode("signup");
     $("signupBtn").onclick = signup;
     $("loginBtn").onclick = login;
+    $("openTeachPickerBtn").onclick = () => openSkillPicker("teach");
+    $("openLearnPickerBtn").onclick = () => openSkillPicker("learn");
+    $("savePickerBtn").onclick = closeSkillPicker;
+    $("cancelPickerBtn").onclick = closeSkillPicker;
+    pickerSearchInput.addEventListener("input", renderPickerSkills);
     $("completeOnboardingBtn").onclick = completeOnboarding;
     $("searchBtn").onclick = loadMarketplace;
     $("publishRequestBtn").onclick = () => publishRequest(false);
@@ -1830,22 +1656,19 @@
     $("logoutBtn").onclick = clearSession;
     $("saveCfgBtn").onclick = saveCfg;
     $("toggleTechBtn").onclick = toggleTech;
-    $("toggleDebugBtn").onclick = toggleDebugLog;
 
     loadCfg();
     loadSession();
-    renderSkillCatalog(teachCatalog, onboardingTeach, "teach");
-    renderSkillCatalog(learnCatalog, onboardingLearn, "learn");
     renderSelectedSummary("teach");
     renderSelectedSummary("learn");
-    renderCategoryFilters();
-    logEl.classList.add("hidden");
+    renderDashboardCategories();
 
     if (currentUser) {
       ensureOnboardingOrDashboard();
     } else {
       authScreen.classList.remove("hidden");
       onboardingModal.classList.add("hidden");
+      skillPickerOverlay.classList.add("hidden");
       dashboard.classList.add("hidden");
     }
   </script>
