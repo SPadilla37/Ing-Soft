@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skill Exchange - Mensajeria</title>
+  <style>
+    :root {
+      --bg: #f4f7f2;
+      --ink: #1f2a1f;
+      --card: #ffffff;
+      --accent: #2f7d4b;
+      --accent-2: #d8892b;
+      --line: #d9e1d3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 20% 0%, #dff3d6 0%, transparent 40%),
+        radial-gradient(circle at 90% 20%, #f6e3c8 0%, transparent 35%),
+        var(--bg);
+    }
+
+    .wrap {
+      width: min(1100px, 95vw);
+      margin: 2rem auto;
+      display: grid;
+      gap: 1rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      letter-spacing: 0.03em;
+    }
+
+    .sub {
+      margin: 0.25rem 0 0;
+      opacity: 0.8;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    }
+
+    label {
+      display: block;
+      margin-top: 0.6rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    input, select, textarea, button {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #b8c7b5;
+      padding: 0.6rem 0.7rem;
+      font: inherit;
+      background: #fff;
+    }
+
+    textarea { min-height: 80px; resize: vertical; }
+
+    button {
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 0.8rem;
+    }
+
+    button.secondary { background: var(--accent-2); }
+    button.ghost { background: #5b6d57; }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+    }
+
+    .list {
+      margin-top: 0.7rem;
+      display: grid;
+      gap: 0.6rem;
+      max-height: 280px;
+      overflow: auto;
+    }
+
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.6rem;
+      background: #fefefe;
+    }
+
+    .pill {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      background: #e8f7e8;
+      border: 1px solid #cce8cc;
+    }
+
+    .log {
+      background: #18231b;
+      color: #deffe1;
+      border-radius: 12px;
+      padding: 0.8rem;
+      min-height: 180px;
+      max-height: 300px;
+      overflow: auto;
+      font-family: Consolas, monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+    }
+
+    .chat-box {
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.6rem;
+      background: #fafdfa;
+    }
+
+    .chat-msg {
+      margin: 0.35rem 0;
+      padding: 0.4rem 0.55rem;
+      border-radius: 8px;
+      background: #eaf4e8;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="card">
+      <h1>Plataforma de Intercambio - Mensajeria</h1>
+      <p class="sub">Flujo: solicitud -> aceptar/rechazar -> chat WebSocket</p>
+    </header>
+
+    <section class="grid">
+      <article class="card">
+        <h3>1) Configuracion</h3>
+        <label>URL Backend (Render)</label>
+        <input id="apiBase" value="https://ing-soft-5shh.onrender.com" />
+        <label>Tu usuario actual</label>
+        <input id="currentUser" value="SPadilla37" />
+        <button id="saveCfg" class="ghost">Guardar configuracion local</button>
+      </article>
+
+      <article class="card">
+        <h3>2) Enviar solicitud de chat</h3>
+        <label>Receptor</label>
+        <input id="toUser" placeholder="ej: maria22" />
+        <div class="row">
+          <div>
+            <label>Habilidad que ofreces</label>
+            <input id="offeredSkill" placeholder="Python" />
+          </div>
+          <div>
+            <label>Habilidad que buscas</label>
+            <input id="requestedSkill" placeholder="Figma" />
+          </div>
+        </div>
+        <label>Mensaje inicial</label>
+        <textarea id="introMessage" placeholder="Hola, te puedo ayudar con..."></textarea>
+        <button id="sendRequest">Enviar solicitud</button>
+      </article>
+
+      <article class="card">
+        <h3>3) Solicitudes recibidas</h3>
+        <button id="loadIncoming" class="secondary">Cargar solicitudes</button>
+        <div id="incomingList" class="list"></div>
+      </article>
+
+      <article class="card">
+        <h3>4) Conversaciones</h3>
+        <button id="loadConversations" class="secondary">Cargar conversaciones</button>
+        <div id="conversationsList" class="list"></div>
+      </article>
+
+      <article class="card" style="grid-column: 1 / -1;">
+        <h3>5) Chat WebSocket</h3>
+        <div class="row">
+          <div>
+            <label>Conversation ID</label>
+            <input id="conversationId" placeholder="pega el conversation id" />
+          </div>
+          <div style="display: flex; align-items: end; gap: 0.4rem;">
+            <button id="connectWs">Conectar WS</button>
+            <button id="disconnectWs" class="ghost">Cerrar WS</button>
+          </div>
+        </div>
+        <div id="chatBox" class="chat-box"></div>
+        <div class="row">
+          <input id="chatInput" placeholder="Escribe mensaje..." />
+          <button id="sendWsMessage">Enviar WS</button>
+        </div>
+      </article>
+
+      <article class="card" style="grid-column: 1 / -1;">
+        <h3>Log</h3>
+        <div id="log" class="log"></div>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const logEl = $("log");
+    const chatBox = $("chatBox");
+    let socket = null;
+
+    function log(msg) {
+      const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logEl.textContent += `${line}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function cfg() {
+      return {
+        apiBase: $("apiBase").value.trim().replace(/\/$/, ""),
+        currentUser: $("currentUser").value.trim(),
+      };
+    }
+
+    function saveCfg() {
+      localStorage.setItem("skill_chat_cfg", JSON.stringify(cfg()));
+      log("Configuracion guardada en localStorage");
+    }
+
+    function loadCfg() {
+      const saved = localStorage.getItem("skill_chat_cfg");
+      if (!saved) return;
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.apiBase) $("apiBase").value = parsed.apiBase;
+        if (parsed.currentUser) $("currentUser").value = parsed.currentUser;
+      } catch {
+        log("No se pudo leer configuracion previa");
+      }
+    }
+
+    async function api(path, options = {}) {
+      const { apiBase } = cfg();
+      const response = await fetch(`${apiBase}${path}`, {
+        headers: { "Content-Type": "application/json" },
+        ...options,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || JSON.stringify(data));
+      }
+      return data;
+    }
+
+    function requestCard(request) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "item";
+      wrapper.innerHTML = `
+        <div><b>ID:</b> ${request.id}</div>
+        <div><b>De:</b> ${request.from_user_id} -> <b>Para:</b> ${request.to_user_id}</div>
+        <div><b>Skills:</b> ${request.offered_skill} <-> ${request.requested_skill}</div>
+        <div><b>Status:</b> <span class="pill">${request.status}</span></div>
+        <div><b>Intro:</b> ${request.intro_message || "(sin mensaje)"}</div>
+      `;
+
+      if (request.status === "pending") {
+        const acceptBtn = document.createElement("button");
+        acceptBtn.textContent = "Aceptar";
+        acceptBtn.onclick = () => respondRequest(request.id, "accepted");
+
+        const rejectBtn = document.createElement("button");
+        rejectBtn.className = "secondary";
+        rejectBtn.textContent = "Rechazar";
+        rejectBtn.onclick = () => respondRequest(request.id, "rejected");
+
+        wrapper.appendChild(acceptBtn);
+        wrapper.appendChild(rejectBtn);
+      }
+
+      return wrapper;
+    }
+
+    function conversationCard(conversation) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "item";
+      wrapper.innerHTML = `
+        <div><b>Conversation ID:</b> ${conversation.id}</div>
+        <div><b>Participantes:</b> ${conversation.participants.join(", ")}</div>
+        <div><b>Request ID:</b> ${conversation.request_id}</div>
+      `;
+
+      const useBtn = document.createElement("button");
+      useBtn.className = "ghost";
+      useBtn.textContent = "Usar esta conversacion";
+      useBtn.onclick = () => {
+        $("conversationId").value = conversation.id;
+        log(`Conversation seleccionada: ${conversation.id}`);
+      };
+
+      wrapper.appendChild(useBtn);
+      return wrapper;
+    }
+
+    function addChatMessage(msg) {
+      const div = document.createElement("div");
+      div.className = "chat-msg";
+      div.textContent = `${msg.from_user_id}: ${msg.content}`;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function sendRequest() {
+      try {
+        const { currentUser } = cfg();
+        const body = {
+          from_user_id: currentUser,
+          to_user_id: $("toUser").value.trim(),
+          offered_skill: $("offeredSkill").value.trim(),
+          requested_skill: $("requestedSkill").value.trim(),
+          intro_message: $("introMessage").value.trim(),
+        };
+        const result = await api("/message-requests", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        log(`Solicitud enviada: ${result.request.id}`);
+      } catch (err) {
+        log(`Error enviando solicitud: ${err.message}`);
+      }
+    }
+
+    async function loadIncoming() {
+      try {
+        const { currentUser } = cfg();
+        const result = await api(`/message-requests/${encodeURIComponent(currentUser)}/incoming`);
+        const list = $("incomingList");
+        list.innerHTML = "";
+        result.requests.forEach((request) => list.appendChild(requestCard(request)));
+        log(`Solicitudes recibidas: ${result.requests.length}`);
+      } catch (err) {
+        log(`Error cargando solicitudes: ${err.message}`);
+      }
+    }
+
+    async function respondRequest(requestId, action) {
+      try {
+        const { currentUser } = cfg();
+        const result = await api(`/message-requests/${requestId}/respond`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            responder_user_id: currentUser,
+            action,
+          }),
+        });
+        log(`Solicitud ${action}: ${requestId}`);
+        if (result.conversation_id) {
+          log(`Conversacion creada: ${result.conversation_id}`);
+          $("conversationId").value = result.conversation_id;
+        }
+        await loadIncoming();
+      } catch (err) {
+        log(`Error respondiendo solicitud: ${err.message}`);
+      }
+    }
+
+    async function loadConversations() {
+      try {
+        const { currentUser } = cfg();
+        const result = await api(`/conversations/${encodeURIComponent(currentUser)}`);
+        const list = $("conversationsList");
+        list.innerHTML = "";
+        result.conversations.forEach((conversation) => list.appendChild(conversationCard(conversation)));
+        log(`Conversaciones cargadas: ${result.conversations.length}`);
+      } catch (err) {
+        log(`Error cargando conversaciones: ${err.message}`);
+      }
+    }
+
+    function wsUrl(baseUrl, conversationId, userId) {
+      const isSecure = baseUrl.startsWith("https://");
+      const wsProto = isSecure ? "wss://" : "ws://";
+      const host = baseUrl.replace(/^https?:\/\//, "");
+      return `${wsProto}${host}/ws/chat/${encodeURIComponent(conversationId)}?user_id=${encodeURIComponent(userId)}`;
+    }
+
+    function connectWs() {
+      const { apiBase, currentUser } = cfg();
+      const conversationId = $("conversationId").value.trim();
+      if (!conversationId) {
+        log("Debes indicar conversation id");
+        return;
+      }
+
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
+
+      const url = wsUrl(apiBase, conversationId, currentUser);
+      socket = new WebSocket(url);
+
+      socket.onopen = () => log(`WS conectado: ${url}`);
+
+      socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === "history") {
+          chatBox.innerHTML = "";
+          data.messages.forEach(addChatMessage);
+          log(`Historial recibido: ${data.messages.length} mensajes`);
+        } else if (data.type === "chat_message") {
+          addChatMessage(data.message);
+        } else {
+          log(`WS evento: ${JSON.stringify(data)}`);
+        }
+      };
+
+      socket.onerror = () => log("WS error");
+      socket.onclose = () => log("WS cerrado");
+    }
+
+    function disconnectWs() {
+      if (socket) {
+        socket.close();
+        socket = null;
+      }
+    }
+
+    function sendWsMessage() {
+      const content = $("chatInput").value.trim();
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        log("Conecta el WebSocket primero");
+        return;
+      }
+      if (!content) return;
+
+      socket.send(JSON.stringify({ type: "message", content }));
+      $("chatInput").value = "";
+    }
+
+    $("saveCfg").onclick = saveCfg;
+    $("sendRequest").onclick = sendRequest;
+    $("loadIncoming").onclick = loadIncoming;
+    $("loadConversations").onclick = loadConversations;
+    $("connectWs").onclick = connectWs;
+    $("disconnectWs").onclick = disconnectWs;
+    $("sendWsMessage").onclick = sendWsMessage;
+
+    loadCfg();
+    log("Listo. Configura tu URL de Render y prueba el flujo.");
+  </script>
+</body>
+</html>
