@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -64,7 +64,7 @@ class MessageRequestModel(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     from_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
-    to_user_id: Mapped[str | None] = mapped_column(String(120), ForeignKey("users.id"), index=True, nullable=True)
+    to_user_id: Mapped[Optional[str]] = mapped_column(String(120), ForeignKey("users.id"), index=True, nullable=True)
     offered_skill: Mapped[str] = mapped_column(String(120))
     requested_skill: Mapped[str] = mapped_column(String(120))
     intro_message: Mapped[str] = mapped_column(Text, default="")
