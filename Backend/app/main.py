@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Set
+from typing import Dict, List
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from sqlalchemy import DateTime, ForeignKey, String, Text, create_engine, select
+from sqlalchemy.orm import Mapped, Session, declarative_base, mapped_column, sessionmaker
 
 
 def utc_now_iso() -> str:
@@ -41,94 +42,102 @@ class ChatMessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=2000)
 
 
-@dataclass
-class MessageRequest:
-    id: str
-    from_user_id: str
-    to_user_id: str
-    offered_skill: str
-    requested_skill: str
-    intro_message: str
-    status: RequestStatus
-    created_at: str
-    updated_at: str
+Base = declarative_base()
 
 
-@dataclass
-class ChatMessage:
-    id: str
-    conversation_id: str
-    from_user_id: str
-    content: str
-    sent_at: str
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(120), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
-@dataclass
-class Conversation:
-    id: str
-    request_id: str
-    participants: Set[str] = field(default_factory=set)
-    created_at: str = field(default_factory=utc_now_iso)
+class MessageRequestModel(Base):
+    __tablename__ = "message_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    from_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
+    to_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
+    offered_skill: Mapped[str] = mapped_column(String(120))
+    requested_skill: Mapped[str] = mapped_column(String(120))
+    intro_message: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(20), default=RequestStatus.pending.value, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
-class InMemoryStore:
-    def __init__(self) -> None:
-        self.requests: Dict[str, MessageRequest] = {}
-        self.conversations: Dict[str, Conversation] = {}
-        self.messages: Dict[str, List[ChatMessage]] = {}
+class ConversationModel(Base):
+    __tablename__ = "conversations"
 
-    def create_request(self, payload: MessageRequestCreate) -> MessageRequest:
-        if payload.from_user_id == payload.to_user_id:
-            raise HTTPException(status_code=400, detail="No puedes enviarte solicitud a ti mismo")
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    request_id: Mapped[str] = mapped_column(String(36), ForeignKey("message_requests.id"), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
-        now = utc_now_iso()
-        request = MessageRequest(
-            id=str(uuid4()),
-            from_user_id=payload.from_user_id,
-            to_user_id=payload.to_user_id,
-            offered_skill=payload.offered_skill,
-            requested_skill=payload.requested_skill,
-            intro_message=payload.intro_message,
-            status=RequestStatus.pending,
-            created_at=now,
-            updated_at=now,
-        )
-        self.requests[request.id] = request
-        return request
 
-    def respond_request(self, request_id: str, payload: MessageRequestResponse) -> MessageRequest:
-        request = self.requests.get(request_id)
-        if not request:
-            raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+class ConversationParticipant(Base):
+    __tablename__ = "conversation_participants"
 
-        if payload.responder_user_id != request.to_user_id:
-            raise HTTPException(status_code=403, detail="Solo el receptor puede responder la solicitud")
+    conversation_id: Mapped[str] = mapped_column(String(36), ForeignKey("conversations.id"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), primary_key=True)
 
-        if request.status != RequestStatus.pending:
-            raise HTTPException(status_code=400, detail="Esta solicitud ya fue respondida")
 
-        if payload.action not in {RequestStatus.accepted, RequestStatus.rejected}:
-            raise HTTPException(status_code=400, detail="La accion debe ser accepted o rejected")
+class ChatMessageModel(Base):
+    __tablename__ = "chat_messages"
 
-        request.status = payload.action
-        request.updated_at = utc_now_iso()
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(36), ForeignKey("conversations.id"), index=True)
+    from_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
+    content: Mapped[str] = mapped_column(Text)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
-        if request.status == RequestStatus.accepted:
-            conversation = Conversation(
-                id=str(uuid4()),
-                request_id=request.id,
-                participants={request.from_user_id, request.to_user_id},
-            )
-            self.conversations[conversation.id] = conversation
-            self.messages[conversation.id] = []
 
-        return request
+def normalize_database_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+psycopg://", 1)
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
 
-    def get_conversation_for_request(self, request_id: str) -> Conversation | None:
-        for conversation in self.conversations.values():
-            if conversation.request_id == request_id:
-                return conversation
-        return None
+
+default_db = "sqlite:///./skillswap.db"
+database_url = normalize_database_url(os.getenv("DATABASE_URL", default_db))
+
+engine_kwargs: Dict[str, object] = {"pool_pre_ping": True}
+if database_url.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(database_url, **engine_kwargs)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
+def ensure_user(session: Session, user_id: str) -> None:
+    user = session.get(User, user_id)
+    if not user:
+        session.add(User(id=user_id))
+
+
+def serialize_request(request: MessageRequestModel) -> dict:
+    return {
+        "id": request.id,
+        "from_user_id": request.from_user_id,
+        "to_user_id": request.to_user_id,
+        "offered_skill": request.offered_skill,
+        "requested_skill": request.requested_skill,
+        "intro_message": request.intro_message,
+        "status": request.status,
+        "created_at": request.created_at.isoformat(),
+        "updated_at": request.updated_at.isoformat(),
+    }
+
+
+def serialize_message(message: ChatMessageModel) -> dict:
+    return {
+        "id": message.id,
+        "conversation_id": message.conversation_id,
+        "from_user_id": message.from_user_id,
+        "content": message.content,
+        "sent_at": message.sent_at.isoformat(),
+    }
 
 
 class ConnectionManager:
@@ -172,8 +181,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-store = InMemoryStore()
 manager = ConnectionManager()
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    Base.metadata.create_all(bind=engine)
 
 
 @app.get("/health")
@@ -183,121 +196,211 @@ def health() -> dict:
 
 @app.post("/message-requests")
 def create_message_request(payload: MessageRequestCreate) -> dict:
-    request = store.create_request(payload)
-    return {"request": request.__dict__}
+    if payload.from_user_id == payload.to_user_id:
+        raise HTTPException(status_code=400, detail="No puedes enviarte solicitud a ti mismo")
+
+    with SessionLocal() as session:
+        ensure_user(session, payload.from_user_id)
+        ensure_user(session, payload.to_user_id)
+
+        now = datetime.now(timezone.utc)
+        request = MessageRequestModel(
+            id=str(uuid4()),
+            from_user_id=payload.from_user_id,
+            to_user_id=payload.to_user_id,
+            offered_skill=payload.offered_skill,
+            requested_skill=payload.requested_skill,
+            intro_message=payload.intro_message,
+            status=RequestStatus.pending.value,
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(request)
+        session.commit()
+        session.refresh(request)
+        return {"request": serialize_request(request)}
 
 
 @app.get("/message-requests/{user_id}/incoming")
 def get_incoming_requests(user_id: str) -> dict:
-    requests = [
-        request.__dict__
-        for request in store.requests.values()
-        if request.to_user_id == user_id
-    ]
-    requests.sort(key=lambda item: item["created_at"], reverse=True)
-    return {"requests": requests}
+    with SessionLocal() as session:
+        requests = session.execute(
+            select(MessageRequestModel)
+            .where(MessageRequestModel.to_user_id == user_id)
+            .order_by(MessageRequestModel.created_at.desc())
+        ).scalars().all()
+        return {"requests": [serialize_request(item) for item in requests]}
 
 
 @app.get("/message-requests/{user_id}/outgoing")
 def get_outgoing_requests(user_id: str) -> dict:
-    requests = [
-        request.__dict__
-        for request in store.requests.values()
-        if request.from_user_id == user_id
-    ]
-    requests.sort(key=lambda item: item["created_at"], reverse=True)
-    return {"requests": requests}
+    with SessionLocal() as session:
+        requests = session.execute(
+            select(MessageRequestModel)
+            .where(MessageRequestModel.from_user_id == user_id)
+            .order_by(MessageRequestModel.created_at.desc())
+        ).scalars().all()
+        return {"requests": [serialize_request(item) for item in requests]}
 
 
 @app.patch("/message-requests/{request_id}/respond")
 def respond_message_request(request_id: str, payload: MessageRequestResponse) -> dict:
-    request = store.respond_request(request_id, payload)
-    conversation = store.get_conversation_for_request(request.id)
-    return {
-        "request": request.__dict__,
-        "conversation_id": conversation.id if conversation else None,
-    }
+    if payload.action not in {RequestStatus.accepted, RequestStatus.rejected}:
+        raise HTTPException(status_code=400, detail="La accion debe ser accepted o rejected")
+
+    with SessionLocal() as session:
+        request = session.get(MessageRequestModel, request_id)
+        if not request:
+            raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+        if payload.responder_user_id != request.to_user_id:
+            raise HTTPException(status_code=403, detail="Solo el receptor puede responder la solicitud")
+
+        if request.status != RequestStatus.pending.value:
+            raise HTTPException(status_code=400, detail="Esta solicitud ya fue respondida")
+
+        request.status = payload.action.value
+        request.updated_at = datetime.now(timezone.utc)
+
+        conversation_id = None
+        if request.status == RequestStatus.accepted.value:
+            conversation = ConversationModel(
+                id=str(uuid4()),
+                request_id=request.id,
+                created_at=datetime.now(timezone.utc),
+            )
+            session.add(conversation)
+            session.add(ConversationParticipant(conversation_id=conversation.id, user_id=request.from_user_id))
+            session.add(ConversationParticipant(conversation_id=conversation.id, user_id=request.to_user_id))
+            conversation_id = conversation.id
+
+        session.commit()
+        session.refresh(request)
+        return {
+            "request": serialize_request(request),
+            "conversation_id": conversation_id,
+        }
 
 
 @app.get("/conversations/{user_id}")
 def get_user_conversations(user_id: str) -> dict:
-    conversations = []
-    for conversation in store.conversations.values():
-        if user_id in conversation.participants:
-            request = store.requests.get(conversation.request_id)
+    with SessionLocal() as session:
+        participant_rows = session.execute(
+            select(ConversationParticipant).where(ConversationParticipant.user_id == user_id)
+        ).scalars().all()
+
+        conversations = []
+        for row in participant_rows:
+            conversation = session.get(ConversationModel, row.conversation_id)
+            if not conversation:
+                continue
+
+            participants = session.execute(
+                select(ConversationParticipant.user_id).where(
+                    ConversationParticipant.conversation_id == conversation.id
+                )
+            ).scalars().all()
+
+            request = session.get(MessageRequestModel, conversation.request_id)
             conversations.append(
                 {
                     "id": conversation.id,
                     "request_id": conversation.request_id,
-                    "participants": sorted(conversation.participants),
-                    "created_at": conversation.created_at,
-                    "request": request.__dict__ if request else None,
+                    "participants": sorted(participants),
+                    "created_at": conversation.created_at.isoformat(),
+                    "request": serialize_request(request) if request else None,
                 }
             )
 
-    conversations.sort(key=lambda item: item["created_at"], reverse=True)
-    return {"conversations": conversations}
+        conversations.sort(key=lambda item: item["created_at"], reverse=True)
+        return {"conversations": conversations}
 
 
 @app.get("/conversations/{conversation_id}/messages")
 def get_conversation_messages(conversation_id: str, user_id: str = Query(..., min_length=1)) -> dict:
-    conversation = store.conversations.get(conversation_id)
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Conversacion no encontrada")
+    with SessionLocal() as session:
+        conversation = session.get(ConversationModel, conversation_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversacion no encontrada")
 
-    if user_id not in conversation.participants:
-        raise HTTPException(status_code=403, detail="No puedes leer mensajes de esta conversacion")
+        membership = session.get(ConversationParticipant, {"conversation_id": conversation_id, "user_id": user_id})
+        if not membership:
+            raise HTTPException(status_code=403, detail="No puedes leer mensajes de esta conversacion")
 
-    messages = [message.__dict__ for message in store.messages.get(conversation_id, [])]
-    return {"messages": messages}
+        messages = session.execute(
+            select(ChatMessageModel)
+            .where(ChatMessageModel.conversation_id == conversation_id)
+            .order_by(ChatMessageModel.sent_at.asc())
+        ).scalars().all()
+        return {"messages": [serialize_message(msg) for msg in messages]}
 
 
 @app.post("/conversations/{conversation_id}/messages")
 async def create_message(conversation_id: str, payload: ChatMessageCreate) -> dict:
-    conversation = store.conversations.get(conversation_id)
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Conversacion no encontrada")
+    with SessionLocal() as session:
+        conversation = session.get(ConversationModel, conversation_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversacion no encontrada")
 
-    if payload.from_user_id not in conversation.participants:
-        raise HTTPException(status_code=403, detail="No puedes enviar mensajes en esta conversacion")
+        membership = session.get(
+            ConversationParticipant,
+            {"conversation_id": conversation_id, "user_id": payload.from_user_id},
+        )
+        if not membership:
+            raise HTTPException(status_code=403, detail="No puedes enviar mensajes en esta conversacion")
 
-    message = ChatMessage(
-        id=str(uuid4()),
-        conversation_id=conversation_id,
-        from_user_id=payload.from_user_id,
-        content=payload.content,
-        sent_at=utc_now_iso(),
-    )
-    store.messages.setdefault(conversation_id, []).append(message)
+        message = ChatMessageModel(
+            id=str(uuid4()),
+            conversation_id=conversation_id,
+            from_user_id=payload.from_user_id,
+            content=payload.content,
+            sent_at=datetime.now(timezone.utc),
+        )
+        session.add(message)
+        session.commit()
+        session.refresh(message)
+
+    serialized = serialize_message(message)
 
     await manager.broadcast(
         conversation_id,
         {
             "type": "chat_message",
-            "message": message.__dict__,
+            "message": serialized,
         },
     )
 
-    return {"message": message.__dict__}
+    return {"message": serialized}
 
 
 @app.websocket("/ws/chat/{conversation_id}")
 async def chat_socket(websocket: WebSocket, conversation_id: str, user_id: str = Query(..., min_length=1)) -> None:
-    conversation = store.conversations.get(conversation_id)
-    if not conversation:
-        await websocket.close(code=1008, reason="Conversacion no encontrada")
-        return
+    with SessionLocal() as session:
+        conversation = session.get(ConversationModel, conversation_id)
+        if not conversation:
+            await websocket.close(code=1008, reason="Conversacion no encontrada")
+            return
 
-    if user_id not in conversation.participants:
-        await websocket.close(code=1008, reason="No autorizado para esta conversacion")
-        return
+        membership = session.get(
+            ConversationParticipant,
+            {"conversation_id": conversation_id, "user_id": user_id},
+        )
+        if not membership:
+            await websocket.close(code=1008, reason="No autorizado para esta conversacion")
+            return
+
+        history = session.execute(
+            select(ChatMessageModel)
+            .where(ChatMessageModel.conversation_id == conversation_id)
+            .order_by(ChatMessageModel.sent_at.asc())
+        ).scalars().all()
 
     await manager.connect(conversation_id, user_id, websocket)
     await websocket.send_text(
         json.dumps(
             {
                 "type": "history",
-                "messages": [m.__dict__ for m in store.messages.get(conversation_id, [])],
+                "messages": [serialize_message(m) for m in history],
             }
         )
     )
@@ -334,20 +437,25 @@ async def chat_socket(websocket: WebSocket, conversation_id: str, user_id: str =
                 await websocket.send_text(json.dumps({"type": "error", "detail": "Mensaje vacio"}))
                 continue
 
-            message = ChatMessage(
-                id=str(uuid4()),
-                conversation_id=conversation_id,
-                from_user_id=user_id,
-                content=content,
-                sent_at=utc_now_iso(),
-            )
-            store.messages.setdefault(conversation_id, []).append(message)
+            with SessionLocal() as session:
+                message = ChatMessageModel(
+                    id=str(uuid4()),
+                    conversation_id=conversation_id,
+                    from_user_id=user_id,
+                    content=content,
+                    sent_at=datetime.now(timezone.utc),
+                )
+                session.add(message)
+                session.commit()
+                session.refresh(message)
+
+            serialized = serialize_message(message)
 
             await manager.broadcast(
                 conversation_id,
                 {
                     "type": "chat_message",
-                    "message": message.__dict__,
+                    "message": serialized,
                 },
             )
     except WebSocketDisconnect:
