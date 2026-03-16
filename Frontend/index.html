@@ -3,538 +3,320 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SkillSwap - Mensajeria</title>
+  <title>SkillSwap</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --nav-bg: rgba(255, 255, 255, 0.92);
-      --ink: #131629;
-      --muted: #d7defa;
-      --hero-a: #2141d9;
-      --hero-b: #5377ff;
-      --hero-c: #7897ff;
-      --accent: #f6a505;
-      --accent-2: #102b7f;
-      --success: #17a668;
-      --danger: #cc3551;
-      --surface: #f3f6ff;
-      --card: rgba(255, 255, 255, 0.14);
-      --card-line: rgba(255, 255, 255, 0.26);
-      --log-bg: #0b1220;
+      --ink: #12162a;
+      --blue-1: #2642de;
+      --blue-2: #5f80ff;
+      --warm: #ffbe2e;
+      --surface: #f4f7ff;
+      --line: #d4dcfb;
+      --ok: #198f60;
+      --danger: #cb3752;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
-    html,
     body {
       margin: 0;
-      min-height: 100%;
-    }
-
-    body {
       font-family: "Manrope", "Segoe UI", sans-serif;
       color: var(--ink);
-      background: linear-gradient(150deg, #ecf1ff 0%, #f9fbff 52%, #edf5ff 100%);
+      background: linear-gradient(170deg, #edf3ff 0%, #f9fbff 55%, #eef5ff 100%);
     }
 
-    .shell {
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    .glow {
-      position: absolute;
-      border-radius: 999px;
-      filter: blur(70px);
-      opacity: 0.4;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .glow.a {
-      width: 340px;
-      height: 340px;
-      background: #84a4ff;
-      top: 40px;
-      left: -100px;
-    }
-
-    .glow.b {
-      width: 390px;
-      height: 390px;
-      background: #ffd27c;
-      right: -120px;
-      top: 360px;
+    .app {
+      width: min(1180px, 94vw);
+      margin: 0 auto 2rem;
     }
 
     .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      backdrop-filter: blur(10px);
-      background: var(--nav-bg);
-      border-bottom: 1px solid rgba(14, 29, 90, 0.08);
-    }
-
-    .topbar-inner {
-      width: min(1180px, 94vw);
-      margin: 0 auto;
+      margin-top: 1rem;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(31, 49, 124, 0.12);
+      border-radius: 14px;
+      padding: 0.7rem 0.9rem;
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      padding: 0.8rem 0;
+      align-items: center;
       gap: 1rem;
+      backdrop-filter: blur(6px);
     }
 
     .brand {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      text-decoration: none;
-      color: inherit;
       font-family: "Space Grotesk", sans-serif;
       font-weight: 700;
-      font-size: 1.35rem;
-    }
-
-    .brand-mark {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      display: grid;
-      place-items: center;
-      color: white;
-      background: linear-gradient(135deg, #3f5fff 0%, #2741d2 100%);
-      font-size: 1rem;
-      font-weight: 800;
-    }
-
-    .nav-links {
+      font-size: 1.2rem;
       display: flex;
-      gap: 1rem;
       align-items: center;
-      color: #2a3253;
-      font-weight: 600;
-      font-size: 0.94rem;
+      gap: 0.55rem;
     }
 
-    .nav-links span {
-      opacity: 0.82;
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: linear-gradient(140deg, var(--warm), #f38f00);
+      box-shadow: 0 0 0 6px rgba(246, 165, 5, 0.15);
     }
 
-    .cta {
-      border: 0;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #f9b420 0%, #f48f00 100%);
-      color: #18203a;
-      font-family: inherit;
-      font-weight: 800;
-      padding: 0.66rem 1rem;
+    .actions {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .ghost-inline {
+      border: 1px solid #d9e2ff;
+      background: #ffffff;
+      color: #233774;
+      border-radius: 10px;
+      padding: 0.45rem 0.75rem;
+      font-weight: 700;
       cursor: pointer;
     }
 
-    .content {
-      width: min(1180px, 94vw);
-      margin: 1.2rem auto 2.2rem;
-      position: relative;
-      z-index: 1;
-    }
-
     .hero {
-      position: relative;
-      background: linear-gradient(118deg, var(--hero-a) 0%, var(--hero-b) 54%, var(--hero-c) 100%);
-      color: white;
+      margin-top: 1rem;
       border-radius: 24px;
-      padding: clamp(1.3rem, 4vw, 2.3rem);
-      overflow: hidden;
-      box-shadow: 0 24px 45px rgba(25, 53, 159, 0.28);
-      animation: fadeUp 500ms ease;
+      color: #fff;
+      padding: clamp(1rem, 4vw, 2.2rem);
+      background: linear-gradient(120deg, var(--blue-1) 0%, var(--blue-2) 100%);
+      box-shadow: 0 24px 44px rgba(30, 56, 156, 0.24);
     }
 
-    .hero::before {
-      content: "";
-      position: absolute;
-      inset: -25% auto auto -20%;
-      width: 280px;
-      height: 280px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.26) 0%, transparent 65%);
-    }
-
-    .hero::after {
-      content: "";
-      position: absolute;
-      right: -70px;
-      bottom: -70px;
-      width: 260px;
-      height: 260px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255, 197, 84, 0.7) 0%, rgba(255, 197, 84, 0) 72%);
-    }
-
-    h1 {
+    .hero h1 {
       margin: 0;
-      line-height: 1.05;
       font-family: "Space Grotesk", sans-serif;
-      font-size: clamp(2rem, 4.5vw, 4.1rem);
-      letter-spacing: 0.01em;
+      font-size: clamp(1.9rem, 4.8vw, 4rem);
+      line-height: 1.05;
       max-width: 12ch;
     }
 
-    h1 .warm {
-      color: #ffcb4d;
-    }
+    .hero h1 span { color: #ffd26a; }
 
     .hero p {
       margin: 0.8rem 0 0;
       max-width: 56ch;
-      color: #e7edff;
-      font-size: clamp(1rem, 1.8vw, 1.55rem);
-      line-height: 1.45;
+      color: #e6ecff;
+      font-size: clamp(1rem, 1.7vw, 1.45rem);
     }
 
-    .flow-chip {
-      margin-top: 1rem;
-      display: inline-flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-      align-items: center;
-      border-radius: 999px;
-      padding: 0.45rem 0.65rem;
-      font-weight: 700;
+    .badge {
+      margin-top: 0.9rem;
+      display: inline-block;
       font-size: 0.83rem;
-      background: rgba(255, 255, 255, 0.18);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-    }
-
-    .flow-chip span {
+      font-weight: 800;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.12);
+      padding: 0.35rem 0.65rem;
       border-radius: 999px;
-      padding: 0.23rem 0.54rem;
-      background: rgba(255, 255, 255, 0.2);
     }
 
-    .panel {
-      margin-top: 1.15rem;
-      background: var(--card);
-      border: 1px solid var(--card-line);
+    .section {
+      margin-top: 1rem;
       border-radius: 20px;
-      padding: 0.95rem;
-      backdrop-filter: blur(5px);
+      border: 1px solid var(--line);
+      background: #ffffff;
+      padding: 1rem;
+      box-shadow: 0 8px 24px rgba(24, 49, 138, 0.08);
     }
 
-    .panel h2 {
-      margin: 0 0 0.8rem;
-      font-size: 1.45rem;
-      font-family: "Space Grotesk", sans-serif;
-      color: #f6f9ff;
-    }
-
-    .how-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.8rem;
-    }
-
-    .how-card {
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      background: rgba(5, 24, 95, 0.19);
-      padding: 0.9rem;
-      transform: translateY(12px);
-      opacity: 0;
-      animation: fadeUp 520ms ease forwards;
-    }
-
-    .how-card:nth-child(2) {
-      animation-delay: 80ms;
-    }
-
-    .how-card:nth-child(3) {
-      animation-delay: 160ms;
-    }
-
-    .how-card strong {
-      display: block;
-      margin-bottom: 0.4rem;
-      color: #fff;
-      font-size: 1.02rem;
-    }
-
-    .how-card p {
+    .section h2 {
       margin: 0;
-      color: #dbe5ff;
-      font-size: 0.93rem;
-      line-height: 1.4;
+      font-size: 1.4rem;
+      font-family: "Space Grotesk", sans-serif;
+      color: #152259;
     }
 
-    .workspace {
-      margin-top: 1.15rem;
+    .section small {
+      display: block;
+      margin-top: 0.25rem;
+      color: #6570a1;
+      font-weight: 600;
+    }
+
+    .grid {
+      margin-top: 0.8rem;
       display: grid;
-      gap: 1rem;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.8rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .card {
-      border-radius: 20px;
-      background: white;
-      border: 1px solid #dce4ff;
-      box-shadow: 0 8px 24px rgba(16, 37, 120, 0.08);
-      padding: 1rem;
-      animation: fadeUp 480ms ease;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      padding: 0.85rem;
     }
 
     .card h3 {
       margin: 0;
-      font-family: "Space Grotesk", sans-serif;
-      font-size: 1.26rem;
-      letter-spacing: 0.01em;
-      color: #1a2450;
-    }
-
-    .card small {
-      display: block;
-      margin-top: 0.25rem;
-      color: #6b74a1;
-      font-weight: 600;
+      font-size: 1.08rem;
+      color: #1f2d69;
     }
 
     label {
       display: block;
-      margin-top: 0.7rem;
-      font-size: 0.91rem;
+      margin-top: 0.58rem;
+      font-size: 0.9rem;
       font-weight: 700;
-      color: #233061;
+      color: #223371;
     }
 
-    input,
-    textarea,
-    button {
+    input, textarea, button {
       width: 100%;
-      border-radius: 12px;
-      border: 1px solid #c5d2fd;
-      padding: 0.68rem 0.75rem;
-      margin-top: 0.35rem;
+      border: 1px solid #c2cff9;
+      border-radius: 10px;
+      padding: 0.6rem 0.68rem;
+      margin-top: 0.32rem;
       font: inherit;
-      background: #f9fbff;
-      transition: 140ms ease;
+      background: #fff;
     }
 
-    textarea {
-      min-height: 92px;
-      resize: vertical;
-    }
-
-    input:focus,
-    textarea:focus {
+    input:focus, textarea:focus {
       outline: none;
-      border-color: #6483ff;
-      box-shadow: 0 0 0 3px rgba(100, 131, 255, 0.16);
-      background: white;
+      border-color: #6080ff;
+      box-shadow: 0 0 0 3px rgba(96, 128, 255, 0.14);
     }
+
+    textarea { min-height: 88px; resize: vertical; }
 
     button {
-      border: none;
+      border: 0;
+      color: #fff;
       cursor: pointer;
-      margin-top: 0.74rem;
-      color: white;
       font-weight: 800;
-      background: linear-gradient(135deg, #2f53f0 0%, #1b3ed9 100%);
+      background: linear-gradient(140deg, #2f52f3, #1f3ccd);
     }
 
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 16px rgba(43, 77, 216, 0.22);
-    }
-
-    button.secondary {
-      background: linear-gradient(135deg, #f7b41e 0%, #eb8a00 100%);
-      color: #21283f;
-    }
-
-    button.ghost {
-      background: linear-gradient(135deg, #3552ca 0%, #223897 100%);
-      color: #eef3ff;
-    }
-
-    button.danger {
-      background: linear-gradient(135deg, #e24c5e 0%, #b62140 100%);
-    }
+    button.ok { background: linear-gradient(140deg, #26a667, #138153); }
+    button.warn { background: linear-gradient(140deg, #f6b322, #ec8b00); color: #282d45; }
+    button.danger { background: linear-gradient(140deg, #e24b61, #b72344); }
 
     .row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 0.6rem;
+      gap: 0.55rem;
     }
 
+    .wide { grid-column: 1 / -1; }
+
+    .hidden { display: none !important; }
+
     .list {
-      margin-top: 0.8rem;
-      max-height: 280px;
+      margin-top: 0.75rem;
+      max-height: 290px;
       overflow: auto;
       display: grid;
-      gap: 0.65rem;
-      padding-right: 0.15rem;
+      gap: 0.6rem;
     }
 
     .item {
-      border: 1px solid #d9e2ff;
-      border-radius: 14px;
-      background: #f8faff;
-      padding: 0.75rem;
-      font-size: 0.95rem;
-      color: #1f2b5e;
-    }
-
-    .item b {
-      color: #182455;
+      border: 1px solid #d3dcfb;
+      border-radius: 12px;
+      padding: 0.72rem;
+      background: #fcfdff;
+      color: #1a285d;
     }
 
     .pill {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      padding: 0.12rem 0.54rem;
+      display: inline-block;
       font-size: 0.78rem;
-      font-weight: 700;
-      background: #dcebff;
-      color: #2444b0;
-      border: 1px solid #bfd4ff;
+      border: 1px solid #c4d3ff;
+      background: #eaf0ff;
+      border-radius: 999px;
+      padding: 0.08rem 0.55rem;
+      font-weight: 800;
+      color: #2a489f;
     }
 
-    .wide {
-      grid-column: 1 / -1;
-    }
-
-    .chat-toolbar {
+    .search-row {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr;
-      gap: 0.6rem;
+      grid-template-columns: 1fr auto;
+      gap: 0.55rem;
       align-items: end;
+    }
+
+    .search-row button {
+      width: 180px;
+      height: 42px;
+      margin-top: 0;
     }
 
     .chat-box {
       margin-top: 0.75rem;
-      max-height: 280px;
+      max-height: 260px;
       overflow: auto;
-      border-radius: 14px;
-      border: 1px solid #cdd8ff;
-      background: linear-gradient(180deg, #f7faff 0%, #edf3ff 100%);
-      padding: 0.65rem;
+      border: 1px solid #cad6ff;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #f8faff, #edf2ff);
+      padding: 0.6rem;
       display: grid;
-      gap: 0.5rem;
+      gap: 0.45rem;
     }
 
     .chat-msg {
-      max-width: 88%;
-      border-radius: 12px;
-      background: white;
-      border: 1px solid #d7e1ff;
-      padding: 0.48rem 0.6rem;
-      box-shadow: 0 2px 8px rgba(27, 66, 181, 0.08);
-      color: #1a2453;
+      max-width: 86%;
+      background: #fff;
+      border: 1px solid #d3ddff;
+      border-radius: 10px;
+      padding: 0.4rem 0.55rem;
+      color: #1a295e;
     }
 
     .chat-msg.mine {
       margin-left: auto;
-      background: #e5f4ee;
-      border-color: #b7e9d4;
+      background: #e6f6ed;
+      border-color: #bbe8cf;
     }
 
-    .chat-msg .meta {
+    .meta {
       display: block;
-      margin-bottom: 0.25rem;
-      font-size: 0.77rem;
+      font-size: 0.76rem;
       font-weight: 800;
-      color: #3d56c4;
+      color: #3f58c0;
+      margin-bottom: 0.16rem;
     }
 
-    .debug-toggle {
-      margin-top: 0.3rem;
-      width: auto;
-      padding: 0.45rem 0.8rem;
-      font-size: 0.86rem;
-      background: linear-gradient(135deg, #6b79b8 0%, #3d4e98 100%);
-    }
-
-    .log-wrap {
+    .debug {
+      margin-top: 0.7rem;
+      border-top: 1px dashed #d6dff9;
+      padding-top: 0.7rem;
       display: none;
-      margin-top: 0.75rem;
-      border-top: 1px dashed #d4def8;
-      padding-top: 0.75rem;
     }
 
-    .log-wrap.show {
-      display: block;
-    }
+    .debug.show { display: block; }
 
     .log {
-      min-height: 160px;
-      max-height: 260px;
+      min-height: 130px;
+      max-height: 230px;
       overflow: auto;
-      border-radius: 12px;
-      padding: 0.8rem;
-      white-space: pre-wrap;
-      background: var(--log-bg);
-      color: #d9ffe2;
+      background: #0d1528;
+      color: #d6ffdf;
+      border-radius: 10px;
+      padding: 0.7rem;
       font-family: Consolas, monospace;
-      font-size: 0.86rem;
-      border: 1px solid #13243f;
+      white-space: pre-wrap;
+      font-size: 0.84rem;
     }
 
-    @keyframes fadeUp {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @media (max-width: 1030px) {
-      .workspace {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .wide {
-        grid-column: span 2;
-      }
-    }
-
-    @media (max-width: 780px) {
-      .topbar-inner {
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-
-      .nav-links {
-        order: 3;
-      }
-
-      .hero {
-        border-radius: 20px;
-      }
-
-      .how-grid {
+    @media (max-width: 880px) {
+      .grid,
+      .row {
         grid-template-columns: 1fr;
       }
 
-      .workspace {
+      .search-row {
         grid-template-columns: 1fr;
       }
 
-      .wide {
-        grid-column: auto;
-      }
-
-      .row,
-      .chat-toolbar {
-        grid-template-columns: 1fr;
+      .search-row button {
+        width: 100%;
       }
 
       .chat-msg {
@@ -544,138 +326,144 @@
   </style>
 </head>
 <body>
-  <div class="shell">
-    <div class="glow a"></div>
-    <div class="glow b"></div>
-
+  <div class="app">
     <header class="topbar">
-      <div class="topbar-inner">
-        <a class="brand" href="#">
-          <span class="brand-mark">S</span>
-          <span>SkillSwap</span>
-        </a>
-        <nav class="nav-links" aria-label="menu principal">
-          <span>Discover</span>
-          <span>My Swaps</span>
-          <span>Messages</span>
-          <span>Guidelines</span>
-          <span>FAQ</span>
-        </nav>
-        <button class="cta" type="button">Get Started</button>
+      <div class="brand"><span class="dot"></span>SkillSwap</div>
+      <div class="actions">
+        <span id="whoami">No has iniciado sesion</span>
+        <button id="logoutBtn" class="ghost-inline hidden" type="button">Cerrar sesion</button>
       </div>
     </header>
 
-    <main class="content">
-      <section class="hero">
-        <h1>Learn. Teach. <span class="warm">Connect.</span></h1>
-        <p>Conecta con personas, intercambia habilidades y abre un chat seguro solo cuando la solicitud haya sido aceptada.</p>
-        <div class="flow-chip">
-          Flujo:
-          <span>solicitud</span>
-          <span>aceptar/rechazar</span>
-          <span>chat WebSocket</span>
-        </div>
+    <section class="hero">
+      <h1>Learn. Teach. <span>Connect.</span></h1>
+      <p>Publica la habilidad que ofreces y la que quieres aprender. Otros usuarios pueden encontrar tu solicitud, aceptarla y ahi se habilita el chat en tiempo real.</p>
+      <div class="badge">Solicitud -> Aceptacion -> Chat WebSocket</div>
+    </section>
 
-        <div class="panel">
-          <h2>Como Funciona</h2>
-          <div class="how-grid">
-            <article class="how-card">
-              <strong>1. Envia solicitud</strong>
-              <p>Define a quien escribir y que habilidad ofreces a cambio de la que quieres aprender.</p>
-            </article>
-            <article class="how-card">
-              <strong>2. Respuesta del receptor</strong>
-              <p>La otra persona puede aceptar para habilitar el chat, o rechazar si no hay match.</p>
-            </article>
-            <article class="how-card">
-              <strong>3. Conversacion en vivo</strong>
-              <p>Si se acepta, se abre una conversacion en tiempo real con WebSocket entre ambos usuarios.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="workspace">
+    <section id="authSection" class="section">
+      <h2>Bienvenido</h2>
+      <small>Crea tu cuenta o inicia sesion para entrar al intercambio</small>
+      <div class="grid">
         <article class="card">
-          <h3>1) Configuracion</h3>
-          <small>Conecta tu frontend con Render</small>
+          <h3>Crear cuenta</h3>
+          <label>Usuario</label>
+          <input id="signupUser" placeholder="ej: padilla37" />
+          <label>Contrasena</label>
+          <input id="signupPass" type="password" placeholder="Minimo 4 caracteres" />
+          <button id="signupBtn" class="ok">Crear cuenta</button>
+        </article>
+
+        <article class="card">
+          <h3>Iniciar sesion</h3>
+          <label>Usuario</label>
+          <input id="loginUser" placeholder="Tu usuario" />
+          <label>Contrasena</label>
+          <input id="loginPass" type="password" placeholder="Tu contrasena" />
+          <button id="loginBtn">Entrar</button>
+        </article>
+      </div>
+    </section>
+
+    <section id="workspaceSection" class="section hidden">
+      <h2>Tu espacio de intercambio</h2>
+      <small>Completa tus datos basicos, publica solicitud y busca solicitudes de otros usuarios</small>
+
+      <div class="grid">
+        <article class="card">
+          <h3>Configuracion backend</h3>
           <label>URL Backend (Render)</label>
           <input id="apiBase" value="https://ing-soft-5shh.onrender.com" />
-          <label>Tu usuario actual</label>
-          <input id="currentUser" value="SPadilla37" />
-          <button id="saveCfg" class="ghost">Guardar configuracion local</button>
+          <button id="saveCfgBtn">Guardar configuracion local</button>
         </article>
 
         <article class="card">
-          <h3>2) Enviar solicitud de chat</h3>
-          <small>Propon tu intercambio de habilidades</small>
-          <label>Receptor</label>
-          <input id="toUser" placeholder="ej: maria22" />
-          <div class="row">
+          <h3>Datos basicos</h3>
+          <label>Nombre completo</label>
+          <input id="fullName" placeholder="Sebastian Padilla" />
+          <label>Ciudad</label>
+          <input id="city" placeholder="Caracas" />
+          <label>Bio corta</label>
+          <textarea id="bio" placeholder="Me gusta ensenar y aprender..."></textarea>
+          <button id="saveProfileBtn" class="ok">Guardar perfil</button>
+        </article>
+
+        <article class="card">
+          <h3>Publicar tu solicitud</h3>
+          <label>Habilidad que ofreces</label>
+          <input id="offeredSkill" placeholder="Python" />
+          <label>Habilidad que quieres</label>
+          <input id="requestedSkill" placeholder="Diseno UI" />
+          <label>Mensaje de solicitud</label>
+          <textarea id="introMessage" placeholder="Puedo ayudarte con ... y quiero aprender ..."></textarea>
+          <button id="publishRequestBtn" class="ok">Publicar solicitud</button>
+        </article>
+
+        <article class="card wide">
+          <h3>Buscar solicitudes</h3>
+          <div class="search-row">
             <div>
-              <label>Habilidad que ofreces</label>
-              <input id="offeredSkill" placeholder="Python" />
+              <label>Barra de busqueda</label>
+              <input id="searchInput" placeholder="Busca por habilidad o usuario: python, figma, maria..." />
             </div>
-            <div>
-              <label>Habilidad que buscas</label>
-              <input id="requestedSkill" placeholder="Figma" />
-            </div>
+            <button id="searchBtn" class="warn">Buscar</button>
           </div>
-          <label>Mensaje inicial</label>
-          <textarea id="introMessage" placeholder="Hola, te puedo ayudar con..."></textarea>
-          <button id="sendRequest">Enviar solicitud</button>
+          <div id="marketplaceList" class="list"></div>
         </article>
 
-        <article class="card">
-          <h3>3) Solicitudes recibidas</h3>
-          <small>Acepta o rechaza para seguir al chat</small>
-          <button id="loadIncoming" class="secondary">Cargar solicitudes</button>
-          <div id="incomingList" class="list"></div>
-        </article>
-
-        <article class="card">
-          <h3>4) Conversaciones</h3>
-          <small>Revisa tus chats habilitados</small>
-          <button id="loadConversations" class="secondary">Cargar conversaciones</button>
+        <article class="card wide">
+          <h3>Conversaciones</h3>
+          <button id="loadConversationsBtn" class="warn">Cargar conversaciones</button>
           <div id="conversationsList" class="list"></div>
         </article>
 
         <article class="card wide">
-          <h3>5) Chat WebSocket</h3>
-          <small>Mensajeria en tiempo real</small>
-          <div class="chat-toolbar">
+          <h3>Chat (solo tras aceptacion)</h3>
+          <div class="row">
             <div>
               <label>Conversation ID</label>
-              <input id="conversationId" placeholder="pega el conversation id" />
+              <input id="conversationId" placeholder="se completa al aceptar una solicitud" />
             </div>
-            <button id="connectWs">Conectar WS</button>
-            <button id="disconnectWs" class="danger">Cerrar WS</button>
+            <div>
+              <label>Acciones</label>
+              <div class="row">
+                <button id="connectWsBtn">Conectar WS</button>
+                <button id="disconnectWsBtn" class="danger">Cerrar WS</button>
+              </div>
+            </div>
           </div>
           <div id="chatBox" class="chat-box"></div>
           <div class="row">
             <input id="chatInput" placeholder="Escribe mensaje..." />
-            <button id="sendWsMessage">Enviar WS</button>
+            <button id="sendWsMessageBtn" class="ok">Enviar mensaje</button>
           </div>
-        </article>
 
-        <article class="card wide">
-          <h3>Registro tecnico</h3>
-          <small>Oculto por defecto para modo demo</small>
-          <button id="toggleDebug" class="debug-toggle" type="button">Mostrar/Ocultar debug</button>
-          <div id="logWrap" class="log-wrap">
+          <button id="toggleDebugBtn" class="ghost-inline" type="button">Mostrar/Ocultar debug</button>
+          <div id="debugWrap" class="debug">
             <div id="log" class="log"></div>
           </div>
         </article>
-      </section>
-    </main>
+      </div>
+    </section>
   </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
+    const dbKeyUsers = "skillswap_users";
+    const dbKeySession = "skillswap_session";
+    const dbKeyProfilePrefix = "skillswap_profile_";
+    const dbKeyCfg = "skill_chat_cfg";
+
+    const whoamiEl = $("whoami");
+    const authSection = $("authSection");
+    const workspaceSection = $("workspaceSection");
+    const logoutBtn = $("logoutBtn");
     const logEl = $("log");
-    const logWrap = $("logWrap");
+    const debugWrap = $("debugWrap");
     const chatBox = $("chatBox");
+
     let socket = null;
+    let currentUser = null;
 
     function log(msg) {
       const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
@@ -683,27 +471,89 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
+    function readUsers() {
+      try {
+        return JSON.parse(localStorage.getItem(dbKeyUsers) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function writeUsers(users) {
+      localStorage.setItem(dbKeyUsers, JSON.stringify(users));
+    }
+
+    function setSession(username) {
+      localStorage.setItem(dbKeySession, username);
+      currentUser = username;
+      renderSession();
+    }
+
+    function clearSession() {
+      localStorage.removeItem(dbKeySession);
+      currentUser = null;
+      renderSession();
+    }
+
+    function loadSession() {
+      const saved = localStorage.getItem(dbKeySession);
+      currentUser = saved || null;
+    }
+
     function cfg() {
       return {
         apiBase: $("apiBase").value.trim().replace(/\/$/, ""),
-        currentUser: $("currentUser").value.trim(),
       };
     }
 
     function saveCfg() {
-      localStorage.setItem("skill_chat_cfg", JSON.stringify(cfg()));
-      log("Configuracion guardada en localStorage");
+      localStorage.setItem(dbKeyCfg, JSON.stringify(cfg()));
+      log("Configuracion guardada");
     }
 
     function loadCfg() {
-      const saved = localStorage.getItem("skill_chat_cfg");
-      if (!saved) return;
       try {
-        const parsed = JSON.parse(saved);
-        if (parsed.apiBase) $("apiBase").value = parsed.apiBase;
-        if (parsed.currentUser) $("currentUser").value = parsed.currentUser;
-      } catch {
-        log("No se pudo leer configuracion previa");
+        const saved = JSON.parse(localStorage.getItem(dbKeyCfg) || "{}");
+        if (saved.apiBase) {
+          $("apiBase").value = saved.apiBase;
+        }
+      } catch {}
+    }
+
+    function saveProfile() {
+      if (!currentUser) return;
+      const profile = {
+        fullName: $("fullName").value.trim(),
+        city: $("city").value.trim(),
+        bio: $("bio").value.trim(),
+      };
+      localStorage.setItem(`${dbKeyProfilePrefix}${currentUser}`, JSON.stringify(profile));
+      log("Perfil guardado");
+    }
+
+    function loadProfile() {
+      if (!currentUser) return;
+      try {
+        const p = JSON.parse(localStorage.getItem(`${dbKeyProfilePrefix}${currentUser}`) || "{}");
+        $("fullName").value = p.fullName || "";
+        $("city").value = p.city || "";
+        $("bio").value = p.bio || "";
+      } catch {}
+    }
+
+    function renderSession() {
+      if (currentUser) {
+        whoamiEl.textContent = `Sesion: ${currentUser}`;
+        authSection.classList.add("hidden");
+        workspaceSection.classList.remove("hidden");
+        logoutBtn.classList.remove("hidden");
+        loadProfile();
+        loadMarketplace();
+      } else {
+        whoamiEl.textContent = "No has iniciado sesion";
+        authSection.classList.remove("hidden");
+        workspaceSection.classList.add("hidden");
+        logoutBtn.classList.add("hidden");
       }
     }
 
@@ -720,79 +570,46 @@
       return data;
     }
 
-    function requestCard(request) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "item";
-      wrapper.innerHTML = `
-        <div><b>ID:</b> ${request.id}</div>
-        <div><b>De:</b> ${request.from_user_id} -> <b>Para:</b> ${request.to_user_id}</div>
-        <div><b>Skills:</b> ${request.offered_skill} <-> ${request.requested_skill}</div>
-        <div><b>Status:</b> <span class="pill">${request.status}</span></div>
-        <div><b>Intro:</b> ${request.intro_message || "(sin mensaje)"}</div>
-      `;
-
-      if (request.status === "pending") {
-        const acceptBtn = document.createElement("button");
-        acceptBtn.textContent = "Aceptar";
-        acceptBtn.onclick = () => respondRequest(request.id, "accepted");
-
-        const rejectBtn = document.createElement("button");
-        rejectBtn.className = "danger";
-        rejectBtn.textContent = "Rechazar";
-        rejectBtn.onclick = () => respondRequest(request.id, "rejected");
-
-        wrapper.appendChild(acceptBtn);
-        wrapper.appendChild(rejectBtn);
+    function signup() {
+      const user = $("signupUser").value.trim();
+      const pass = $("signupPass").value.trim();
+      if (!user || pass.length < 4) {
+        alert("Completa usuario y una contrasena de al menos 4 caracteres");
+        return;
       }
 
-      return wrapper;
+      const users = readUsers();
+      if (users[user]) {
+        alert("Ese usuario ya existe, inicia sesion");
+        return;
+      }
+
+      users[user] = { pass };
+      writeUsers(users);
+      setSession(user);
+      log("Cuenta creada y sesion iniciada");
     }
 
-    function conversationCard(conversation) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "item";
-      wrapper.innerHTML = `
-        <div><b>Conversation ID:</b> ${conversation.id}</div>
-        <div><b>Participantes:</b> ${conversation.participants.join(", ")}</div>
-        <div><b>Request ID:</b> ${conversation.request_id}</div>
-      `;
+    function login() {
+      const user = $("loginUser").value.trim();
+      const pass = $("loginPass").value.trim();
+      const users = readUsers();
 
-      const useBtn = document.createElement("button");
-      useBtn.className = "ghost";
-      useBtn.textContent = "Usar esta conversacion";
-      useBtn.onclick = () => {
-        $("conversationId").value = conversation.id;
-        log(`Conversation seleccionada: ${conversation.id}`);
-      };
+      if (!users[user] || users[user].pass !== pass) {
+        alert("Usuario o contrasena incorrectos");
+        return;
+      }
 
-      wrapper.appendChild(useBtn);
-      return wrapper;
+      setSession(user);
+      log("Sesion iniciada");
     }
 
-    function addChatMessage(msg) {
-      const div = document.createElement("div");
-      const mine = msg.from_user_id === cfg().currentUser;
-      div.className = `chat-msg${mine ? " mine" : ""}`;
-
-      const meta = document.createElement("span");
-      meta.className = "meta";
-      meta.textContent = `${msg.from_user_id}${msg.sent_at ? ` - ${new Date(msg.sent_at).toLocaleTimeString()}` : ""}`;
-
-      const content = document.createElement("span");
-      content.textContent = msg.content;
-
-      div.appendChild(meta);
-      div.appendChild(content);
-      chatBox.appendChild(div);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    async function sendRequest() {
+    async function publishRequest() {
+      if (!currentUser) return;
       try {
-        const { currentUser } = cfg();
         const body = {
           from_user_id: currentUser,
-          to_user_id: $("toUser").value.trim(),
+          to_user_id: null,
           offered_skill: $("offeredSkill").value.trim(),
           requested_skill: $("requestedSkill").value.trim(),
           intro_message: $("introMessage").value.trim(),
@@ -801,57 +618,133 @@
           method: "POST",
           body: JSON.stringify(body),
         });
-        log(`Solicitud enviada: ${result.request.id}`);
+        log(`Solicitud publicada: ${result.request.id}`);
+        $("offeredSkill").value = "";
+        $("requestedSkill").value = "";
+        $("introMessage").value = "";
+        await loadMarketplace();
       } catch (err) {
-        log(`Error enviando solicitud: ${err.message}`);
+        log(`Error publicando solicitud: ${err.message}`);
       }
     }
 
-    async function loadIncoming() {
+    function marketplaceCard(request) {
+      const el = document.createElement("div");
+      el.className = "item";
+      el.innerHTML = `
+        <div><b>Usuario:</b> ${request.from_user_id}</div>
+        <div><b>Ofrece:</b> ${request.offered_skill}</div>
+        <div><b>Quiere:</b> ${request.requested_skill}</div>
+        <div><b>Estado:</b> <span class="pill">${request.status}</span></div>
+        <div><b>Mensaje:</b> ${request.intro_message || "(sin mensaje)"}</div>
+      `;
+
+      const acceptBtn = document.createElement("button");
+      acceptBtn.className = "ok";
+      acceptBtn.textContent = "Aceptar solicitud";
+      acceptBtn.onclick = () => acceptRequest(request.id);
+      el.appendChild(acceptBtn);
+      return el;
+    }
+
+    async function loadMarketplace() {
+      if (!currentUser) return;
       try {
-        const { currentUser } = cfg();
-        const result = await api(`/message-requests/${encodeURIComponent(currentUser)}/incoming`);
-        const list = $("incomingList");
+        const q = $("searchInput").value.trim();
+        const query = new URLSearchParams({ viewer_user_id: currentUser });
+        if (q) query.append("q", q);
+
+        const result = await api(`/marketplace/requests?${query.toString()}`);
+        const list = $("marketplaceList");
         list.innerHTML = "";
-        result.requests.forEach((request) => list.appendChild(requestCard(request)));
-        log(`Solicitudes recibidas: ${result.requests.length}`);
+
+        if (!result.requests.length) {
+          const empty = document.createElement("div");
+          empty.className = "item";
+          empty.textContent = "No hay solicitudes que coincidan ahora mismo.";
+          list.appendChild(empty);
+          return;
+        }
+
+        result.requests.forEach((request) => list.appendChild(marketplaceCard(request)));
+        log(`Marketplace cargado: ${result.requests.length} solicitudes`);
       } catch (err) {
-        log(`Error cargando solicitudes: ${err.message}`);
+        log(`Error cargando marketplace: ${err.message}`);
       }
     }
 
-    async function respondRequest(requestId, action) {
+    async function acceptRequest(requestId) {
+      if (!currentUser) return;
       try {
-        const { currentUser } = cfg();
-        const result = await api(`/message-requests/${requestId}/respond`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            responder_user_id: currentUser,
-            action,
-          }),
+        const result = await api(`/marketplace/requests/${requestId}/accept`, {
+          method: "POST",
+          body: JSON.stringify({ accepter_user_id: currentUser }),
         });
-        log(`Solicitud ${action}: ${requestId}`);
-        if (result.conversation_id) {
-          log(`Conversacion creada: ${result.conversation_id}`);
-          $("conversationId").value = result.conversation_id;
-        }
-        await loadIncoming();
+        log(`Solicitud aceptada. Conversacion: ${result.conversation_id}`);
+        $("conversationId").value = result.conversation_id || "";
+        await loadMarketplace();
+        await loadConversations();
       } catch (err) {
-        log(`Error respondiendo solicitud: ${err.message}`);
+        log(`Error aceptando solicitud: ${err.message}`);
       }
+    }
+
+    function conversationCard(conversation) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "item";
+      wrapper.innerHTML = `
+        <div><b>Conversation ID:</b> ${conversation.id}</div>
+        <div><b>Participantes:</b> ${conversation.participants.join(", ")}</div>
+        <div><b>Intercambio:</b> ${conversation.request?.offered_skill || "-"} <-> ${conversation.request?.requested_skill || "-"}</div>
+      `;
+
+      const useBtn = document.createElement("button");
+      useBtn.textContent = "Abrir este chat";
+      useBtn.onclick = () => {
+        $("conversationId").value = conversation.id;
+        log(`Conversation seleccionada: ${conversation.id}`);
+      };
+      wrapper.appendChild(useBtn);
+      return wrapper;
     }
 
     async function loadConversations() {
+      if (!currentUser) return;
       try {
-        const { currentUser } = cfg();
         const result = await api(`/conversations/${encodeURIComponent(currentUser)}`);
         const list = $("conversationsList");
         list.innerHTML = "";
-        result.conversations.forEach((conversation) => list.appendChild(conversationCard(conversation)));
-        log(`Conversaciones cargadas: ${result.conversations.length}`);
+
+        if (!result.conversations.length) {
+          const empty = document.createElement("div");
+          empty.className = "item";
+          empty.textContent = "Aun no tienes conversaciones.";
+          list.appendChild(empty);
+          return;
+        }
+
+        result.conversations.forEach((c) => list.appendChild(conversationCard(c)));
       } catch (err) {
         log(`Error cargando conversaciones: ${err.message}`);
       }
+    }
+
+    function addChatMessage(msg) {
+      const mine = msg.from_user_id === currentUser;
+      const div = document.createElement("div");
+      div.className = `chat-msg${mine ? " mine" : ""}`;
+
+      const meta = document.createElement("span");
+      meta.className = "meta";
+      meta.textContent = `${msg.from_user_id}${msg.sent_at ? ` - ${new Date(msg.sent_at).toLocaleTimeString()}` : ""}`;
+
+      const body = document.createElement("span");
+      body.textContent = msg.content;
+
+      div.appendChild(meta);
+      div.appendChild(body);
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     function wsUrl(baseUrl, conversationId, userId) {
@@ -862,7 +755,8 @@
     }
 
     function connectWs() {
-      const { apiBase, currentUser } = cfg();
+      if (!currentUser) return;
+      const { apiBase } = cfg();
       const conversationId = $("conversationId").value.trim();
       if (!conversationId) {
         log("Debes indicar conversation id");
@@ -877,20 +771,17 @@
       socket = new WebSocket(url);
 
       socket.onopen = () => log(`WS conectado: ${url}`);
-
       socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === "history") {
           chatBox.innerHTML = "";
           data.messages.forEach(addChatMessage);
-          log(`Historial recibido: ${data.messages.length} mensajes`);
         } else if (data.type === "chat_message") {
           addChatMessage(data.message);
         } else {
           log(`WS evento: ${JSON.stringify(data)}`);
         }
       };
-
       socket.onerror = () => log("WS error");
       socket.onclose = () => log("WS cerrado");
     }
@@ -909,26 +800,31 @@
         return;
       }
       if (!content) return;
-
       socket.send(JSON.stringify({ type: "message", content }));
       $("chatInput").value = "";
     }
 
     function toggleDebug() {
-      logWrap.classList.toggle("show");
+      debugWrap.classList.toggle("show");
     }
 
-    $("saveCfg").onclick = saveCfg;
-    $("sendRequest").onclick = sendRequest;
-    $("loadIncoming").onclick = loadIncoming;
-    $("loadConversations").onclick = loadConversations;
-    $("connectWs").onclick = connectWs;
-    $("disconnectWs").onclick = disconnectWs;
-    $("sendWsMessage").onclick = sendWsMessage;
-    $("toggleDebug").onclick = toggleDebug;
+    $("signupBtn").onclick = signup;
+    $("loginBtn").onclick = login;
+    $("logoutBtn").onclick = clearSession;
+    $("saveCfgBtn").onclick = saveCfg;
+    $("saveProfileBtn").onclick = saveProfile;
+    $("publishRequestBtn").onclick = publishRequest;
+    $("searchBtn").onclick = loadMarketplace;
+    $("loadConversationsBtn").onclick = loadConversations;
+    $("connectWsBtn").onclick = connectWs;
+    $("disconnectWsBtn").onclick = disconnectWs;
+    $("sendWsMessageBtn").onclick = sendWsMessage;
+    $("toggleDebugBtn").onclick = toggleDebug;
 
     loadCfg();
-    log("Listo. Configura tu URL de Render y prueba el flujo.");
+    loadSession();
+    renderSession();
+    log("Sistema listo.");
   </script>
 </body>
 </html>

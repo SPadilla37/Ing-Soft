@@ -10,12 +10,15 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import DateTime, ForeignKey, String, Text, create_engine, select
+from sqlalchemy import DateTime, ForeignKey, String, Text, create_engine, or_, select
 from sqlalchemy.orm import Mapped, Session, declarative_base, mapped_column, sessionmaker
 
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+PUBLIC_MARKETPLACE_USER = "__PUBLIC__"
 
 
 class RequestStatus(str, Enum):
@@ -26,7 +29,7 @@ class RequestStatus(str, Enum):
 
 class MessageRequestCreate(BaseModel):
     from_user_id: str = Field(min_length=1, max_length=120)
-    to_user_id: str = Field(min_length=1, max_length=120)
+    to_user_id: str | None = Field(default=None, min_length=1, max_length=120)
     offered_skill: str = Field(min_length=1, max_length=120)
     requested_skill: str = Field(min_length=1, max_length=120)
     intro_message: str = Field(default="", max_length=500)
@@ -40,6 +43,10 @@ class MessageRequestResponse(BaseModel):
 class ChatMessageCreate(BaseModel):
     from_user_id: str = Field(min_length=1, max_length=120)
     content: str = Field(min_length=1, max_length=2000)
+
+
+class MarketplaceAcceptRequest(BaseModel):
+    accepter_user_id: str = Field(min_length=1, max_length=120)
 
 
 Base = declarative_base()
@@ -57,7 +64,7 @@ class MessageRequestModel(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     from_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
-    to_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
+    to_user_id: Mapped[str | None] = mapped_column(String(120), ForeignKey("users.id"), index=True, nullable=True)
     offered_skill: Mapped[str] = mapped_column(String(120))
     requested_skill: Mapped[str] = mapped_column(String(120))
     intro_message: Mapped[str] = mapped_column(Text, default="")
@@ -140,6 +147,27 @@ def serialize_message(message: ChatMessageModel) -> dict:
     }
 
 
+def create_conversation_for_request(session: Session, request: MessageRequestModel) -> str:
+    if not request.to_user_id:
+        raise HTTPException(status_code=400, detail="La solicitud aun no tiene receptor")
+
+    existing = session.execute(
+        select(ConversationModel).where(ConversationModel.request_id == request.id)
+    ).scalars().first()
+    if existing:
+        return existing.id
+
+    conversation = ConversationModel(
+        id=str(uuid4()),
+        request_id=request.id,
+        created_at=datetime.now(timezone.utc),
+    )
+    session.add(conversation)
+    session.add(ConversationParticipant(conversation_id=conversation.id, user_id=request.from_user_id))
+    session.add(ConversationParticipant(conversation_id=conversation.id, user_id=request.to_user_id))
+    return conversation.id
+
+
 class ConnectionManager:
     def __init__(self) -> None:
         self.connections_by_conversation: Dict[str, Dict[str, WebSocket]] = {}
@@ -187,6 +215,9 @@ manager = ConnectionManager()
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
+    with SessionLocal() as session:
+        ensure_user(session, PUBLIC_MARKETPLACE_USER)
+        session.commit()
 
 
 @app.get("/health")
@@ -196,18 +227,21 @@ def health() -> dict:
 
 @app.post("/message-requests")
 def create_message_request(payload: MessageRequestCreate) -> dict:
-    if payload.from_user_id == payload.to_user_id:
+    if payload.to_user_id and payload.from_user_id == payload.to_user_id:
         raise HTTPException(status_code=400, detail="No puedes enviarte solicitud a ti mismo")
 
     with SessionLocal() as session:
         ensure_user(session, payload.from_user_id)
-        ensure_user(session, payload.to_user_id)
+        if payload.to_user_id:
+            ensure_user(session, payload.to_user_id)
+        else:
+            ensure_user(session, PUBLIC_MARKETPLACE_USER)
 
         now = datetime.now(timezone.utc)
         request = MessageRequestModel(
             id=str(uuid4()),
             from_user_id=payload.from_user_id,
-            to_user_id=payload.to_user_id,
+            to_user_id=payload.to_user_id or PUBLIC_MARKETPLACE_USER,
             offered_skill=payload.offered_skill,
             requested_skill=payload.requested_skill,
             intro_message=payload.intro_message,
@@ -219,6 +253,69 @@ def create_message_request(payload: MessageRequestCreate) -> dict:
         session.commit()
         session.refresh(request)
         return {"request": serialize_request(request)}
+
+
+@app.get("/marketplace/requests")
+def list_marketplace_requests(
+    viewer_user_id: str | None = Query(default=None),
+    q: str | None = Query(default=None),
+) -> dict:
+    with SessionLocal() as session:
+        stmt = select(MessageRequestModel).where(
+            MessageRequestModel.status == RequestStatus.pending.value,
+            MessageRequestModel.to_user_id == PUBLIC_MARKETPLACE_USER,
+        )
+
+        if viewer_user_id:
+            stmt = stmt.where(MessageRequestModel.from_user_id != viewer_user_id)
+
+        if q:
+            q_text = f"%{q.lower()}%"
+            stmt = stmt.where(
+                or_(
+                    MessageRequestModel.offered_skill.ilike(q_text),
+                    MessageRequestModel.requested_skill.ilike(q_text),
+                    MessageRequestModel.intro_message.ilike(q_text),
+                    MessageRequestModel.from_user_id.ilike(q_text),
+                )
+            )
+
+        requests = session.execute(
+            stmt.order_by(MessageRequestModel.created_at.desc())
+        ).scalars().all()
+
+        return {"requests": [serialize_request(item) for item in requests]}
+
+
+@app.post("/marketplace/requests/{request_id}/accept")
+def accept_marketplace_request(request_id: str, payload: MarketplaceAcceptRequest) -> dict:
+    with SessionLocal() as session:
+        request = session.get(MessageRequestModel, request_id)
+        if not request:
+            raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+        if request.status != RequestStatus.pending.value:
+            raise HTTPException(status_code=400, detail="Esta solicitud ya no esta disponible")
+
+        if request.to_user_id != PUBLIC_MARKETPLACE_USER:
+            raise HTTPException(status_code=400, detail="Esta solicitud no es publica")
+
+        if payload.accepter_user_id == request.from_user_id:
+            raise HTTPException(status_code=400, detail="No puedes aceptar tu propia solicitud")
+
+        ensure_user(session, payload.accepter_user_id)
+        request.to_user_id = payload.accepter_user_id
+        request.status = RequestStatus.accepted.value
+        request.updated_at = datetime.now(timezone.utc)
+
+        conversation_id = create_conversation_for_request(session, request)
+        session.commit()
+        session.refresh(request)
+
+        return {
+            "request": serialize_request(request),
+            "conversation_id": conversation_id,
+        }
 
 
 @app.get("/message-requests/{user_id}/incoming")
@@ -264,15 +361,7 @@ def respond_message_request(request_id: str, payload: MessageRequestResponse) ->
 
         conversation_id = None
         if request.status == RequestStatus.accepted.value:
-            conversation = ConversationModel(
-                id=str(uuid4()),
-                request_id=request.id,
-                created_at=datetime.now(timezone.utc),
-            )
-            session.add(conversation)
-            session.add(ConversationParticipant(conversation_id=conversation.id, user_id=request.from_user_id))
-            session.add(ConversationParticipant(conversation_id=conversation.id, user_id=request.to_user_id))
-            conversation_id = conversation.id
+            conversation_id = create_conversation_for_request(session, request)
 
         session.commit()
         session.refresh(request)
