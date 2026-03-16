@@ -1041,7 +1041,8 @@
 
       <div class="nav-list">
         <button class="nav-btn active" data-view="matchesView" type="button">Matches <span id="matchesCountBadge">0</span></button>
-        <button class="nav-btn" data-view="incomingMatchesView" type="button">Te dieron match <span id="incomingMatchesCountBadge">0</span></button>
+        <button class="nav-btn" data-view="incomingMatchesView" type="button">Intereses recibidos <span id="incomingMatchesCountBadge">0</span></button>
+        <button class="nav-btn" data-view="myMatchesView" type="button">Mis matches <span id="myMatchesCountBadge">0</span></button>
         <button class="nav-btn" data-view="publishView" type="button">Publicar</button>
         <button class="nav-btn" data-view="chatView" type="button">Chat <span id="chatCountBadge">0</span></button>
         <button class="nav-btn" data-view="profileView" type="button">Perfil</button>
@@ -1095,11 +1096,20 @@
 
       <section id="incomingMatchesView" class="view">
         <div class="incoming-shell">
-          <h2>Te dieron match</h2>
+          <h2>Intereses recibidos</h2>
           <p>Aqui aparecen las personas que ya mostraron interes en ti. Si respondes, se crea el chat.</p>
         </div>
 
         <div id="incomingMatchesGrid" class="cards-grid"></div>
+      </section>
+
+      <section id="myMatchesView" class="view">
+        <div class="incoming-shell">
+          <h2>Mis matches</h2>
+          <p>Consulta el estado de cada match. Puedes finalizarlo y, cuando ambos lo finalicen, calificar de 0 a 5 estrellas.</p>
+        </div>
+
+        <div id="myMatchesGrid" class="cards-grid"></div>
       </section>
 
       <section id="publishView" class="view">
@@ -1313,6 +1323,7 @@
     const chatBox = $("chatBox");
     const marketplaceGrid = $("marketplaceGrid");
     const incomingMatchesGrid = $("incomingMatchesGrid");
+    const myMatchesGrid = $("myMatchesGrid");
     const conversationsList = $("conversationsList");
     const dashboardCategoryChips = $("dashboardCategoryChips");
     const teachSummary = $("teachSummary");
@@ -1355,6 +1366,7 @@
     let profileLanguagesDraft = new Set();
     let currentMarketplace = [];
     let currentIncomingMatches = [];
+    let currentMyMatches = [];
     let currentConversations = [];
     let pickerMode = "teach";
     let pickerSource = "onboarding";
@@ -2199,6 +2211,105 @@
       });
     }
 
+    function renderMatchStatusLabel(match) {
+      if (match.status === "completed") {
+        return "Finalizado";
+      }
+      return match.my_finalized ? "En proceso · Esperando al otro usuario" : "En proceso";
+    }
+
+    function renderRatingStars(match) {
+      if (match.my_rating !== null && match.my_rating !== undefined) {
+        return `Tu calificacion: ${match.my_rating}/5`;
+      }
+      return "Aun no calificas este match";
+    }
+
+    function renderMyMatches(items) {
+      myMatchesGrid.innerHTML = "";
+      $("myMatchesCountBadge").textContent = String(items.length);
+
+      if (!items.length) {
+        const empty = document.createElement("div");
+        empty.className = "surface-card";
+        empty.innerHTML = "<h3>Aun no tienes matches mutuos</h3><p>Cuando ambos usuarios se den match, aparecera aqui con su estado.</p>";
+        myMatchesGrid.appendChild(empty);
+        return;
+      }
+
+      items.forEach((match) => {
+        const author = match.other_user_name || match.other_user_id;
+        const request = match.request || {};
+        const card = document.createElement("article");
+        card.className = "match-card";
+        card.innerHTML = `
+          <div class="match-head">
+            <div class="match-avatar">${getInitials(author)}</div>
+            <div>
+              <h3>${author}</h3>
+              <div class="muted">${renderMatchStatusLabel(match)}</div>
+            </div>
+          </div>
+          <div>
+            <div class="muted">Intercambio</div>
+            <div class="strong-list">${request.offered_skill || "-"} ↔ ${request.requested_skill || "-"}</div>
+          </div>
+          <div>
+            <div class="muted">Calificacion</div>
+            <div>${renderRatingStars(match)}</div>
+          </div>
+        `;
+
+        const actions = document.createElement("div");
+        actions.className = "card-actions";
+
+        if (match.conversation_id) {
+          const chatBtn = document.createElement("button");
+          chatBtn.className = "secondary-btn";
+          chatBtn.type = "button";
+          chatBtn.textContent = "Abrir chat";
+          chatBtn.onclick = () => openMatchedConversation(match.conversation_id);
+          actions.appendChild(chatBtn);
+        }
+
+        const profileBtn = document.createElement("button");
+        profileBtn.className = "ghost-btn";
+        profileBtn.type = "button";
+        profileBtn.textContent = "Go to profile";
+        profileBtn.onclick = () => showRequestDetails({ from_user_id: match.other_user_id }, "myMatchesView");
+        actions.appendChild(profileBtn);
+
+        if (match.status === "in_progress") {
+          const finalizeBtn = document.createElement("button");
+          finalizeBtn.type = "button";
+          if (match.can_finalize) {
+            finalizeBtn.className = "primary-btn";
+            finalizeBtn.textContent = "Finalizar match";
+            finalizeBtn.onclick = () => finalizeMatch(match.id);
+          } else {
+            finalizeBtn.className = "secondary-btn";
+            finalizeBtn.textContent = "Esperando al otro";
+            finalizeBtn.disabled = true;
+          }
+          actions.appendChild(finalizeBtn);
+        }
+
+        if (match.status === "completed" && match.can_rate) {
+          for (let rating = 0; rating <= 5; rating += 1) {
+            const rateBtn = document.createElement("button");
+            rateBtn.className = "ghost-btn";
+            rateBtn.type = "button";
+            rateBtn.textContent = `${rating}★`;
+            rateBtn.onclick = () => rateMatch(match.id, rating);
+            actions.appendChild(rateBtn);
+          }
+        }
+
+        card.appendChild(actions);
+        myMatchesGrid.appendChild(card);
+      });
+    }
+
     async function openMatchedConversation(conversationId) {
       if (!conversationId) {
         setChatStatus("Ese match aun no tiene chat disponible.", "info");
@@ -2243,6 +2354,43 @@
       }
     }
 
+    async function loadMyMatches() {
+      if (!currentUser) return;
+      try {
+        const result = await api(`/matches/${encodeURIComponent(currentUser)}`);
+        currentMyMatches = result.matches || [];
+        renderMyMatches(currentMyMatches);
+      } catch (error) {
+        currentMyMatches = [];
+        renderMyMatches(currentMyMatches);
+        log(`Error cargando mis matches: ${error.message}`);
+      }
+    }
+
+    async function finalizeMatch(matchId) {
+      try {
+        await api(`/matches/${encodeURIComponent(matchId)}/finalize`, {
+          method: "POST",
+          body: JSON.stringify({ user_id: currentUser })
+        });
+        await loadMyMatches();
+      } catch (error) {
+        alert(`No se pudo finalizar el match: ${error.message}`);
+      }
+    }
+
+    async function rateMatch(matchId, rating) {
+      try {
+        await api(`/matches/${encodeURIComponent(matchId)}/rate`, {
+          method: "POST",
+          body: JSON.stringify({ user_id: currentUser, rating })
+        });
+        await loadMyMatches();
+      } catch (error) {
+        alert(`No se pudo guardar la calificacion: ${error.message}`);
+      }
+    }
+
     async function acceptRequest(requestId) {
       try {
         const result = await api(`/marketplace/requests/${requestId}/accept`, {
@@ -2251,6 +2399,7 @@
         });
         await loadMarketplace();
         await loadIncomingMatches();
+        await loadMyMatches();
         if (result.matched && result.conversation_id) {
           selectedConversationId = result.conversation_id;
           $("conversationId").value = selectedConversationId;
@@ -2484,6 +2633,7 @@
       renderLatestRequest();
       await loadMarketplace();
       await loadIncomingMatches();
+      await loadMyMatches();
       await loadConversations();
       const profile = getProfile() || {};
       $("mySkillsPreview").textContent = String((profile.teachSkills || []).length + (profile.learnSkills || []).length);

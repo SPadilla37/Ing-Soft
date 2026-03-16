@@ -48,6 +48,15 @@ class MarketplaceAcceptRequest(BaseModel):
     accepter_user_id: str = Field(min_length=1, max_length=120)
 
 
+class MatchFinalizePayload(BaseModel):
+    user_id: str = Field(min_length=1, max_length=120)
+
+
+class MatchRatePayload(BaseModel):
+    user_id: str = Field(min_length=1, max_length=120)
+    rating: int = Field(ge=0, le=5)
+
+
 class UserRegisterPayload(BaseModel):
     email: str = Field(min_length=3, max_length=120)
     name: str = Field(min_length=1, max_length=120)
@@ -152,7 +161,14 @@ class MatchModel(Base):
     user_a_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
     user_b_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
     conversation_id: Mapped[str] = mapped_column(String(36), ForeignKey("conversations.id"), unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(20), default="in_progress", index=True)
+    finalized_by_a: Mapped[bool] = mapped_column(default=False)
+    finalized_by_b: Mapped[bool] = mapped_column(default=False)
+    rating_by_a: Mapped[int] = mapped_column(default=None, nullable=True)
+    rating_by_b: Mapped[int] = mapped_column(default=None, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=None, nullable=True)
 
 
 def normalize_database_url(url: str) -> str:
@@ -242,6 +258,44 @@ def ensure_users_table_columns() -> None:
             if column_name in existing_columns:
                 continue
             connection.execute(text(f"ALTER TABLE users ADD COLUMN {column_name} {column_type}"))
+
+
+def ensure_matches_table_columns() -> None:
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
+    if "matches" not in table_names:
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("matches")}
+    columns_to_add = {
+        "status": "VARCHAR(20)",
+        "finalized_by_a": "BOOLEAN",
+        "finalized_by_b": "BOOLEAN",
+        "rating_by_a": "INTEGER",
+        "rating_by_b": "INTEGER",
+        "updated_at": "TIMESTAMP",
+        "completed_at": "TIMESTAMP",
+    }
+
+    added_columns: set[str] = set()
+
+    with engine.begin() as connection:
+        for column_name, column_type in columns_to_add.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(text(f"ALTER TABLE matches ADD COLUMN {column_name} {column_type}"))
+            added_columns.add(column_name)
+
+        all_columns = existing_columns.union(added_columns)
+
+        if "status" in all_columns:
+            connection.execute(text("UPDATE matches SET status = 'in_progress' WHERE status IS NULL OR status = ''"))
+        if "finalized_by_a" in all_columns:
+            connection.execute(text("UPDATE matches SET finalized_by_a = FALSE WHERE finalized_by_a IS NULL"))
+        if "finalized_by_b" in all_columns:
+            connection.execute(text("UPDATE matches SET finalized_by_b = FALSE WHERE finalized_by_b IS NULL"))
+        if "updated_at" in all_columns:
+            connection.execute(text("UPDATE matches SET updated_at = created_at WHERE updated_at IS NULL"))
 
 
 def serialize_request(request: MessageRequestModel) -> dict:
@@ -344,6 +398,48 @@ def serialize_request_for_viewer(
     return serialized
 
 
+def get_match_side(match: MatchModel, user_id: str) -> str:
+    if user_id == match.user_a_id:
+        return "a"
+    if user_id == match.user_b_id:
+        return "b"
+    raise HTTPException(status_code=403, detail="No perteneces a este match")
+
+
+def serialize_match_for_user(session: Session, match: MatchModel, user_id: str) -> dict:
+    side = get_match_side(match, user_id)
+    other_user_id = match.user_b_id if side == "a" else match.user_a_id
+    my_finalized = match.finalized_by_a if side == "a" else match.finalized_by_b
+    other_finalized = match.finalized_by_b if side == "a" else match.finalized_by_a
+    my_rating = match.rating_by_a if side == "a" else match.rating_by_b
+    other_rating = match.rating_by_b if side == "a" else match.rating_by_a
+
+    conversation = session.get(ConversationModel, match.conversation_id)
+    request_payload = None
+    if conversation:
+        request = session.get(MessageRequestModel, conversation.request_id)
+        if request:
+            request_payload = serialize_request_with_names(session, request)
+
+    return {
+        "id": match.id,
+        "conversation_id": match.conversation_id,
+        "status": match.status or "in_progress",
+        "created_at": match.created_at.isoformat() if match.created_at else utc_now_iso(),
+        "updated_at": match.updated_at.isoformat() if match.updated_at else utc_now_iso(),
+        "completed_at": match.completed_at.isoformat() if match.completed_at else None,
+        "other_user_id": other_user_id,
+        "other_user_name": get_user_display_name(session, other_user_id),
+        "my_finalized": bool(my_finalized),
+        "other_finalized": bool(other_finalized),
+        "my_rating": my_rating,
+        "other_rating": other_rating,
+        "can_finalize": (match.status or "in_progress") == "in_progress" and not bool(my_finalized),
+        "can_rate": (match.status or "in_progress") == "completed" and my_rating is None,
+        "request": request_payload,
+    }
+
+
 def is_conversation_hidden_for_user(session: Session, conversation_id: str, user_id: str) -> bool:
     hidden = session.get(
         HiddenConversationModel,
@@ -431,6 +527,7 @@ manager = ConnectionManager()
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
     ensure_users_table_columns()
+    ensure_matches_table_columns()
     with SessionLocal() as session:
         ensure_user(session, PUBLIC_MARKETPLACE_USER)
         session.commit()
@@ -636,6 +733,10 @@ def accept_marketplace_request(request_id: str, payload: MarketplaceAcceptReques
                     user_a_id=user_a_id,
                     user_b_id=user_b_id,
                     conversation_id=conversation_id,
+                    status="in_progress",
+                    finalized_by_a=False,
+                    finalized_by_b=False,
+                    updated_at=datetime.now(timezone.utc),
                     created_at=datetime.now(timezone.utc),
                 )
             )
@@ -687,6 +788,80 @@ def get_incoming_match_intents(user_id: str) -> dict:
             )
 
         return {"incoming": items}
+
+
+@app.get("/matches/{user_id}")
+def list_user_matches(user_id: str, status: str | None = Query(default=None)) -> dict:
+    with SessionLocal() as session:
+        stmt = select(MatchModel).where(
+            or_(
+                MatchModel.user_a_id == user_id,
+                MatchModel.user_b_id == user_id,
+            )
+        )
+
+        if status in {"in_progress", "completed"}:
+            stmt = stmt.where(MatchModel.status == status)
+
+        matches = session.execute(
+            stmt.order_by(MatchModel.updated_at.desc(), MatchModel.created_at.desc())
+        ).scalars().all()
+
+        return {"matches": [serialize_match_for_user(session, match, user_id) for match in matches]}
+
+
+@app.post("/matches/{match_id}/finalize")
+def finalize_match(match_id: str, payload: MatchFinalizePayload) -> dict:
+    with SessionLocal() as session:
+        match = session.get(MatchModel, match_id)
+        if not match:
+            raise HTTPException(status_code=404, detail="Match no encontrado")
+
+        side = get_match_side(match, payload.user_id)
+        now = datetime.now(timezone.utc)
+
+        if side == "a":
+            match.finalized_by_a = True
+        else:
+            match.finalized_by_b = True
+
+        if match.finalized_by_a and match.finalized_by_b:
+            match.status = "completed"
+            if not match.completed_at:
+                match.completed_at = now
+
+        match.updated_at = now
+        session.commit()
+        session.refresh(match)
+
+        return {"match": serialize_match_for_user(session, match, payload.user_id)}
+
+
+@app.post("/matches/{match_id}/rate")
+def rate_match(match_id: str, payload: MatchRatePayload) -> dict:
+    with SessionLocal() as session:
+        match = session.get(MatchModel, match_id)
+        if not match:
+            raise HTTPException(status_code=404, detail="Match no encontrado")
+
+        if (match.status or "in_progress") != "completed":
+            raise HTTPException(status_code=400, detail="Solo puedes calificar cuando ambos finalizaron el match")
+
+        side = get_match_side(match, payload.user_id)
+        current_rating = match.rating_by_a if side == "a" else match.rating_by_b
+        if current_rating is not None:
+            raise HTTPException(status_code=400, detail="Ya calificaste este match")
+
+        if side == "a":
+            match.rating_by_a = payload.rating
+        else:
+            match.rating_by_b = payload.rating
+
+        match.updated_at = datetime.now(timezone.utc)
+        session.commit()
+        session.refresh(match)
+
+        return {"match": serialize_match_for_user(session, match, payload.user_id)}
 
 
 @app.delete("/message-requests/{request_id}")
