@@ -835,6 +835,8 @@
               <textarea id="publishIntroMessage" placeholder="Explica brevemente que puedes ensenar y que esperas aprender..."></textarea>
             </div>
             <button id="publishRequestBtn" class="primary-btn" type="button">Publicar solicitud</button>
+            <button id="deleteRequestBtn" class="danger-btn" type="button">Borrar mi publicacion activa</button>
+            <div id="publishStatus" class="muted">Aun no publicas una solicitud en esta sesion.</div>
           </div>
 
           <div class="surface-card stack">
@@ -877,7 +879,9 @@
               </div>
               <button id="connectWsBtn" class="primary-btn" type="button">Conectar</button>
               <button id="disconnectWsBtn" class="danger-btn" type="button">Cerrar</button>
+              <button id="deleteConversationBtn" class="ghost-btn" type="button">Borrar este chat (solo para mi)</button>
             </div>
+            <div id="chatStatus" class="muted">Chat desconectado.</div>
             <div id="chatBox" class="chat-box"></div>
             <div class="composer">
               <input id="chatInput" placeholder="Escribe mensaje..." />
@@ -970,9 +974,11 @@
     const pickerSearchInput = $("pickerSearchInput");
     const pickerCategoryChips = $("pickerCategoryChips");
     const pickerSkillsList = $("pickerSkillsList");
+    const publishStatus = $("publishStatus");
+    const chatStatus = $("chatStatus");
 
     let currentUser = null;
-  let currentUserRecord = null;
+    let currentUserRecord = null;
     let socket = null;
     let selectedCategory = "All";
     let selectedConversationId = "";
@@ -982,6 +988,7 @@
     let currentConversations = [];
     let pickerMode = "teach";
     let pickerCategory = "All";
+    let latestOwnRequest = null;
 
     function log(message) {
       const line = `[${new Date().toLocaleTimeString()}] ${message}`;
@@ -1002,11 +1009,15 @@
     function clearSession() {
       localStorage.removeItem(dbKeySession);
       currentUser = null;
+      currentUserRecord = null;
       selectedConversationId = "";
+      latestOwnRequest = null;
       if (socket) {
         socket.close();
         socket = null;
       }
+      setPublishStatus("Sesion cerrada.", "info");
+      setChatStatus("Chat desconectado.", "info");
       authScreen.classList.remove("hidden");
       onboardingModal.classList.add("hidden");
       skillPickerOverlay.classList.add("hidden");
@@ -1101,6 +1112,33 @@
     function getInitials(text) {
       const clean = (text || "?").trim();
       return clean ? clean.slice(0, 1).toUpperCase() : "?";
+    }
+
+    function setStatus(target, message, type = "info") {
+      if (!target) return;
+      target.textContent = message;
+      if (type === "ok") {
+        target.style.color = "#7ce4b3";
+      } else if (type === "error") {
+        target.style.color = "#ff9cb0";
+      } else {
+        target.style.color = "";
+      }
+    }
+
+    function setPublishStatus(message, type = "info") {
+      setStatus(publishStatus, message, type);
+    }
+
+    function setChatStatus(message, type = "info") {
+      setStatus(chatStatus, message, type);
+    }
+
+    function displayUserName(request, role = "from") {
+      if (role === "from") {
+        return request.from_user_name || request.from_user_id;
+      }
+      return request.to_user_name || request.to_user_id || "-";
     }
 
     async function api(path, options = {}) {
@@ -1245,6 +1283,17 @@
       $("topAvatar").textContent = getInitials(visibleName);
       $("topUsername").textContent = visibleName;
       $("topMeta").textContent = [profile.city, profile.language].filter(Boolean).join(" · ") || currentUser;
+    }
+
+    function requestMatchesMyLearning(request) {
+      const profile = getProfile() || {};
+      const learnSkills = (profile.learnSkills || []).map((skill) => String(skill).toLowerCase().trim()).filter(Boolean);
+      if (!learnSkills.length) {
+        return true;
+      }
+
+      const offeredText = String(request.offered_skill || "").toLowerCase();
+      return learnSkills.some((skill) => offeredText.includes(skill));
     }
 
     function activateView(viewId) {
@@ -1425,36 +1474,69 @@
           method: "POST",
           body: JSON.stringify(payload)
         });
+        latestOwnRequest = result.request;
         localStorage.setItem(latestRequestKey(currentUser), JSON.stringify(result.request));
+        setPublishStatus("Solicitud publicada correctamente.", "ok");
         log(`Solicitud publicada: ${result.request.id}`);
         renderLatestRequest();
         await loadMarketplace();
       } catch (error) {
+        setPublishStatus(`No se pudo publicar: ${error.message}`, "error");
         log(`Error publicando solicitud: ${error.message}`);
+      }
+    }
+
+    async function loadLatestOwnRequest() {
+      if (!currentUser) {
+        latestOwnRequest = null;
+        return;
+      }
+      try {
+        const result = await api(`/message-requests/${encodeURIComponent(currentUser)}/outgoing`);
+        latestOwnRequest = result.requests.find((item) => item.status === "pending" && item.to_user_id === "__PUBLIC__") || null;
+      } catch {
+        latestOwnRequest = null;
+      }
+    }
+
+    async function deleteLatestRequest() {
+      if (!latestOwnRequest?.id) {
+        setPublishStatus("No tienes una publicacion publica pendiente para borrar.", "info");
+        return;
+      }
+      try {
+        await api(`/message-requests/${encodeURIComponent(latestOwnRequest.id)}?user_id=${encodeURIComponent(currentUser)}`, {
+          method: "DELETE"
+        });
+        setPublishStatus("Publicacion eliminada.", "ok");
+        latestOwnRequest = null;
+        localStorage.removeItem(latestRequestKey(currentUser));
+        renderLatestRequest();
+        await loadMarketplace();
+      } catch (error) {
+        setPublishStatus(`No se pudo borrar la publicacion: ${error.message}`, "error");
       }
     }
 
     function renderLatestRequest() {
       const box = $("latestRequestBox");
       box.innerHTML = "";
-      try {
-        const request = JSON.parse(localStorage.getItem(latestRequestKey(currentUser)) || "null");
-        if (!request) {
-          const empty = document.createElement("div");
-          empty.className = "list-item";
-          empty.textContent = "Aun no has publicado ninguna solicitud desde esta sesion.";
-          box.appendChild(empty);
-          return;
-        }
-        const card = document.createElement("div");
-        card.className = "list-item";
-        card.innerHTML = `
-          <strong>${request.offered_skill}</strong>
-          <div class="muted">Quiere aprender: ${request.requested_skill}</div>
-          <div class="muted">Estado: ${request.status}</div>
-        `;
-        box.appendChild(card);
-      } catch {}
+      if (!latestOwnRequest) {
+        const empty = document.createElement("div");
+        empty.className = "list-item";
+        empty.textContent = "Aun no tienes una publicacion publica pendiente.";
+        box.appendChild(empty);
+        return;
+      }
+
+      const card = document.createElement("div");
+      card.className = "list-item";
+      card.innerHTML = `
+        <strong>${latestOwnRequest.offered_skill}</strong>
+        <div class="muted">Quiere aprender: ${latestOwnRequest.requested_skill}</div>
+        <div class="muted">Estado: ${latestOwnRequest.status}</div>
+      `;
+      box.appendChild(card);
     }
 
     function marketplaceMatchesCategory(request) {
@@ -1464,33 +1546,46 @@
 
     function renderMarketplace(requests) {
       marketplaceGrid.innerHTML = "";
-      const filtered = requests.filter(marketplaceMatchesCategory);
+      const searchQuery = $("searchInput").value.trim();
+      const filtered = requests.filter((request) => {
+        if (!marketplaceMatchesCategory(request)) {
+          return false;
+        }
+        if (searchQuery) {
+          return true;
+        }
+        return requestMatchesMyLearning(request);
+      });
+
       $("marketplaceTotal").textContent = String(filtered.length);
       $("matchesCountBadge").textContent = String(filtered.length);
       if (!filtered.length) {
         const card = document.createElement("div");
         card.className = "surface-card";
-        card.innerHTML = "<h3>No hay matches disponibles</h3><p>Prueba con otra busqueda o vuelve a cargar mas tarde.</p>";
+        card.innerHTML = searchQuery
+          ? "<h3>No hay resultados para esa busqueda</h3><p>Prueba con otras palabras o cambia de categoria.</p>"
+          : "<h3>No hay matches con lo que quieres aprender</h3><p>Puedes buscar manualmente en la barra para encontrar otras publicaciones.</p>";
         marketplaceGrid.appendChild(card);
         return;
       }
       filtered.forEach((request) => {
+        const author = displayUserName(request, "from");
         const card = document.createElement("article");
         card.className = "match-card";
         card.innerHTML = `
           <div class="match-head">
-            <div class="match-avatar">${getInitials(request.from_user_id)}</div>
+            <div class="match-avatar">${getInitials(author)}</div>
             <div>
-              <h3>${request.from_user_id}</h3>
+              <h3>${author}</h3>
               <div class="muted">Solicitud publica</div>
             </div>
           </div>
           <div>
-            <div class="muted">Puedes aprender de ${request.from_user_id}:</div>
+            <div class="muted">Puedes aprender de ${author}:</div>
             <div class="strong-list">${request.offered_skill}</div>
           </div>
           <div>
-            <div class="muted">${request.from_user_id} quiere aprender:</div>
+            <div class="muted">${author} quiere aprender:</div>
             <div class="strong-list">${request.requested_skill}</div>
           </div>
           <div>
@@ -1518,7 +1613,8 @@
     }
 
     function showRequestDetails(request) {
-      alert(`Usuario: ${request.from_user_id}\nOfrece: ${request.offered_skill}\nQuiere: ${request.requested_skill}\nMensaje: ${request.intro_message || "Sin descripcion"}`);
+      const author = displayUserName(request, "from");
+      alert(`Usuario: ${author}\nOfrece: ${request.offered_skill}\nQuiere: ${request.requested_skill}\nMensaje: ${request.intro_message || "Sin descripcion"}`);
     }
 
     async function loadMarketplace() {
@@ -1546,8 +1642,10 @@
         activateView("chatView");
         await loadMarketplace();
         await loadConversations();
+        setChatStatus("Conversacion creada. Puedes conectar el chat.", "ok");
         log(`Solicitud aceptada. Conversacion: ${selectedConversationId}`);
       } catch (error) {
+        setChatStatus(`No se pudo aceptar la solicitud: ${error.message}`, "error");
         log(`Error aceptando solicitud: ${error.message}`);
       }
     }
@@ -1564,10 +1662,14 @@
         return;
       }
       currentConversations.forEach((conversation) => {
+        const participantsLabel = (conversation.participants_display && conversation.participants_display.length)
+          ? conversation.participants_display.join(" / ")
+          : conversation.participants.join(" / ");
+
         const item = document.createElement("div");
         item.className = `list-item${selectedConversationId === conversation.id ? " active" : ""}`;
         item.innerHTML = `
-          <strong>${conversation.participants.join(" / ")}</strong>
+          <strong>${participantsLabel}</strong>
           <div class="muted">${conversation.request?.offered_skill || "-"}</div>
           <div class="muted">${conversation.request?.requested_skill || "-"}</div>
         `;
@@ -1578,6 +1680,34 @@
         };
         conversationsList.appendChild(item);
       });
+    }
+
+    async function deleteSelectedConversation() {
+      const conversationId = $("conversationId").value.trim();
+      if (!conversationId) {
+        setChatStatus("Selecciona una conversacion antes de borrarla.", "info");
+        return;
+      }
+
+      try {
+        await api(`/conversations/${encodeURIComponent(conversationId)}?user_id=${encodeURIComponent(currentUser)}`, {
+          method: "DELETE"
+        });
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.close();
+        }
+
+        if (selectedConversationId === conversationId) {
+          selectedConversationId = "";
+        }
+        $("conversationId").value = "";
+        chatBox.innerHTML = "";
+        setChatStatus("Chat borrado para ti. El otro usuario lo mantiene.", "ok");
+        await loadConversations();
+      } catch (error) {
+        setChatStatus(`No se pudo borrar el chat: ${error.message}`, "error");
+      }
     }
 
     async function loadConversations() {
@@ -1622,7 +1752,10 @@
         socket.close();
       }
       socket = new WebSocket(wsUrl(cfg().apiBase, conversationId, currentUser));
-      socket.onopen = () => log(`WS conectado a ${conversationId}`);
+      socket.onopen = () => {
+        setChatStatus(`Conectado al chat ${conversationId}.`, "ok");
+        log(`WS conectado a ${conversationId}`);
+      };
       socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === "history") {
@@ -1634,8 +1767,14 @@
           log(`WS evento: ${JSON.stringify(data)}`);
         }
       };
-      socket.onerror = () => log("WS error");
-      socket.onclose = () => log("WS cerrado");
+      socket.onerror = () => {
+        setChatStatus("Error en la conexion del chat.", "error");
+        log("WS error");
+      };
+      socket.onclose = () => {
+        setChatStatus("Chat desconectado.", "info");
+        log("WS cerrado");
+      };
     }
 
     function disconnectWs() {
@@ -1643,6 +1782,7 @@
         socket.close();
         socket = null;
       }
+      setChatStatus("Chat desconectado.", "info");
     }
 
     function sendWsMessage() {
@@ -1687,6 +1827,7 @@
       renderTopBar();
       hydrateProfileUI();
       renderDashboardCategories();
+      await loadLatestOwnRequest();
       renderLatestRequest();
       await loadMarketplace();
       await loadConversations();
@@ -1710,9 +1851,11 @@
     $("completeOnboardingBtn").onclick = completeOnboarding;
     $("searchBtn").onclick = loadMarketplace;
     $("publishRequestBtn").onclick = () => publishRequest(false);
+    $("deleteRequestBtn").onclick = deleteLatestRequest;
     $("loadConversationsBtn").onclick = loadConversations;
     $("connectWsBtn").onclick = connectWs;
     $("disconnectWsBtn").onclick = disconnectWs;
+    $("deleteConversationBtn").onclick = deleteSelectedConversation;
     $("sendWsMessageBtn").onclick = sendWsMessage;
     $("saveProfileBtn").onclick = () => { saveProfileFromDashboard(); };
     $("logoutBtn").onclick = clearSession;

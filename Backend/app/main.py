@@ -127,6 +127,14 @@ class ChatMessageModel(Base):
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
+class HiddenConversationModel(Base):
+    __tablename__ = "hidden_conversations"
+
+    conversation_id: Mapped[str] = mapped_column(String(36), ForeignKey("conversations.id"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), primary_key=True)
+    hidden_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
 def normalize_database_url(url: str) -> str:
     if url.startswith("postgres://"):
         return url.replace("postgres://", "postgresql+psycopg://", 1)
@@ -228,6 +236,30 @@ def serialize_request(request: MessageRequestModel) -> dict:
         "created_at": request.created_at.isoformat(),
         "updated_at": request.updated_at.isoformat(),
     }
+
+
+def get_user_display_name(session: Session, user_id: str | None) -> str | None:
+    if not user_id:
+        return None
+    user = session.get(User, user_id)
+    if user and user.name and user.name.strip():
+        return user.name.strip()
+    return user_id
+
+
+def serialize_request_with_names(session: Session, request: MessageRequestModel) -> dict:
+    serialized = serialize_request(request)
+    serialized["from_user_name"] = get_user_display_name(session, request.from_user_id)
+    serialized["to_user_name"] = get_user_display_name(session, request.to_user_id)
+    return serialized
+
+
+def is_conversation_hidden_for_user(session: Session, conversation_id: str, user_id: str) -> bool:
+    hidden = session.get(
+        HiddenConversationModel,
+        {"conversation_id": conversation_id, "user_id": user_id},
+    )
+    return hidden is not None
 
 
 def serialize_message(message: ChatMessageModel) -> dict:
@@ -426,7 +458,7 @@ def create_message_request(payload: MessageRequestCreate) -> dict:
         session.add(request)
         session.commit()
         session.refresh(request)
-        return {"request": serialize_request(request)}
+        return {"request": serialize_request_with_names(session, request)}
 
 
 @app.get("/marketplace/requests")
@@ -458,7 +490,7 @@ def list_marketplace_requests(
             stmt.order_by(MessageRequestModel.created_at.desc())
         ).scalars().all()
 
-        return {"requests": [serialize_request(item) for item in requests]}
+        return {"requests": [serialize_request_with_names(session, item) for item in requests]}
 
 
 @app.post("/marketplace/requests/{request_id}/accept")
@@ -487,9 +519,27 @@ def accept_marketplace_request(request_id: str, payload: MarketplaceAcceptReques
         session.refresh(request)
 
         return {
-            "request": serialize_request(request),
+            "request": serialize_request_with_names(session, request),
             "conversation_id": conversation_id,
         }
+
+
+@app.delete("/message-requests/{request_id}")
+def delete_own_message_request(request_id: str, user_id: str = Query(..., min_length=1)) -> dict:
+    with SessionLocal() as session:
+        request = session.get(MessageRequestModel, request_id)
+        if not request:
+            raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+        if request.from_user_id != user_id:
+            raise HTTPException(status_code=403, detail="Solo puedes borrar tus propias solicitudes")
+
+        if request.status != RequestStatus.pending.value or request.to_user_id != PUBLIC_MARKETPLACE_USER:
+            raise HTTPException(status_code=400, detail="Solo puedes borrar solicitudes publicas pendientes")
+
+        session.delete(request)
+        session.commit()
+        return {"deleted": True, "request_id": request_id}
 
 
 @app.get("/message-requests/{user_id}/incoming")
@@ -500,7 +550,7 @@ def get_incoming_requests(user_id: str) -> dict:
             .where(MessageRequestModel.to_user_id == user_id)
             .order_by(MessageRequestModel.created_at.desc())
         ).scalars().all()
-        return {"requests": [serialize_request(item) for item in requests]}
+        return {"requests": [serialize_request_with_names(session, item) for item in requests]}
 
 
 @app.get("/message-requests/{user_id}/outgoing")
@@ -511,7 +561,7 @@ def get_outgoing_requests(user_id: str) -> dict:
             .where(MessageRequestModel.from_user_id == user_id)
             .order_by(MessageRequestModel.created_at.desc())
         ).scalars().all()
-        return {"requests": [serialize_request(item) for item in requests]}
+        return {"requests": [serialize_request_with_names(session, item) for item in requests]}
 
 
 @app.patch("/message-requests/{request_id}/respond")
@@ -540,7 +590,7 @@ def respond_message_request(request_id: str, payload: MessageRequestResponse) ->
         session.commit()
         session.refresh(request)
         return {
-            "request": serialize_request(request),
+            "request": serialize_request_with_names(session, request),
             "conversation_id": conversation_id,
         }
 
@@ -558,11 +608,15 @@ def get_user_conversations(user_id: str) -> dict:
             if not conversation:
                 continue
 
+            if is_conversation_hidden_for_user(session, conversation.id, user_id):
+                continue
+
             participants = session.execute(
                 select(ConversationParticipant.user_id).where(
                     ConversationParticipant.conversation_id == conversation.id
                 )
             ).scalars().all()
+            participant_names = [get_user_display_name(session, participant_id) for participant_id in participants]
 
             request = session.get(MessageRequestModel, conversation.request_id)
             conversations.append(
@@ -570,8 +624,9 @@ def get_user_conversations(user_id: str) -> dict:
                     "id": conversation.id,
                     "request_id": conversation.request_id,
                     "participants": sorted(participants),
+                    "participants_display": sorted([name for name in participant_names if name]),
                     "created_at": conversation.created_at.isoformat(),
-                    "request": serialize_request(request) if request else None,
+                    "request": serialize_request_with_names(session, request) if request else None,
                 }
             )
 
@@ -589,6 +644,9 @@ def get_conversation_messages(conversation_id: str, user_id: str = Query(..., mi
         membership = session.get(ConversationParticipant, {"conversation_id": conversation_id, "user_id": user_id})
         if not membership:
             raise HTTPException(status_code=403, detail="No puedes leer mensajes de esta conversacion")
+
+        if is_conversation_hidden_for_user(session, conversation_id, user_id):
+            raise HTTPException(status_code=403, detail="Conversacion oculta para este usuario")
 
         messages = session.execute(
             select(ChatMessageModel)
@@ -611,6 +669,9 @@ async def create_message(conversation_id: str, payload: ChatMessageCreate) -> di
         )
         if not membership:
             raise HTTPException(status_code=403, detail="No puedes enviar mensajes en esta conversacion")
+
+        if is_conversation_hidden_for_user(session, conversation_id, payload.from_user_id):
+            raise HTTPException(status_code=403, detail="Conversacion oculta para este usuario")
 
         message = ChatMessageModel(
             id=str(uuid4()),
@@ -636,6 +697,37 @@ async def create_message(conversation_id: str, payload: ChatMessageCreate) -> di
     return {"message": serialized}
 
 
+@app.delete("/conversations/{conversation_id}")
+def hide_conversation_for_user(conversation_id: str, user_id: str = Query(..., min_length=1)) -> dict:
+    with SessionLocal() as session:
+        conversation = session.get(ConversationModel, conversation_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversacion no encontrada")
+
+        membership = session.get(
+            ConversationParticipant,
+            {"conversation_id": conversation_id, "user_id": user_id},
+        )
+        if not membership:
+            raise HTTPException(status_code=403, detail="No puedes borrar esta conversacion")
+
+        hidden = session.get(
+            HiddenConversationModel,
+            {"conversation_id": conversation_id, "user_id": user_id},
+        )
+        if not hidden:
+            session.add(
+                HiddenConversationModel(
+                    conversation_id=conversation_id,
+                    user_id=user_id,
+                    hidden_at=datetime.now(timezone.utc),
+                )
+            )
+            session.commit()
+
+        return {"deleted_for_user": True, "conversation_id": conversation_id, "user_id": user_id}
+
+
 @app.websocket("/ws/chat/{conversation_id}")
 async def chat_socket(websocket: WebSocket, conversation_id: str, user_id: str = Query(..., min_length=1)) -> None:
     with SessionLocal() as session:
@@ -650,6 +742,10 @@ async def chat_socket(websocket: WebSocket, conversation_id: str, user_id: str =
         )
         if not membership:
             await websocket.close(code=1008, reason="No autorizado para esta conversacion")
+            return
+
+        if is_conversation_hidden_for_user(session, conversation_id, user_id):
+            await websocket.close(code=1008, reason="Conversacion oculta para este usuario")
             return
 
         history = session.execute(
