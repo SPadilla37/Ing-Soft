@@ -393,6 +393,40 @@
       font-weight: 700;
     }
 
+    .confirm-copy {
+      margin-top: 0.8rem;
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .confirm-copy p {
+      margin: 0;
+      text-align: left;
+      color: #dbe7f9;
+    }
+
+    .confirm-list {
+      margin: 0;
+      padding-left: 1rem;
+      display: grid;
+      gap: 0.35rem;
+      color: #eaf3ff;
+    }
+
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.65rem;
+      margin-top: 1rem;
+    }
+
+    .confirm-actions .ghost-btn,
+    .confirm-actions .danger-btn {
+      width: auto;
+      min-width: 140px;
+      margin-top: 0;
+    }
+
     .dashboard {
       min-height: 100vh;
       padding: 0.9rem;
@@ -1090,6 +1124,24 @@
     </div>
   </section>
 
+  <section id="deleteConfirmModal" class="auth-modal hidden">
+    <div class="modal-card glass">
+      <h2>Confirmar eliminacion</h2>
+      <div class="confirm-copy">
+        <p>Vas a borrar esta publicacion:</p>
+        <ul class="confirm-list">
+          <li><strong>Ofreces:</strong> <span id="deleteConfirmOffered"></span></li>
+          <li><strong>Quieres aprender:</strong> <span id="deleteConfirmRequested"></span></li>
+        </ul>
+        <p>Esta accion no se puede deshacer.</p>
+      </div>
+      <div class="confirm-actions">
+        <button id="deleteConfirmCancelBtn" class="ghost-btn" type="button">Cancelar</button>
+        <button id="deleteConfirmAcceptBtn" class="danger-btn" type="button">Borrar publicacion</button>
+      </div>
+    </div>
+  </section>
+
   <section id="dashboard" class="dashboard hidden">
     <aside class="sidebar">
       <div class="sidebar-brand">
@@ -1409,6 +1461,7 @@
     const publicProfileTeachChips = $("publicProfileTeachChips");
     const publicProfileLearnChips = $("publicProfileLearnChips");
     const publicProfilePrimaryBtn = $("publicProfilePrimaryBtn");
+    const deleteConfirmModal = $("deleteConfirmModal");
 
     let currentUser = null;
     let currentUserRecord = null;
@@ -1432,6 +1485,7 @@
     let ownPendingRequests = [];
     let publicProfileUserId = "";
     let publicProfileReturnView = "matchesView";
+    let deleteConfirmResolver = null;
 
     function log(message) {
       const line = `[${new Date().toLocaleTimeString()}] ${message}`;
@@ -2112,9 +2166,31 @@
     function confirmDeleteRequest(request) {
       const offered = String(request?.offered_skill || "").trim() || "(sin habilidad)";
       const requested = String(request?.requested_skill || "").trim() || "(sin habilidad)";
-      return window.confirm(
-        `Vas a borrar esta publicacion:\n\nOfreces: ${offered}\nQuieres aprender: ${requested}\n\nEsta accion no se puede deshacer.\n\nDeseas continuar?`
-      );
+
+      if (deleteConfirmResolver) {
+        deleteConfirmResolver(false);
+      }
+
+      $("deleteConfirmOffered").textContent = offered;
+      $("deleteConfirmRequested").textContent = requested;
+      deleteConfirmModal.classList.remove("hidden");
+
+      setTimeout(() => {
+        $("deleteConfirmAcceptBtn").focus();
+      }, 0);
+
+      return new Promise((resolve) => {
+        deleteConfirmResolver = resolve;
+      });
+    }
+
+    function closeDeleteConfirmModal(confirmed) {
+      deleteConfirmModal.classList.add("hidden");
+      const resolver = deleteConfirmResolver;
+      deleteConfirmResolver = null;
+      if (resolver) {
+        resolver(Boolean(confirmed));
+      }
     }
 
     function renderLatestRequest() {
@@ -2145,7 +2221,7 @@
         deleteBtn.textContent = "Borrar esta publicacion";
         deleteBtn.addEventListener("click", async (event) => {
           event.stopPropagation();
-          if (!confirmDeleteRequest(request)) {
+          if (!(await confirmDeleteRequest(request))) {
             return;
           }
           await deleteLatestRequest(request.id);
@@ -2803,6 +2879,18 @@
       renderSelectedSummary(pickerMode, pickerSource);
     };
     $("cancelPickerBtn").onclick = closeSkillPicker;
+    $("deleteConfirmCancelBtn").onclick = () => closeDeleteConfirmModal(false);
+    $("deleteConfirmAcceptBtn").onclick = () => closeDeleteConfirmModal(true);
+    deleteConfirmModal.addEventListener("click", (event) => {
+      if (event.target === deleteConfirmModal) {
+        closeDeleteConfirmModal(false);
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !deleteConfirmModal.classList.contains("hidden")) {
+        closeDeleteConfirmModal(false);
+      }
+    });
     pickerSearchInput.addEventListener("input", renderPickerSkills);
     $("completeOnboardingBtn").onclick = completeOnboarding;
     $("searchBtn").onclick = loadMarketplace;
