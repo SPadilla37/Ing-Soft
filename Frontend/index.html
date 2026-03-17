@@ -2231,7 +2231,7 @@
 
       items.forEach((item) => {
         const request = item.request;
-        const author = displayUserName(request, "from");
+        const author = item.from_user_name || item.from_user_id || "Usuario";
         const card = document.createElement("article");
         card.className = "match-card";
         card.innerHTML = `
@@ -2244,11 +2244,11 @@
           </div>
           <div>
             <div class="muted">Te puede ensenar</div>
-            <div class="strong-list">${request.offered_skill}</div>
+            <div class="strong-list">${request.requested_skill}</div>
           </div>
           <div>
             <div class="muted">Quiere aprender</div>
-            <div class="strong-list">${request.requested_skill}</div>
+            <div class="strong-list">${request.offered_skill}</div>
           </div>
           <div>
             <div class="muted">Mensaje</div>
@@ -2263,13 +2263,13 @@
         respondBtn.className = "primary-btn";
         respondBtn.type = "button";
         respondBtn.textContent = "Responder match";
-        respondBtn.onclick = () => acceptRequest(request.id);
+        respondBtn.onclick = () => acceptRequest(request.id, item.from_user_id);
 
         const profileBtn = document.createElement("button");
         profileBtn.className = "ghost-btn";
         profileBtn.type = "button";
         profileBtn.textContent = "Go to profile";
-        profileBtn.onclick = () => showRequestDetails(request, "incomingMatchesView");
+        profileBtn.onclick = () => showRequestDetails({ from_user_id: item.from_user_id }, "incomingMatchesView");
 
         actions.appendChild(respondBtn);
         actions.appendChild(profileBtn);
@@ -2507,11 +2507,14 @@
       }
     }
 
-    async function acceptRequest(requestId) {
+    async function acceptRequest(requestId, responderToUserId = null) {
       try {
         const result = await api(`/marketplace/requests/${requestId}/accept`, {
           method: "POST",
-          body: JSON.stringify({ accepter_user_id: currentUser })
+          body: JSON.stringify({
+            accepter_user_id: currentUser,
+            ...(responderToUserId ? { responder_to_user_id: responderToUserId } : {})
+          })
         });
         await loadMarketplace();
         await loadIncomingMatches();
