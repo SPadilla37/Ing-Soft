@@ -160,6 +160,7 @@ class MatchModel(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     user_a_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
     user_b_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
+    source_request_id: Mapped[str] = mapped_column(String(36), ForeignKey("message_requests.id"), index=True, nullable=True)
     conversation_id: Mapped[str] = mapped_column(String(36), ForeignKey("conversations.id"), unique=True, index=True)
     status: Mapped[str] = mapped_column(String(20), default="in_progress", index=True)
     finalized_by_a: Mapped[bool] = mapped_column(default=False)
@@ -300,6 +301,7 @@ def ensure_matches_table_columns() -> None:
 
     existing_columns = {column["name"] for column in inspector.get_columns("matches")}
     columns_to_add = {
+        "source_request_id": "VARCHAR(36)",
         "status": "VARCHAR(20)",
         "finalized_by_a": "BOOLEAN",
         "finalized_by_b": "BOOLEAN",
@@ -364,23 +366,35 @@ def canonical_match_pair(user_one_id: str, user_two_id: str) -> tuple[str, str]:
     return tuple(sorted([user_one_id, user_two_id]))
 
 
-def get_match_for_users(session: Session, user_one_id: str, user_two_id: str) -> MatchModel | None:
+def get_match_for_users(
+    session: Session,
+    user_one_id: str,
+    user_two_id: str,
+    source_request_id: str | None = None,
+) -> MatchModel | None:
     user_a_id, user_b_id = canonical_match_pair(user_one_id, user_two_id)
-    return session.execute(
-        select(MatchModel).where(
-            MatchModel.user_a_id == user_a_id,
-            MatchModel.user_b_id == user_b_id,
-        )
-    ).scalars().first()
+    stmt = select(MatchModel).where(
+        MatchModel.user_a_id == user_a_id,
+        MatchModel.user_b_id == user_b_id,
+    )
+    if source_request_id is not None:
+        stmt = stmt.where(MatchModel.source_request_id == source_request_id)
+    return session.execute(stmt).scalars().first()
 
 
-def get_match_intent(session: Session, from_user_id: str, to_user_id: str) -> MatchIntentModel | None:
-    return session.execute(
-        select(MatchIntentModel).where(
-            MatchIntentModel.from_user_id == from_user_id,
-            MatchIntentModel.to_user_id == to_user_id,
-        )
-    ).scalars().first()
+def get_match_intent(
+    session: Session,
+    from_user_id: str,
+    to_user_id: str,
+    request_id: str | None = None,
+) -> MatchIntentModel | None:
+    stmt = select(MatchIntentModel).where(
+        MatchIntentModel.from_user_id == from_user_id,
+        MatchIntentModel.to_user_id == to_user_id,
+    )
+    if request_id is not None:
+        stmt = stmt.where(MatchIntentModel.request_id == request_id)
+    return session.execute(stmt).scalars().first()
 
 
 def create_match_conversation(session: Session, user_one_id: str, user_two_id: str, request: MessageRequestModel) -> str:
@@ -413,13 +427,13 @@ def serialize_request_for_viewer(
     if not viewer_user_id or viewer_user_id == request.from_user_id:
         return serialized
 
-    existing_match = get_match_for_users(session, viewer_user_id, request.from_user_id)
+    existing_match = get_match_for_users(session, viewer_user_id, request.from_user_id, request.id)
     if existing_match:
         serialized["viewer_match_state"] = "matched"
         serialized["viewer_conversation_id"] = existing_match.conversation_id
         return serialized
 
-    sent_intent = get_match_intent(session, viewer_user_id, request.from_user_id)
+    sent_intent = get_match_intent(session, viewer_user_id, request.from_user_id, request.id)
     if sent_intent:
         serialized["viewer_match_state"] = "sent"
 
@@ -729,7 +743,7 @@ def accept_marketplace_request(request_id: str, payload: MarketplaceAcceptReques
             raise HTTPException(status_code=400, detail="No puedes aceptar tu propia solicitud")
 
         ensure_user(session, payload.accepter_user_id)
-        existing_match = get_match_for_users(session, payload.accepter_user_id, request.from_user_id)
+        existing_match = get_match_for_users(session, payload.accepter_user_id, request.from_user_id, request.id)
         if existing_match:
             return {
                 "request": serialize_request_for_viewer(session, request, payload.accepter_user_id),
@@ -738,7 +752,7 @@ def accept_marketplace_request(request_id: str, payload: MarketplaceAcceptReques
                 "match_state": "matched",
             }
 
-        existing_intent = get_match_intent(session, payload.accepter_user_id, request.from_user_id)
+        existing_intent = get_match_intent(session, payload.accepter_user_id, request.from_user_id, request.id)
         reverse_intent = get_match_intent(session, request.from_user_id, payload.accepter_user_id)
 
         if not existing_intent:
@@ -764,6 +778,7 @@ def accept_marketplace_request(request_id: str, payload: MarketplaceAcceptReques
                     id=str(uuid4()),
                     user_a_id=user_a_id,
                     user_b_id=user_b_id,
+                    source_request_id=request.id,
                     conversation_id=conversation_id,
                     status="in_progress",
                     finalized_by_a=False,
@@ -795,20 +810,14 @@ def get_incoming_match_intents(user_id: str) -> dict:
 
         items = []
         for intent in intents:
-            existing_match = get_match_for_users(session, intent.from_user_id, intent.to_user_id)
+            existing_match = get_match_for_users(session, intent.from_user_id, intent.to_user_id, intent.request_id)
             if existing_match:
                 continue
 
-            request = session.execute(
-                select(MessageRequestModel)
-                .where(
-                    MessageRequestModel.from_user_id == intent.from_user_id,
-                    MessageRequestModel.status == RequestStatus.pending.value,
-                    MessageRequestModel.to_user_id == PUBLIC_MARKETPLACE_USER,
-                )
-                .order_by(MessageRequestModel.created_at.desc())
-            ).scalars().first()
+            request = session.get(MessageRequestModel, intent.request_id)
             if not request:
+                continue
+            if request.status != RequestStatus.pending.value or request.to_user_id != PUBLIC_MARKETPLACE_USER:
                 continue
 
             items.append(
