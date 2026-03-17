@@ -1190,7 +1190,7 @@
               <textarea id="publishIntroMessage" placeholder="Explica brevemente que puedes ensenar y que esperas aprender..."></textarea>
             </div>
             <button id="publishRequestBtn" class="primary-btn" type="button">Publicar solicitud</button>
-            <button id="deleteRequestBtn" class="danger-btn" type="button">Borrar mi publicacion activa</button>
+            <button id="deleteRequestBtn" class="ghost-btn" type="button">Actualizar mis publicaciones</button>
             <div id="publishStatus" class="muted">Aun no publicas una solicitud en esta sesion.</div>
           </div>
 
@@ -1208,7 +1208,7 @@
               <div id="learnPreview" class="summary-row"></div>
             </div>
             <div>
-              <strong>Ultima solicitud publicada</strong>
+              <strong>Mis solicitudes activas</strong>
               <div id="latestRequestBox" class="list"></div>
             </div>
           </div>
@@ -1358,7 +1358,6 @@
     const dbKeySession = "skillswap_session";
     const dbKeyProfilePrefix = "skillswap_profile_";
     const dbKeyCfg = "skill_chat_cfg";
-    const dbKeyLatestRequestPrefix = "skillswap_latest_request_";
 
     const skillsCatalog = {
       "All": [],
@@ -1430,7 +1429,7 @@
     let pickerMode = "teach";
     let pickerSource = "onboarding";
     let pickerCategory = "All";
-    let latestOwnRequest = null;
+    let ownPendingRequests = [];
     let publicProfileUserId = "";
     let publicProfileReturnView = "matchesView";
 
@@ -1456,7 +1455,7 @@
       currentUserRecord = null;
       selectedConversationId = "";
       connectedConversationId = "";
-      latestOwnRequest = null;
+      ownPendingRequests = [];
       if (socket) {
         socket.close();
         socket = null;
@@ -1489,7 +1488,6 @@
     }
 
     function profileKey(user) { return `${dbKeyProfilePrefix}${user}`; }
-    function latestRequestKey(user) { return `${dbKeyLatestRequestPrefix}${user}`; }
 
     function getCurrentUserRecord() {
       return currentUserRecord;
@@ -2068,8 +2066,7 @@
           method: "POST",
           body: JSON.stringify(payload)
         });
-        latestOwnRequest = result.request;
-        localStorage.setItem(latestRequestKey(currentUser), JSON.stringify(result.request));
+        ownPendingRequests = [result.request, ...ownPendingRequests.filter((item) => item.id !== result.request.id)];
         setPublishStatus("Solicitud publicada correctamente.", "ok");
         log(`Solicitud publicada: ${result.request.id}`);
         renderLatestRequest();
@@ -2082,29 +2079,29 @@
 
     async function loadLatestOwnRequest() {
       if (!currentUser) {
-        latestOwnRequest = null;
+        ownPendingRequests = [];
         return;
       }
       try {
         const result = await api(`/message-requests/${encodeURIComponent(currentUser)}/outgoing`);
-        latestOwnRequest = result.requests.find((item) => item.status === "pending" && item.to_user_id === "__PUBLIC__") || null;
+        ownPendingRequests = result.requests.filter((item) => item.status === "pending" && item.to_user_id === "__PUBLIC__");
       } catch {
-        latestOwnRequest = null;
+        ownPendingRequests = [];
       }
     }
 
-    async function deleteLatestRequest() {
-      if (!latestOwnRequest?.id) {
+    async function deleteLatestRequest(requestId = null) {
+      const targetRequestId = requestId || ownPendingRequests[0]?.id;
+      if (!targetRequestId) {
         setPublishStatus("No tienes una publicacion publica pendiente para borrar.", "info");
         return;
       }
       try {
-        await api(`/message-requests/${encodeURIComponent(latestOwnRequest.id)}?user_id=${encodeURIComponent(currentUser)}`, {
+        await api(`/message-requests/${encodeURIComponent(targetRequestId)}?user_id=${encodeURIComponent(currentUser)}`, {
           method: "DELETE"
         });
         setPublishStatus("Publicacion eliminada.", "ok");
-        latestOwnRequest = null;
-        localStorage.removeItem(latestRequestKey(currentUser));
+        ownPendingRequests = ownPendingRequests.filter((item) => item.id !== targetRequestId);
         renderLatestRequest();
         await loadMarketplace();
       } catch (error) {
@@ -2112,10 +2109,18 @@
       }
     }
 
+    function confirmDeleteRequest(request) {
+      const offered = String(request?.offered_skill || "").trim() || "(sin habilidad)";
+      const requested = String(request?.requested_skill || "").trim() || "(sin habilidad)";
+      return window.confirm(
+        `Vas a borrar esta publicacion:\n\nOfreces: ${offered}\nQuieres aprender: ${requested}\n\nEsta accion no se puede deshacer.\n\nDeseas continuar?`
+      );
+    }
+
     function renderLatestRequest() {
       const box = $("latestRequestBox");
       box.innerHTML = "";
-      if (!latestOwnRequest) {
+      if (!ownPendingRequests.length) {
         const empty = document.createElement("div");
         empty.className = "list-item";
         empty.textContent = "Aun no tienes una publicacion publica pendiente.";
@@ -2123,14 +2128,33 @@
         return;
       }
 
-      const card = document.createElement("div");
-      card.className = "list-item";
-      card.innerHTML = `
-        <strong>${latestOwnRequest.offered_skill}</strong>
-        <div class="muted">Quiere aprender: ${latestOwnRequest.requested_skill}</div>
-        <div class="muted">Estado: ${latestOwnRequest.status}</div>
-      `;
-      box.appendChild(card);
+      ownPendingRequests.forEach((request) => {
+        const card = document.createElement("div");
+        card.className = "list-item";
+        card.innerHTML = `
+          <strong>${request.offered_skill}</strong>
+          <div class="muted">Quiere aprender: ${request.requested_skill}</div>
+          <div class="muted">Estado: ${request.status}</div>
+        `;
+
+        const actions = document.createElement("div");
+        actions.className = "card-actions";
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "mini-btn";
+        deleteBtn.textContent = "Borrar esta publicacion";
+        deleteBtn.addEventListener("click", async (event) => {
+          event.stopPropagation();
+          if (!confirmDeleteRequest(request)) {
+            return;
+          }
+          await deleteLatestRequest(request.id);
+        });
+
+        actions.appendChild(deleteBtn);
+        card.appendChild(actions);
+        box.appendChild(card);
+      });
     }
 
     function marketplaceMatchesCategory(request) {
@@ -2783,7 +2807,11 @@
     $("completeOnboardingBtn").onclick = completeOnboarding;
     $("searchBtn").onclick = loadMarketplace;
     $("publishRequestBtn").onclick = () => publishRequest(false);
-    $("deleteRequestBtn").onclick = deleteLatestRequest;
+    $("deleteRequestBtn").onclick = async () => {
+      await loadLatestOwnRequest();
+      renderLatestRequest();
+      setPublishStatus("Lista de publicaciones actualizada.", "info");
+    };
     $("loadConversationsBtn").onclick = loadConversations;
     $("disconnectWsBtn").onclick = disconnectWs;
     $("deleteConversationBtn").onclick = deleteSelectedConversation;
