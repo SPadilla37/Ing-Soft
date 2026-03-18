@@ -12,10 +12,16 @@ Se implemento un backend en Python con FastAPI y WebSocket para el flujo de inte
 
 ## Estructura
 
-- `Backend/app/main.py`: API REST + WebSocket.
+- `Backend/app/main.py`: punto de entrada FastAPI y orquestacion.
+- `Backend/app/core/security.py`: utilidades de autenticacion (hash de password).
+- `Backend/app/db/database.py`: configuracion de engine/sesion SQLAlchemy.
+- `Backend/app/db/models/`: modelos SQLAlchemy por dominio.
+- `Backend/app/schemas/`: validaciones Pydantic (payloads y contratos).
+- `Backend/app/services/`: logica reusable (websocket, matching, reputacion).
+- `Backend/app/api/routes/`: endpoints separados por routers de API.
 - `Backend/requirements.txt`: dependencias Python.
 - `Backend/render.yaml`: configuracion para Render.
-- `Frontend/index.html`: cliente de prueba estatico (ideal para GitHub Pages).
+- `Frontend/index.html`: cliente web estatico.
 
 ## Backend local
 
@@ -41,14 +47,17 @@ http://127.0.0.1:8000/docs
 
 ## Endpoints principales
 
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /usuarios/{user_id}`
+- `PUT /usuarios/{user_id}/profile`
 - `POST /message-requests`
-- `GET /message-requests/{user_id}/incoming`
-- `GET /message-requests/{user_id}/outgoing`
-- `PATCH /message-requests/{request_id}/respond`
 - `GET /conversations/{user_id}`
-- `GET /conversations/{conversation_id}/messages?user_id=...`
+- `GET /conversaciones`
+- `POST /conversaciones`
 - `POST /conversations/{conversation_id}/messages`
-- `WS /ws/chat/{conversation_id}?user_id=...`
+- `POST /mensajes`
+- `WS /ws/{conversation_id}/{user_id}`
 
 ## Deploy
 
@@ -73,6 +82,5 @@ Si quieres permitir varios origenes:
 
 ## Nota importante
 
-Actualmente el almacenamiento es en memoria (ideal para prototipo y demo).
-Si reinicias el servidor, se pierden solicitudes, conversaciones y mensajes.
-Para produccion, el siguiente paso es conectar PostgreSQL (Render Postgres).
+Actualmente el almacenamiento por defecto usa SQLite local (`skillswap.db`).
+Para produccion, el siguiente paso recomendado es conectar PostgreSQL (Render Postgres).
