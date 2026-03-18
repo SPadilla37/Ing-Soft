@@ -200,7 +200,14 @@ def list_marketplace_requests(
             stmt.order_by(MessageRequestModel.created_at.desc())
         ).scalars().all()
 
-        return {"requests": [serialize_request_for_viewer(session, item, viewer_user_id) for item in requests]}
+        serialized_requests = [serialize_request_for_viewer(session, item, viewer_user_id) for item in requests]
+        if viewer_user_id:
+            serialized_requests = [
+                item for item in serialized_requests
+                if item.get("viewer_match_state") != "matched"
+            ]
+
+        return {"requests": serialized_requests}
 
 
 @router.post("/marketplace/requests/{request_id}/accept")

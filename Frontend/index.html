@@ -2242,6 +2242,10 @@
       marketplaceGrid.innerHTML = "";
       const searchQuery = $("searchInput").value.trim();
       const filtered = requests.filter((request) => {
+        const matchState = request.viewer_match_state || "none";
+        if (matchState === "matched") {
+          return false;
+        }
         if (!marketplaceMatchesCategory(request)) {
           return false;
         }
