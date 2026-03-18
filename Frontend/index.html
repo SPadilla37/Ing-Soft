@@ -1344,16 +1344,6 @@
             </div>
           </div>
 
-          <div class="stack" style="margin-top: 1rem;">
-            <div id="debugShell" class="debug-shell hidden">
-              <h3>Debug tecnico</h3>
-              <label>URL Backend</label>
-              <input id="apiBase" value="https://ing-soft-5shh.onrender.com" />
-              <button id="saveCfgBtn" class="ghost-btn" type="button">Guardar configuracion tecnica</button>
-              <pre id="log"></pre>
-            </div>
-            <button id="toggleTechBtn" class="ghost-btn" type="button">Mostrar/Ocultar ajustes tecnicos</button>
-          </div>
         </div>
       </section>
 
@@ -1409,7 +1399,7 @@
     const $ = (id) => document.getElementById(id);
     const dbKeySession = "skillswap_session";
     const dbKeyProfilePrefix = "skillswap_profile_";
-    const dbKeyCfg = "skill_chat_cfg";
+    const API_BASE = "https://ing-soft-5shh.onrender.com";
 
     const skillsCatalog = {
       "All": [],
@@ -1427,8 +1417,6 @@
     const onboardingModal = $("onboardingModal");
     const skillPickerOverlay = $("skillPickerOverlay");
     const dashboard = $("dashboard");
-    const debugShell = $("debugShell");
-    const logEl = $("log");
     const chatBox = $("chatBox");
     const marketplaceGrid = $("marketplaceGrid");
     const incomingMatchesGrid = $("incomingMatchesGrid");
@@ -1488,9 +1476,7 @@
     let deleteConfirmResolver = null;
 
     function log(message) {
-      const line = `[${new Date().toLocaleTimeString()}] ${message}`;
-      logEl.textContent += `${line}\n`;
-      logEl.scrollTop = logEl.scrollHeight;
+      console.debug(`[SkillSwap] ${message}`);
     }
 
     function loadSession() {
@@ -1524,21 +1510,7 @@
     }
 
     function cfg() {
-      return { apiBase: $("apiBase").value.trim().replace(/\/$/, "") };
-    }
-
-    function saveCfg() {
-      localStorage.setItem(dbKeyCfg, JSON.stringify(cfg()));
-      log("Configuracion tecnica guardada");
-    }
-
-    function loadCfg() {
-      try {
-        const saved = JSON.parse(localStorage.getItem(dbKeyCfg) || "{}");
-        if (saved.apiBase) {
-          $("apiBase").value = saved.apiBase;
-        }
-      } catch {}
+      return { apiBase: API_BASE };
     }
 
     function profileKey(user) { return `${dbKeyProfilePrefix}${user}`; }
@@ -2844,10 +2816,6 @@
       log("Perfil actualizado.");
     }
 
-    function toggleTech() {
-      debugShell.classList.toggle("hidden");
-    }
-
     async function refreshAll() {
       renderTopBar();
       hydrateProfileUI();
@@ -2917,11 +2885,7 @@
     };
     $("closePublicProfileBtn").onclick = closePublicProfile;
     $("logoutBtn").onclick = clearSession;
-    $("saveCfgBtn").onclick = saveCfg;
-    $("toggleTechBtn").onclick = toggleTech;
-
     async function initializeApp() {
-      loadCfg();
       loadSession();
       renderSelectedSummary("teach");
       renderSelectedSummary("learn");
