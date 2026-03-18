@@ -44,6 +44,17 @@ class ChatMessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=2000)
 
 
+class ConversationCreatePayload(BaseModel):
+    request_id: str = Field(min_length=1, max_length=36)
+    user_id: str = Field(min_length=1, max_length=120)
+
+
+class MessageCreatePayload(BaseModel):
+    conversation_id: str = Field(min_length=1, max_length=36)
+    from_user_id: str = Field(min_length=1, max_length=120)
+    content: str = Field(min_length=1, max_length=2000)
+
+
 class MarketplaceAcceptRequest(BaseModel):
     accepter_user_id: str = Field(min_length=1, max_length=120)
     responder_to_user_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
@@ -585,7 +596,7 @@ def health() -> dict:
     return {"status": "ok", "time": utc_now_iso()}
 
 
-@app.post("/users/register")
+@app.post("/auth/register")
 def register_user(payload: UserRegisterPayload) -> dict:
     email = payload.email.strip().lower()
     with SessionLocal() as session:
@@ -613,7 +624,7 @@ def register_user(payload: UserRegisterPayload) -> dict:
         return {"user": serialize_user(existing, session)}
 
 
-@app.post("/users/login")
+@app.post("/auth/login")
 def login_user(payload: UserLoginPayload) -> dict:
     email = payload.email.strip().lower()
     with SessionLocal() as session:
@@ -626,7 +637,7 @@ def login_user(payload: UserLoginPayload) -> dict:
         return {"user": serialize_user(user, session)}
 
 
-@app.get("/users/{user_id}")
+@app.get("/usuarios/{user_id}")
 def get_user(user_id: str) -> dict:
     with SessionLocal() as session:
         user = session.get(User, user_id)
@@ -635,7 +646,7 @@ def get_user(user_id: str) -> dict:
         return {"user": serialize_user(user, session)}
 
 
-@app.put("/users/{user_id}/profile")
+@app.put("/usuarios/{user_id}/profile")
 def update_user_profile(user_id: str, payload: UserProfileUpdatePayload) -> dict:
     with SessionLocal() as session:
         user = session.get(User, user_id)
@@ -999,6 +1010,7 @@ def respond_message_request(request_id: str, payload: MessageRequestResponse) ->
 
 
 @app.get("/conversations/{user_id}")
+@app.get("/conversaciones")
 def get_user_conversations(user_id: str) -> dict:
     with SessionLocal() as session:
         participant_rows = session.execute(
@@ -1035,6 +1047,24 @@ def get_user_conversations(user_id: str) -> dict:
 
         conversations.sort(key=lambda item: item["created_at"], reverse=True)
         return {"conversations": conversations}
+
+
+@app.post("/conversaciones")
+def create_conversation(payload: ConversationCreatePayload) -> dict:
+    with SessionLocal() as session:
+        request = session.get(MessageRequestModel, payload.request_id)
+        if not request:
+            raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+        if payload.user_id not in {request.from_user_id, request.to_user_id}:
+            raise HTTPException(status_code=403, detail="No autorizado para crear esta conversacion")
+
+        if request.status != RequestStatus.accepted.value:
+            raise HTTPException(status_code=400, detail="La solicitud debe estar aceptada")
+
+        conversation_id = create_conversation_for_request(session, request)
+        session.commit()
+        return {"conversation_id": conversation_id}
 
 
 @app.get("/conversations/{conversation_id}/messages")
@@ -1100,6 +1130,14 @@ async def create_message(conversation_id: str, payload: ChatMessageCreate) -> di
     return {"message": serialized}
 
 
+@app.post("/mensajes")
+async def create_message_alias(payload: MessageCreatePayload) -> dict:
+    return await create_message(
+        conversation_id=payload.conversation_id,
+        payload=ChatMessageCreate(from_user_id=payload.from_user_id, content=payload.content),
+    )
+
+
 @app.delete("/conversations/{conversation_id}")
 def hide_conversation_for_user(conversation_id: str, user_id: str = Query(..., min_length=1)) -> dict:
     with SessionLocal() as session:
@@ -1131,8 +1169,7 @@ def hide_conversation_for_user(conversation_id: str, user_id: str = Query(..., m
         return {"deleted_for_user": True, "conversation_id": conversation_id, "user_id": user_id}
 
 
-@app.websocket("/ws/chat/{conversation_id}")
-async def chat_socket(websocket: WebSocket, conversation_id: str, user_id: str = Query(..., min_length=1)) -> None:
+async def chat_socket_impl(websocket: WebSocket, conversation_id: str, user_id: str) -> None:
     with SessionLocal() as session:
         conversation = session.get(ConversationModel, conversation_id)
         if not conversation:
@@ -1231,3 +1268,8 @@ async def chat_socket(websocket: WebSocket, conversation_id: str, user_id: str =
                 "at": utc_now_iso(),
             },
         )
+
+
+@app.websocket("/ws/{conversation_id}/{user_id}")
+async def chat_socket_alias(websocket: WebSocket, conversation_id: str, user_id: str) -> None:
+    await chat_socket_impl(websocket, conversation_id, user_id)

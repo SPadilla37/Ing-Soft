@@ -1580,7 +1580,7 @@
 
     async function loadCurrentUserFromApi() {
       if (!currentUser) return;
-      const result = await api(`/users/${encodeURIComponent(currentUser)}`);
+      const result = await api(`/usuarios/${encodeURIComponent(currentUser)}`);
       currentUserRecord = result.user;
       const normalized = normalizeProfileFromUser(result.user);
       if (normalized) {
@@ -1590,7 +1590,7 @@
 
     async function persistProfileToApi(profile) {
       if (!currentUser) return;
-      const result = await api(`/users/${encodeURIComponent(currentUser)}/profile`, {
+      const result = await api(`/usuarios/${encodeURIComponent(currentUser)}/profile`, {
         method: "PUT",
         body: JSON.stringify({
           name: profile.fullName,
@@ -1687,7 +1687,7 @@
         };
       }
 
-      const result = await api(`/users/${encodeURIComponent(userId)}`);
+      const result = await api(`/usuarios/${encodeURIComponent(userId)}`);
       return result.user;
     }
 
@@ -2028,7 +2028,7 @@
       }
 
       try {
-        const result = await api("/users/register", {
+        const result = await api("/auth/register", {
           method: "POST",
           body: JSON.stringify({ email, name, password: pass })
         });
@@ -2052,7 +2052,7 @@
       const pass = $("loginPass").value.trim();
 
       try {
-        const result = await api("/users/login", {
+        const result = await api("/auth/login", {
           method: "POST",
           body: JSON.stringify({ email, password: pass })
         });
@@ -2744,7 +2744,7 @@
       const secure = baseUrl.startsWith("https://");
       const protocol = secure ? "wss://" : "ws://";
       const host = baseUrl.replace(/^https?:\/\//, "");
-      return `${protocol}${host}/ws/chat/${encodeURIComponent(conversationId)}?user_id=${encodeURIComponent(userId)}`;
+      return `${protocol}${host}/ws/${encodeURIComponent(conversationId)}/${encodeURIComponent(userId)}`;
     }
 
     function connectWs(autoConnect = false) {
