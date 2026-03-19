@@ -26,7 +26,7 @@ export async function signupDomain({
   }
 
   try {
-    const result = await api("/auth/register", {
+    const result = await api("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({ email, name, password: pass }),
     });
@@ -57,11 +57,13 @@ export async function loginDomain({
   const pass = $("loginPass").value.trim();
 
   try {
-    const result = await api("/auth/login", {
+    const result = await api("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password: pass }),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ username: email, password: pass }).toString(),
     });
-    setCurrentUserRecord(result.user);
+    setAuthToken(result.access_token);
+    setCurrentUserRecord({ id: email });
   } catch (error) {
     alert(error.message);
     return;
@@ -71,3 +73,4 @@ export async function loginDomain({
   await ensureOnboardingOrDashboard();
   log("Sesion iniciada.");
 }
+

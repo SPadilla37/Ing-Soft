@@ -102,20 +102,22 @@ const $ = (id) => document.getElementById(id);
       currentUser = email;
     }
 
-    function clearSession() {
-      localStorage.removeItem(dbKeySession);
-      currentUser = null;
-      currentUserRecord = null;
-      selectedConversationId = "";
-      ownPendingRequests = [];
-      disconnectConversationSocket({ socketState, setChatStatus });
-      setPublishStatus("Sesion cerrada.", "info");
-      authScreen.classList.remove("hidden");
-      onboardingModal.classList.add("hidden");
-      skillPickerOverlay.classList.add("hidden");
-      dashboard.classList.add("hidden");
-      activateView("matchesView");
-    }
+function clearSession() {
+  localStorage.removeItem("auth_token");
+  setAuthToken(null);
+  localStorage.removeItem(dbKeySession);
+  currentUser = null;
+  currentUserRecord = null;
+  selectedConversationId = "";
+  ownPendingRequests = [];
+  disconnectConversationSocket({ socketState, setChatStatus });
+  setPublishStatus("Sesion cerrada.", "info");
+  authScreen.classList.remove("hidden");
+  onboardingModal.classList.add("hidden");
+  skillPickerOverlay.classList.add("hidden");
+  dashboard.classList.add("hidden");
+  activateView("matchesView");
+}
 
     function cfg() {
       return { apiBase: API_BASE };

@@ -44,21 +44,6 @@ class MarketplaceAcceptRequest(BaseModel):
     responder_to_user_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
 
 
-class MatchFinalizePayload(BaseModel):
-    user_id: str = Field(min_length=1, max_length=120)
-
-
-class MatchRatePayload(BaseModel):
-    user_id: str = Field(min_length=1, max_length=120)
-    rating: int = Field(ge=0, le=5)
-
-
-class UserRegisterPayload(BaseModel):
-    email: str = Field(min_length=3, max_length=120)
-    name: str = Field(min_length=1, max_length=120)
-    password: str = Field(min_length=4, max_length=200)
-
-
 class UserLoginPayload(BaseModel):
     email: str = Field(min_length=3, max_length=120)
     password: str = Field(min_length=4, max_length=200)
