@@ -1,9 +1,8 @@
 import os
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import router
+from app.api.routes import matches, auth, requests, users, websocket
 from app.db.database import Base, SessionLocal, engine
 from app.services.core import (
     PUBLIC_MARKETPLACE_USER,
@@ -36,5 +35,11 @@ def on_startup() -> None:
         ensure_user(session, PUBLIC_MARKETPLACE_USER)
         session.commit()
 
+app.include_router(matches.router)
+app.include_router(auth.router)
+app.include_router(requests.router)
+app.include_router(users.router)
+app.include_router(websocket.router)
 
-app.include_router(router)
+
+
