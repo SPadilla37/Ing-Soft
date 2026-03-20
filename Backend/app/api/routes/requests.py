@@ -1,28 +1,17 @@
 from datetime import datetime, timezone
-from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import or_, select
 from app.db.database import SessionLocal
-from app.db.models import MessageRequestModel, MatchIntentModel, MatchModel
-from app.schemas import (
-    MarketplaceAcceptRequest,
-    MessageRequestCreate,
-    MessageRequestResponse,
-    RequestStatus,
-)
+from app.db.models.entities_2 import Intercambio, Conversacion
+from app.schemas import MarketplaceAcceptRequest, MessageRequestCreate, MessageRequestResponse
 from app.services.core import (
-    PUBLIC_MARKETPLACE_USER,
-    create_conversation_for_request,
-    create_match_conversation,
+    PUBLIC_MARKETPLACE_USER_ID,
+    create_conversation_for_intercambio,
     ensure_user,
     get_match_for_users,
-    get_match_intent,
-    get_user_display_name,
-    serialize_match_for_user,
-    serialize_request_for_viewer,
-    serialize_request_with_names,
+    serialize_intercambio_for_viewer,
+    serialize_intercambio_with_names,
 )
-from app.services.matching import canonical_match_pair
 
 
 router = APIRouter()
@@ -37,221 +26,197 @@ def create_message_request(payload: MessageRequestCreate) -> dict:
         ensure_user(session, payload.from_user_id)
         if payload.to_user_id:
             ensure_user(session, payload.to_user_id)
+            receptor_id = payload.to_user_id
         else:
-            ensure_user(session, PUBLIC_MARKETPLACE_USER)
+            receptor_id = PUBLIC_MARKETPLACE_USER_ID
 
         now = datetime.now(timezone.utc)
-        request_obj = MessageRequestModel(
-            id=str(uuid4()),
-            from_user_id=payload.from_user_id,
-            to_user_id=payload.to_user_id or PUBLIC_MARKETPLACE_USER,
-            offered_skill=payload.offered_skill,
-            requested_skill=payload.requested_skill,
-            intro_message=payload.intro_message,
-            status=RequestStatus.pending.value,
-            created_at=now,
-            updated_at=now,
+        intercambio = Intercambio(
+            usuario_emisor_id=payload.from_user_id,
+            usuario_receptor_id=receptor_id,
+            habilidad_id=payload.habilidad_id,
+            habilidad_solicitada_id=payload.habilidad_solicitada_id,
+            mensaje=payload.mensaje,
+            estado="pendiente",
+            fecha_creacion=now,
         )
-        session.add(request_obj)
+        session.add(intercambio)
         session.commit()
-        session.refresh(request_obj)
-        return {"request": serialize_request_with_names(session, request_obj)}
+        session.refresh(intercambio)
+        return {"request": serialize_intercambio_with_names(session, intercambio)}
 
 
 @router.get("/marketplace/requests")
 def list_marketplace_requests(
-    viewer_user_id: str | None = Query(default=None),
+    viewer_user_id: int | None = Query(default=None),
     q: str | None = Query(default=None),
 ) -> dict:
     with SessionLocal() as session:
-        stmt = select(MessageRequestModel).where(
-            MessageRequestModel.status == RequestStatus.pending.value,
-            MessageRequestModel.to_user_id == PUBLIC_MARKETPLACE_USER,
+        stmt = select(Intercambio).where(
+            Intercambio.estado == "pendiente",
+            Intercambio.usuario_receptor_id == PUBLIC_MARKETPLACE_USER_ID,
         )
 
         if viewer_user_id:
-            stmt = stmt.where(MessageRequestModel.from_user_id != viewer_user_id)
+            stmt = stmt.where(Intercambio.usuario_emisor_id != viewer_user_id)
 
-        if q:
-            q_text = f"%{q.lower()}%"
-            stmt = stmt.where(
-                or_(
-                    MessageRequestModel.offered_skill.ilike(q_text),
-                    MessageRequestModel.requested_skill.ilike(q_text),
-                    MessageRequestModel.intro_message.ilike(q_text),
-                    MessageRequestModel.from_user_id.ilike(q_text),
-                )
-            )
-
-        requests = session.execute(
-            stmt.order_by(MessageRequestModel.created_at.desc())
+        intercambios = session.execute(
+            stmt.order_by(Intercambio.fecha_creacion.desc())
         ).scalars().all()
 
-        serialized_requests = [serialize_request_for_viewer(session, item, viewer_user_id) for item in requests]
-        if viewer_user_id:
-            serialized_requests = [
-                item for item in serialized_requests
-                if item.get("viewer_match_state") != "matched"
-            ]
+        serialized = []
+        for item in intercambios:
+            ser = serialize_intercambio_for_viewer(session, item, viewer_user_id)
+            if viewer_user_id and ser.get("viewer_match_state") == "matched":
+                continue
+            serialized.append(ser)
 
-        return {"requests": serialized_requests}
+        return {"requests": serialized}
 
 
 @router.post("/marketplace/requests/{request_id}/accept")
-def accept_marketplace_request(request_id: str, payload: MarketplaceAcceptRequest) -> dict:
+def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptRequest) -> dict:
     with SessionLocal() as session:
-        request_obj = session.get(MessageRequestModel, request_id)
-        if not request_obj:
+        intercambio = session.get(Intercambio, request_id)
+        if not intercambio:
             raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
-        if request_obj.status != RequestStatus.pending.value:
+        if intercambio.estado != "pendiente":
             raise HTTPException(status_code=400, detail="Esta solicitud ya no esta disponible")
 
-        if request_obj.to_user_id != PUBLIC_MARKETPLACE_USER:
+        if intercambio.usuario_receptor_id != PUBLIC_MARKETPLACE_USER_ID:
             raise HTTPException(status_code=400, detail="Esta solicitud no es publica")
 
-        ensure_user(session, payload.accepter_user_id)
-        target_user_id = request_obj.from_user_id
+        ensure_user(session, payload.viewer_user_id)
 
-        if payload.accepter_user_id == request_obj.from_user_id:
-            if not payload.responder_to_user_id:
-                raise HTTPException(status_code=400, detail="Debes indicar que usuario quieres aceptar")
-            if payload.responder_to_user_id == payload.accepter_user_id:
-                raise HTTPException(status_code=400, detail="No puedes aceptar tu propio interes")
+        viewer = payload.viewer_user_id
+        target = intercambio.usuario_emisor_id
 
-            incoming_intent = get_match_intent(
-                session,
-                payload.responder_to_user_id,
-                payload.accepter_user_id,
-                request_obj.id,
-            )
-            if not incoming_intent:
-                raise HTTPException(status_code=400, detail="Ese interes recibido ya no esta disponible")
+        if viewer == target:
+            raise HTTPException(status_code=400, detail="No puedes aceptar tu propia solicitud")
 
-            target_user_id = payload.responder_to_user_id
-
-        existing_match = get_match_for_users(session, payload.accepter_user_id, target_user_id, request_obj.id)
+        existing_match = get_match_for_users(session, viewer, target)
         if existing_match:
+            conv = session.execute(
+                select(Conversacion).where(
+                    or_(
+                        (Conversacion.usuario_1_id == existing_match.usuario_emisor_id) & (Conversacion.usuario_2_id == existing_match.usuario_receptor_id),
+                        (Conversacion.usuario_1_id == existing_match.usuario_receptor_id) & (Conversacion.usuario_2_id == existing_match.usuario_emisor_id),
+                    )
+                )
+            ).scalars().first()
             return {
-                "request": serialize_request_for_viewer(session, request_obj, payload.accepter_user_id),
+                "request": serialize_intercambio_for_viewer(session, intercambio, viewer),
                 "matched": True,
-                "conversation_id": existing_match.conversation_id,
+                "conversation_id": conv.id if conv else None,
                 "match_state": "matched",
             }
 
-        existing_intent = get_match_intent(session, payload.accepter_user_id, target_user_id, request_obj.id)
-        reverse_intent = get_match_intent(session, target_user_id, payload.accepter_user_id)
-
-        if not existing_intent:
-            session.add(
-                MatchIntentModel(
-                    id=str(uuid4()),
-                    from_user_id=payload.accepter_user_id,
-                    to_user_id=target_user_id,
-                    request_id=request_obj.id,
-                    created_at=datetime.now(timezone.utc),
-                )
+        matched = session.execute(
+            select(Intercambio).where(
+                Intercambio.usuario_emisor_id == viewer,
+                Intercambio.usuario_receptor_id == target,
+                Intercambio.estado == "pendiente",
             )
+        ).scalars().first()
 
-        matched = reverse_intent is not None
         conversation_id = None
         match_state = "sent"
 
         if matched:
-            conversation_id = create_match_conversation(session, payload.accepter_user_id, target_user_id, request_obj)
-            user_a_id, user_b_id = canonical_match_pair(payload.accepter_user_id, target_user_id)
-            session.add(
-                MatchModel(
-                    id=str(uuid4()),
-                    user_a_id=user_a_id,
-                    user_b_id=user_b_id,
-                    source_request_id=request_obj.id,
-                    conversation_id=conversation_id,
-                    status="in_progress",
-                    finalized_by_a=False,
-                    finalized_by_b=False,
-                    updated_at=datetime.now(timezone.utc),
-                    created_at=datetime.now(timezone.utc),
-                )
+            now = datetime.now(timezone.utc)
+            acepted_intercambio = Intercambio(
+                usuario_emisor_id=viewer,
+                usuario_receptor_id=target,
+                habilidad_id=getattr(matched, "habilidad_id", None),
+                habilidad_solicitada_id=getattr(matched, "habilidad_solicitada_id", None),
+                mensaje=getattr(matched, "mensaje", ""),
+                estado="aceptado",
+                fecha_creacion=now,
             )
+            session.add(acepted_intercambio)
+            session.flush()
+            conversation_id = create_conversation_for_intercambio(session, acepted_intercambio)
             match_state = "matched"
 
         session.commit()
 
         return {
-            "request": serialize_request_for_viewer(session, request_obj, payload.accepter_user_id),
-            "matched": matched,
+            "request": serialize_intercambio_for_viewer(session, intercambio, viewer),
+            "matched": matched is not None,
             "match_state": match_state,
             "conversation_id": conversation_id,
         }
 
 
 @router.delete("/message-requests/{request_id}")
-def delete_own_message_request(request_id: str, user_id: str = Query(..., min_length=1)) -> dict:
+def delete_own_message_request(request_id: int, user_id: int = Query(..., min_length=1)) -> dict:
     with SessionLocal() as session:
-        request_obj = session.get(MessageRequestModel, request_id)
-        if not request_obj:
+        intercambio = session.get(Intercambio, request_id)
+        if not intercambio:
             raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
-        if request_obj.from_user_id != user_id:
+        if intercambio.usuario_emisor_id != user_id:
             raise HTTPException(status_code=403, detail="Solo puedes borrar tus propias solicitudes")
 
-        if request_obj.status != RequestStatus.pending.value or request_obj.to_user_id != PUBLIC_MARKETPLACE_USER:
+        if intercambio.estado != "pendiente" or intercambio.usuario_receptor_id != PUBLIC_MARKETPLACE_USER_ID:
             raise HTTPException(status_code=400, detail="Solo puedes borrar solicitudes publicas pendientes")
 
-        session.delete(request_obj)
+        session.delete(intercambio)
         session.commit()
         return {"deleted": True, "request_id": request_id}
 
 
 @router.get("/message-requests/{user_id}/incoming")
-def get_incoming_requests(user_id: str) -> dict:
+def get_incoming_requests(user_id: int) -> dict:
     with SessionLocal() as session:
-        requests = session.execute(
-            select(MessageRequestModel)
-            .where(MessageRequestModel.to_user_id == user_id)
-            .order_by(MessageRequestModel.created_at.desc())
+        ensure_user(session, user_id)
+        intercambios = session.execute(
+            select(Intercambio)
+            .where(Intercambio.usuario_receptor_id == user_id)
+            .order_by(Intercambio.fecha_creacion.desc())
         ).scalars().all()
-        return {"requests": [serialize_request_with_names(session, item) for item in requests]}
+        return {"requests": [serialize_intercambio_with_names(session, item) for item in intercambios]}
 
 
 @router.get("/message-requests/{user_id}/outgoing")
-def get_outgoing_requests(user_id: str) -> dict:
+def get_outgoing_requests(user_id: int) -> dict:
     with SessionLocal() as session:
-        requests = session.execute(
-            select(MessageRequestModel)
-            .where(MessageRequestModel.from_user_id == user_id)
-            .order_by(MessageRequestModel.created_at.desc())
+        ensure_user(session, user_id)
+        intercambios = session.execute(
+            select(Intercambio)
+            .where(Intercambio.usuario_emisor_id == user_id)
+            .order_by(Intercambio.fecha_creacion.desc())
         ).scalars().all()
-        return {"requests": [serialize_request_with_names(session, item) for item in requests]}
+        return {"requests": [serialize_intercambio_with_names(session, item) for item in intercambios]}
 
 
 @router.patch("/message-requests/{request_id}/respond")
-def respond_message_request(request_id: str, payload: MessageRequestResponse) -> dict:
-    if payload.action not in {RequestStatus.accepted, RequestStatus.rejected}:
-        raise HTTPException(status_code=400, detail="La accion debe ser accepted o rejected")
+def respond_message_request(request_id: int, payload: MessageRequestResponse) -> dict:
+    if payload.action not in {"accept", "reject"}:
+        raise HTTPException(status_code=400, detail="La accion debe ser accept o reject")
 
     with SessionLocal() as session:
-        request_obj = session.get(MessageRequestModel, request_id)
-        if not request_obj:
+        intercambio = session.get(Intercambio, request_id)
+        if not intercambio:
             raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
-        if payload.responder_user_id != request_obj.to_user_id:
+        if payload.user_id != intercambio.usuario_receptor_id:
             raise HTTPException(status_code=403, detail="Solo el receptor puede responder la solicitud")
 
-        if request_obj.status != RequestStatus.pending.value:
+        if intercambio.estado != "pendiente":
             raise HTTPException(status_code=400, detail="Esta solicitud ya fue respondida")
 
-        request_obj.status = payload.action.value
-        request_obj.updated_at = datetime.now(timezone.utc)
-
-        conversation_id = None
-        if request_obj.status == RequestStatus.accepted.value:
-            conversation_id = create_conversation_for_request(session, request_obj)
+        if payload.action == "accept":
+            intercambio.estado = "aceptado"
+            conversation_id = create_conversation_for_intercambio(session, intercambio)
+        else:
+            intercambio.estado = "cancelado"
+            conversation_id = None
 
         session.commit()
-        session.refresh(request_obj)
+        session.refresh(intercambio)
         return {
-            "request": serialize_request_with_names(session, request_obj),
+            "request": serialize_intercambio_with_names(session, intercambio),
             "conversation_id": conversation_id,
         }

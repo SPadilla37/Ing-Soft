@@ -1,43 +1,34 @@
 import json
 from datetime import datetime, timezone
-from uuid import uuid4
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 from app.db.database import SessionLocal
-from app.db.models import ChatMessageModel, ConversationModel, ConversationParticipant
-from app.services.core import is_conversation_hidden_for_user, serialize_message, utc_now_iso
+from app.db.models.entities_2 import Conversacion, Mensaje
+from app.services.core import serialize_message, utc_now_iso
 from app.services.websocket import manager
 
 
 router = APIRouter()
 
 
-async def chat_socket_impl(websocket: WebSocket, conversation_id: str, user_id: str) -> None:
+async def chat_socket_impl(websocket: WebSocket, conversation_id: int, user_id: int) -> None:
     with SessionLocal() as session:
-        conversation = session.get(ConversationModel, conversation_id)
+        conversation = session.get(Conversacion, conversation_id)
         if not conversation:
             await websocket.close(code=1008, reason="Conversacion no encontrada")
             return
 
-        membership = session.get(
-            ConversationParticipant,
-            {"conversation_id": conversation_id, "user_id": user_id},
-        )
-        if not membership:
+        if user_id not in {conversation.usuario_1_id, conversation.usuario_2_id}:
             await websocket.close(code=1008, reason="No autorizado para esta conversacion")
             return
 
-        if is_conversation_hidden_for_user(session, conversation_id, user_id):
-            await websocket.close(code=1008, reason="Conversacion oculta para este usuario")
-            return
-
         history = session.execute(
-            select(ChatMessageModel)
-            .where(ChatMessageModel.conversation_id == conversation_id)
-            .order_by(ChatMessageModel.sent_at.asc())
+            select(Mensaje)
+            .where(Mensaje.conversacion_id == conversation_id)
+            .order_by(Mensaje.enviado_at.asc())
         ).scalars().all()
 
-    await manager.connect(conversation_id, user_id, websocket)
+    await manager.connect(str(conversation_id), user_id, websocket)
     await websocket.send_text(
         json.dumps(
             {
@@ -48,7 +39,7 @@ async def chat_socket_impl(websocket: WebSocket, conversation_id: str, user_id: 
     )
 
     await manager.broadcast(
-        conversation_id,
+        str(conversation_id),
         {
             "type": "presence",
             "event": "joined",
@@ -80,30 +71,29 @@ async def chat_socket_impl(websocket: WebSocket, conversation_id: str, user_id: 
                 continue
 
             with SessionLocal() as session:
-                message = ChatMessageModel(
-                    id=str(uuid4()),
-                    conversation_id=conversation_id,
-                    from_user_id=user_id,
-                    content=content,
-                    sent_at=datetime.now(timezone.utc),
+                mensaje = Mensaje(
+                    conversacion_id=conversation_id,
+                    remitente_id=user_id,
+                    contenido=content,
+                    enviado_at=datetime.now(timezone.utc),
                 )
-                session.add(message)
+                session.add(mensaje)
                 session.commit()
-                session.refresh(message)
+                session.refresh(mensaje)
 
-            serialized = serialize_message(message)
+            serialized = serialize_message(mensaje)
 
             await manager.broadcast(
-                conversation_id,
+                str(conversation_id),
                 {
                     "type": "chat_message",
                     "message": serialized,
                 },
             )
     except WebSocketDisconnect:
-        manager.disconnect(conversation_id, user_id)
+        manager.disconnect(str(conversation_id), user_id)
         await manager.broadcast(
-            conversation_id,
+            str(conversation_id),
             {
                 "type": "presence",
                 "event": "left",
@@ -114,5 +104,5 @@ async def chat_socket_impl(websocket: WebSocket, conversation_id: str, user_id: 
 
 
 @router.websocket("/ws/{conversation_id}/{user_id}")
-async def chat_socket_alias(websocket: WebSocket, conversation_id: str, user_id: str) -> None:
+async def chat_socket_alias(websocket: WebSocket, conversation_id: int, user_id: int) -> None:
     await chat_socket_impl(websocket, conversation_id, user_id)

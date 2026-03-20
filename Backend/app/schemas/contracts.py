@@ -5,58 +5,62 @@ from pydantic import BaseModel, Field
 
 
 class RequestStatus(str, Enum):
-    pending = "pending"
-    accepted = "accepted"
-    rejected = "rejected"
+    pendiente = "pendiente"
+    aceptado = "aceptado"
+    completado = "completado"
+    cancelado = "cancelado"
 
 
 class MessageRequestCreate(BaseModel):
-    from_user_id: str = Field(min_length=1, max_length=120)
-    to_user_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
-    offered_skill: str = Field(min_length=1, max_length=120)
-    requested_skill: str = Field(min_length=1, max_length=120)
-    intro_message: str = Field(default="", max_length=500)
+    from_user_id: int
+    to_user_id: Optional[int] = None
+    habilidad_id: int
+    habilidad_solicitada_id: int
+    mensaje: str = Field(default="", max_length=500)
 
 
 class MessageRequestResponse(BaseModel):
-    responder_user_id: str = Field(min_length=1, max_length=120)
-    action: RequestStatus
+    user_id: int
+    action: str
 
 
 class ChatMessageCreate(BaseModel):
-    from_user_id: str = Field(min_length=1, max_length=120)
+    from_user_id: int
     content: str = Field(min_length=1, max_length=2000)
 
 
 class ConversationCreatePayload(BaseModel):
-    request_id: str = Field(min_length=1, max_length=36)
-    user_id: str = Field(min_length=1, max_length=120)
+    usuario_1_id: int
+    usuario_2_id: int
 
 
 class MessageCreatePayload(BaseModel):
-    conversation_id: str = Field(min_length=1, max_length=36)
-    from_user_id: str = Field(min_length=1, max_length=120)
+    conversation_id: int
+    from_user_id: int
     content: str = Field(min_length=1, max_length=2000)
 
 
 class MarketplaceAcceptRequest(BaseModel):
-    accepter_user_id: str = Field(min_length=1, max_length=120)
-    responder_to_user_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    viewer_user_id: int
 
 
 class MatchFinalizePayload(BaseModel):
-    user_id: str = Field(min_length=1, max_length=120)
+    user_id: int
 
 
 class MatchRatePayload(BaseModel):
-    user_id: str = Field(min_length=1, max_length=120)
+    user_id: int
     rating: int = Field(ge=0, le=5)
+    comentario: Optional[str] = Field(default=None, max_length=500)
 
 
 class UserRegisterPayload(BaseModel):
     email: str = Field(min_length=3, max_length=120)
+    username: str = Field(min_length=3, max_length=25)
     name: str = Field(min_length=1, max_length=120)
+    apellido: str = Field(min_length=1, max_length=35)
     password: str = Field(min_length=4, max_length=200)
+    clerk_id: str = Field(default="")
 
 
 class UserLoginPayload(BaseModel):
@@ -65,10 +69,28 @@ class UserLoginPayload(BaseModel):
 
 
 class UserProfileUpdatePayload(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
-    bio: Optional[str] = Field(default=None, max_length=2000)
-    city: Optional[str] = Field(default=None, max_length=120)
-    language: Optional[str] = Field(default=None, max_length=80)
-    teach_skills: Optional[List[str]] = Field(default=None)
-    learn_skills: Optional[List[str]] = Field(default=None)
-    marketplace_message: Optional[str] = Field(default=None, max_length=500)
+    nombre: Optional[str] = Field(default=None, min_length=1, max_length=35)
+    apellido: Optional[str] = Field(default=None, min_length=1, max_length=35)
+    foto_url: Optional[str] = Field(default=None, max_length=50)
+    biografia: Optional[str] = Field(default=None, max_length=2000)
+    habilidades_ofertadas: Optional[List[int]] = Field(default=None)
+    habilidades_busçadas: Optional[List[int]] = Field(default=None)
+
+
+class HabilidadCreate(BaseModel):
+    nombre: str
+    categoria: str
+
+
+class HabilidadResponse(BaseModel):
+    id: int
+    nombre: str
+    categoria: str
+
+
+class ResenaCreate(BaseModel):
+    intercambio_id: int
+    autor_id: int
+    receptor_id: int
+    calificacion: int = Field(ge=0, le=5)
+    comentario: Optional[str] = Field(default=None, max_length=500)

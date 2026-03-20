@@ -1,48 +1,68 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
+from sqlalchemy import delete
 from app.db.database import SessionLocal
-from app.db.models import User
+from app.db.models.entities_2 import Usuario, UsuarioHabilidad
 from app.schemas import UserProfileUpdatePayload
-from app.services.core import encode_skills, serialize_user
+from app.services.core import serialize_user
 
 
 router = APIRouter()
 
 
 @router.get("/usuarios/{user_id}")
-def get_user(user_id: str) -> dict:
+def get_user(user_id: int) -> dict:
     with SessionLocal() as session:
-        user = session.get(User, user_id)
+        user = session.get(Usuario, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         return {"user": serialize_user(user, session)}
 
 
 @router.put("/usuarios/{user_id}/profile")
-def update_user_profile(user_id: str, payload: UserProfileUpdatePayload) -> dict:
+def update_user_profile(user_id: int, payload: UserProfileUpdatePayload) -> dict:
     with SessionLocal() as session:
-        user = session.get(User, user_id)
+        user = session.get(Usuario, user_id)
         if not user:
-            now = datetime.now(timezone.utc)
-            user = User(id=user_id, created_at=now, updated_at=now)
-            session.add(user)
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        if payload.name is not None:
-            user.name = payload.name.strip()
-        if payload.bio is not None:
-            user.bio = payload.bio.strip()
-        if payload.city is not None:
-            user.city = payload.city.strip()
-        if payload.language is not None:
-            user.language = payload.language.strip()
-        if payload.teach_skills is not None:
-            user.teach_skills = encode_skills(payload.teach_skills)
-        if payload.learn_skills is not None:
-            user.learn_skills = encode_skills(payload.learn_skills)
-        if payload.marketplace_message is not None:
-            user.marketplace_message = payload.marketplace_message.strip()
+        if payload.nombre is not None:
+            user.nombre = payload.nombre.strip()
+        if payload.apellido is not None:
+            user.apellido = payload.apellido.strip()
+        if payload.foto_url is not None:
+            user.foto_url = payload.foto_url.strip()
+        if payload.biografia is not None:
+            user.biografia = payload.biografia.strip()
 
-        user.updated_at = datetime.now(timezone.utc)
+        if payload.habilidades_ofertadas is not None:
+            session.execute(
+                delete(UsuarioHabilidad).where(
+                    UsuarioHabilidad.usuario_id == user_id,
+                    UsuarioHabilidad.categoria == "ofertada",
+                )
+            )
+            for hab_id in payload.habilidades_ofertadas:
+                session.add(UsuarioHabilidad(
+                    habilidad_id=hab_id,
+                    usuario_id=user_id,
+                    categoria="ofertada",
+                ))
+
+        if payload.habilidades_busçadas is not None:
+            session.execute(
+                delete(UsuarioHabilidad).where(
+                    UsuarioHabilidad.usuario_id == user_id,
+                    UsuarioHabilidad.categoria == "buscada",
+                )
+            )
+            for hab_id in payload.habilidades_busçadas:
+                session.add(UsuarioHabilidad(
+                    habilidad_id=hab_id,
+                    usuario_id=user_id,
+                    categoria="buscada",
+                ))
+
         session.commit()
         session.refresh(user)
         return {"user": serialize_user(user, session)}

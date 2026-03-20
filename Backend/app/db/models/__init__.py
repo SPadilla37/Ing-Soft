@@ -1,21 +1,19 @@
-from app.db.models.entities import (
-	ChatMessageModel,
-	ConversationModel,
-	ConversationParticipant,
-	HiddenConversationModel,
-	MatchIntentModel,
-	MatchModel,
-	MessageRequestModel,
-	User,
+from app.db.models.entities_2 import (
+    Conversacion,
+    Habilidad,
+    Intercambio,
+    Mensaje,
+    Resena,
+    Usuario,
+    UsuarioHabilidad,
 )
 
 __all__ = [
-	"User",
-	"MessageRequestModel",
-	"ConversationModel",
-	"ConversationParticipant",
-	"ChatMessageModel",
-	"HiddenConversationModel",
-	"MatchIntentModel",
-	"MatchModel",
+    "Usuario",
+    "Habilidad",
+    "Intercambio",
+    "UsuarioHabilidad",
+    "Conversacion",
+    "Mensaje",
+    "Resena",
 ]
