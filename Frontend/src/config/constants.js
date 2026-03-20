@@ -1,4 +1,4 @@
-export const API_BASE = "https://ing-soft-5shh.onrender.com";
+export const API_BASE = "http://127.0.0.1:8000";
 
 export const dbKeySession = "skillswap_session";
 export const dbKeyProfilePrefix = "skillswap_profile_";

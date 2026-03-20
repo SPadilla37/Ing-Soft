@@ -7,10 +7,16 @@ export async function api(apiBase, path, options = {}) {
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  const response = await fetch(`${apiBase}${path}`, {
-    headers,
-    ...options,
-  });
+  const url = `${apiBase}${path}`;
+  let response;
+  try {
+    response = await fetch(url, {
+      headers,
+      ...options,
+    });
+  } catch (err) {
+    throw new Error(`Fetch failed for ${url}: ${err?.message || String(err)}`);
+  }
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.detail || JSON.stringify(data));

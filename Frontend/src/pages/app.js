@@ -1,5 +1,5 @@
-﻿import { API_BASE, dbKeyProfilePrefix, dbKeySession, languagesCatalog, skillsCatalog } from "../config/constants.js";
-import { api as apiRequest } from "../services/api.js";
+import { API_BASE, dbKeyProfilePrefix, dbKeySession, languagesCatalog, skillsCatalog } from "../config/constants.js";
+import { api as apiRequest, setAuthToken } from "../services/api.js";
 import { wsUrl } from "../services/websocket.js";
 import { getInitials, renderSummaryChips, setStatus, starText } from "../components/ui.js";
 import { renderIncomingMatchesSection, renderMarketplaceSection, renderMyMatchesSection } from "../components/marketplace.js";
@@ -242,7 +242,11 @@ function clearSession() {
 
     async function api(path, options = {}) {
       const { apiBase } = cfg();
-      return apiRequest(apiBase, path, options);
+      // El backend monta todas las rutas bajo `/api`.
+      // Normalizamos para que el resto de dominios pueda llamar a `/usuarios/...`,
+      // `/message-requests/...`, etc, sin tener que preocuparse del prefijo.
+      const normalizedPath = path.startsWith("/api") ? path : `/api${path}`;
+      return apiRequest(apiBase, normalizedPath, options);
     }
 
     function setAuthMode(mode) {
@@ -820,7 +824,7 @@ function clearSession() {
         setChatStatus,
         log,
         chatBox,
-        buildWsUrl: (cid, uid) => wsUrl(cfg().apiBase, cid, uid),
+        buildWsUrl: (cid, uid) => wsUrl(`${cfg().apiBase}/api`, cid, uid),
       });
     }
 

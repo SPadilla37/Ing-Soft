@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy import or_, select
 
 
@@ -17,6 +17,7 @@ from app.db.models import (
     MessageRequestModel,
     User,
 )
+from app.core.security import get_current_user
 from app.schemas import (
     ChatMessageCreate,
     ConversationCreatePayload,
@@ -71,7 +72,13 @@ def get_user(user_id: str) -> dict:
 
 
 @router.put("/usuarios/{user_id}/profile")
-def update_user_profile(user_id: str, payload: UserProfileUpdatePayload) -> dict:
+def update_user_profile(
+    user_id: str,
+    payload: UserProfileUpdatePayload,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="No autorizado para editar este perfil")
     with SessionLocal() as session:
         user = session.get(User, user_id)
         if not user:
@@ -101,7 +108,13 @@ def update_user_profile(user_id: str, payload: UserProfileUpdatePayload) -> dict
 
 
 @router.post("/message-requests")
-def create_message_request(payload: MessageRequestCreate) -> dict:
+def create_message_request(
+    payload: MessageRequestCreate,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if payload.from_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para crear solicitudes para otro usuario")
+
     if payload.to_user_id and payload.from_user_id == payload.to_user_id:
         raise HTTPException(status_code=400, detail="No puedes enviarte solicitud a ti mismo")
 
@@ -134,7 +147,11 @@ def create_message_request(payload: MessageRequestCreate) -> dict:
 def list_marketplace_requests(
     viewer_user_id: str | None = Query(default=None),
     q: str | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
+    if viewer_user_id and viewer_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para consultar como otro usuario")
+    viewer_user_id = current_user.id
     with SessionLocal() as session:
         stmt = select(MessageRequestModel).where(
             MessageRequestModel.status == RequestStatus.pending.value,
@@ -170,7 +187,13 @@ def list_marketplace_requests(
 
 
 @router.post("/marketplace/requests/{request_id}/accept")
-def accept_marketplace_request(request_id: str, payload: MarketplaceAcceptRequest) -> dict:
+def accept_marketplace_request(
+    request_id: str,
+    payload: MarketplaceAcceptRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if payload.accepter_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para aceptar solicitudes de otro usuario")
     with SessionLocal() as session:
         request_obj = session.get(MessageRequestModel, request_id)
         if not request_obj:
@@ -259,7 +282,9 @@ def accept_marketplace_request(request_id: str, payload: MarketplaceAcceptReques
 
 
 @router.get("/matches/{user_id}/incoming")
-def get_incoming_match_intents(user_id: str) -> dict:
+def get_incoming_match_intents(user_id: str, current_user: User = Depends(get_current_user)) -> dict:
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para ver intereses de otro usuario")
     with SessionLocal() as session:
         intents = session.execute(
             select(MatchIntentModel)
@@ -296,7 +321,13 @@ def get_incoming_match_intents(user_id: str) -> dict:
 
 
 @router.get("/matches/{user_id}")
-def list_user_matches(user_id: str, status: str | None = Query(default=None)) -> dict:
+def list_user_matches(
+    user_id: str,
+    status: str | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para ver matches de otro usuario")
     with SessionLocal() as session:
         stmt = select(MatchModel).where(
             or_(
@@ -316,7 +347,13 @@ def list_user_matches(user_id: str, status: str | None = Query(default=None)) ->
 
 
 @router.post("/matches/{match_id}/finalize")
-def finalize_match(match_id: str, payload: MatchFinalizePayload) -> dict:
+def finalize_match(
+    match_id: str,
+    payload: MatchFinalizePayload,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if payload.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para finalizar como otro usuario")
     with SessionLocal() as session:
         match = session.get(MatchModel, match_id)
         if not match:
@@ -343,7 +380,13 @@ def finalize_match(match_id: str, payload: MatchFinalizePayload) -> dict:
 
 
 @router.post("/matches/{match_id}/rate")
-def rate_match(match_id: str, payload: MatchRatePayload) -> dict:
+def rate_match(
+    match_id: str,
+    payload: MatchRatePayload,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if payload.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para calificar como otro usuario")
     with SessionLocal() as session:
         match = session.get(MatchModel, match_id)
         if not match:
@@ -370,7 +413,13 @@ def rate_match(match_id: str, payload: MatchRatePayload) -> dict:
 
 
 @router.delete("/message-requests/{request_id}")
-def delete_own_message_request(request_id: str, user_id: str = Query(..., min_length=1)) -> dict:
+def delete_own_message_request(
+    request_id: str,
+    user_id: str = Query(..., min_length=1),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para borrar solicitudes de otro usuario")
     with SessionLocal() as session:
         request_obj = session.get(MessageRequestModel, request_id)
         if not request_obj:
@@ -388,7 +437,9 @@ def delete_own_message_request(request_id: str, user_id: str = Query(..., min_le
 
 
 @router.get("/message-requests/{user_id}/incoming")
-def get_incoming_requests(user_id: str) -> dict:
+def get_incoming_requests(user_id: str, current_user: User = Depends(get_current_user)) -> dict:
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para ver solicitudes de otro usuario")
     with SessionLocal() as session:
         requests = session.execute(
             select(MessageRequestModel)
@@ -399,7 +450,9 @@ def get_incoming_requests(user_id: str) -> dict:
 
 
 @router.get("/message-requests/{user_id}/outgoing")
-def get_outgoing_requests(user_id: str) -> dict:
+def get_outgoing_requests(user_id: str, current_user: User = Depends(get_current_user)) -> dict:
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para ver solicitudes de otro usuario")
     with SessionLocal() as session:
         requests = session.execute(
             select(MessageRequestModel)
@@ -410,7 +463,14 @@ def get_outgoing_requests(user_id: str) -> dict:
 
 
 @router.patch("/message-requests/{request_id}/respond")
-def respond_message_request(request_id: str, payload: MessageRequestResponse) -> dict:
+def respond_message_request(
+    request_id: str,
+    payload: MessageRequestResponse,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if payload.responder_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para responder como otro usuario")
+
     if payload.action not in {RequestStatus.accepted, RequestStatus.rejected}:
         raise HTTPException(status_code=400, detail="La accion debe ser accepted o rejected")
 
@@ -442,7 +502,9 @@ def respond_message_request(request_id: str, payload: MessageRequestResponse) ->
 
 @router.get("/conversations/{user_id}")
 @router.get("/conversaciones")
-def get_user_conversations(user_id: str) -> dict:
+def get_user_conversations(user_id: str, current_user: User = Depends(get_current_user)) -> dict:
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para ver conversaciones de otro usuario")
     with SessionLocal() as session:
         participant_rows = session.execute(
             select(ConversationParticipant).where(ConversationParticipant.user_id == user_id)
@@ -481,7 +543,12 @@ def get_user_conversations(user_id: str) -> dict:
 
 
 @router.post("/conversaciones")
-def create_conversation(payload: ConversationCreatePayload) -> dict:
+def create_conversation(
+    payload: ConversationCreatePayload,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if payload.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para crear conversaciones de otro usuario")
     with SessionLocal() as session:
         request_obj = session.get(MessageRequestModel, payload.request_id)
         if not request_obj:
@@ -499,7 +566,13 @@ def create_conversation(payload: ConversationCreatePayload) -> dict:
 
 
 @router.get("/conversations/{conversation_id}/messages")
-def get_conversation_messages(conversation_id: str, user_id: str = Query(..., min_length=1)) -> dict:
+def get_conversation_messages(
+    conversation_id: str,
+    user_id: str = Query(..., min_length=1),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para leer mensajes de otro usuario")
     with SessionLocal() as session:
         conversation = session.get(ConversationModel, conversation_id)
         if not conversation:
@@ -521,7 +594,13 @@ def get_conversation_messages(conversation_id: str, user_id: str = Query(..., mi
 
 
 @router.post("/conversations/{conversation_id}/messages")
-async def create_message(conversation_id: str, payload: ChatMessageCreate) -> dict:
+async def create_message(
+    conversation_id: str,
+    payload: ChatMessageCreate,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if payload.from_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para enviar como otro usuario")
     with SessionLocal() as session:
         conversation = session.get(ConversationModel, conversation_id)
         if not conversation:
@@ -562,15 +641,27 @@ async def create_message(conversation_id: str, payload: ChatMessageCreate) -> di
 
 
 @router.post("/mensajes")
-async def create_message_alias(payload: MessageCreatePayload) -> dict:
+async def create_message_alias(
+    payload: MessageCreatePayload,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if payload.from_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para enviar como otro usuario")
     return await create_message(
         conversation_id=payload.conversation_id,
         payload=ChatMessageCreate(from_user_id=payload.from_user_id, content=payload.content),
+        current_user=current_user,
     )
 
 
 @router.delete("/conversations/{conversation_id}")
-def hide_conversation_for_user(conversation_id: str, user_id: str = Query(..., min_length=1)) -> dict:
+def hide_conversation_for_user(
+    conversation_id: str,
+    user_id: str = Query(..., min_length=1),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para borrar conversaciones de otro usuario")
     with SessionLocal() as session:
         conversation = session.get(ConversationModel, conversation_id)
         if not conversation:

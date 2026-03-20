@@ -44,6 +44,12 @@ class MarketplaceAcceptRequest(BaseModel):
     responder_to_user_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
 
 
+class UserRegisterPayload(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    email: str = Field(min_length=3, max_length=120)
+    password: str = Field(min_length=6, max_length=128)
+
+
 class UserLoginPayload(BaseModel):
     email: str = Field(min_length=3, max_length=120)
     password: str = Field(min_length=4, max_length=200)
@@ -57,3 +63,12 @@ class UserProfileUpdatePayload(BaseModel):
     teach_skills: Optional[List[str]] = Field(default=None)
     learn_skills: Optional[List[str]] = Field(default=None)
     marketplace_message: Optional[str] = Field(default=None, max_length=500)
+
+
+class MatchFinalizePayload(BaseModel):
+    user_id: str = Field(min_length=1, max_length=120)
+
+
+class MatchRatePayload(BaseModel):
+    user_id: str = Field(min_length=1, max_length=120)
+    rating: int = Field(ge=1, le=5)

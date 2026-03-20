@@ -13,7 +13,7 @@ from app.services.core import (
 )
 
 
-app = FastAPI(title="Skill Exchange Messaging API", version="1.0.0")
+app = FastAPI(title="Skill Exchange Messaging API", version="1.0.0", docs_url="/docs", redoc_url="/redoc")
 
 allowed_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "*")
 allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]

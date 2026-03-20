@@ -1,3 +1,5 @@
+import { setAuthToken } from "../../services/api.js";
+
 export function setAuthModeDomain({ $, mode }) {
   const isLogin = mode === "login";
   $("showLoginTab").classList.toggle("active", isLogin);
@@ -20,13 +22,13 @@ export async function signupDomain({
   const name = $("signupName").value.trim();
   const email = $("signupEmail").value.trim().toLowerCase();
   const pass = $("signupPass").value.trim();
-  if (!name || !email || pass.length < 4) {
-    alert("Completa nombre, correo y una contrasena de al menos 4 caracteres.");
+  if (!name || !email || pass.length < 6) {
+    alert("Completa nombre, correo y una contrasena de al menos 6 caracteres.");
     return;
   }
 
   try {
-    const result = await api("/api/auth/register", {
+    const result = await api("/auth/register", {
       method: "POST",
       body: JSON.stringify({ email, name, password: pass }),
     });
@@ -55,9 +57,21 @@ export async function loginDomain({
 }) {
   const email = $("loginEmail").value.trim().toLowerCase();
   const pass = $("loginPass").value.trim();
+  if (!email || !pass) {
+    alert("Completa tu correo y contrasena.");
+    return;
+  }
+  if (!email.includes("@") || !email.includes(".")) {
+    alert("Correo invalido. Usa un formato tipo nombre@dominio.com.");
+    return;
+  }
+  if (pass.length < 6) {
+    alert("La contrasena debe tener al menos 6 caracteres.");
+    return;
+  }
 
   try {
-    const result = await api("/api/auth/login", {
+    const result = await api("/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ username: email, password: pass }).toString(),
@@ -65,7 +79,7 @@ export async function loginDomain({
     setAuthToken(result.access_token);
     setCurrentUserRecord({ id: email });
   } catch (error) {
-    alert(error.message);
+    alert(error.message || "No se pudo iniciar sesion.");
     return;
   }
 
