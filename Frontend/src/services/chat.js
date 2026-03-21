@@ -131,6 +131,6 @@ export function sendConversationMessage({ socketState, content }) {
   if (!content) {
     return true;
   }
-  socketState.socket.send(JSON.stringify({ type: "message", content }));
+  socketState.socket.send(JSON.stringify({ type: "chat_message", content }));
   return true;
 }

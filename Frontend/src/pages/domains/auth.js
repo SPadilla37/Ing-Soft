@@ -18,6 +18,8 @@ export async function signupDomain({
   log,
 }) {
   const name = $("signupName").value.trim();
+  const apellido = $("signupApellido").value.trim();
+  const username = $("signupUsername").value.trim();
   const email = $("signupEmail").value.trim().toLowerCase();
   const pass = $("signupPass").value.trim();
   if (!name || !email || pass.length < 4) {
@@ -25,10 +27,11 @@ export async function signupDomain({
     return;
   }
 
+  let result;
   try {
-    const result = await api("/auth/register", {
+    result = await api("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, name, password: pass }),
+      body: JSON.stringify({ email, username, name, apellido, password: pass }),
     });
     setCurrentUserRecord(result.user);
   } catch (error) {
@@ -36,7 +39,8 @@ export async function signupDomain({
     return;
   }
 
-  setSession(email);
+  // Guardar el ID numérico del usuario, no el email
+  setSession(result.user.id);
   setOnboardingTeach(new Set());
   setOnboardingLearn(new Set());
   renderSelectedSummary("teach");
@@ -56,8 +60,9 @@ export async function loginDomain({
   const email = $("loginEmail").value.trim().toLowerCase();
   const pass = $("loginPass").value.trim();
 
+  let result;
   try {
-    const result = await api("/auth/login", {
+    result = await api("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password: pass }),
     });
@@ -67,7 +72,8 @@ export async function loginDomain({
     return;
   }
 
-  setSession(email);
+  // Guardar el ID numérico del usuario, no el email
+  setSession(result.user.id);
   await ensureOnboardingOrDashboard();
   log("Sesion iniciada.");
 }

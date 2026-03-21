@@ -1,4 +1,4 @@
-﻿import { API_BASE, dbKeyProfilePrefix, dbKeySession, languagesCatalog, skillsCatalog } from "../config/constants.js";
+import { API_BASE, dbKeyProfilePrefix, dbKeySession, languagesCatalog, skillsCatalog } from "../config/constants.js";
 import { api as apiRequest } from "../services/api.js";
 import { wsUrl } from "../services/websocket.js";
 import { getInitials, renderSummaryChips, setStatus, starText } from "../components/ui.js";
@@ -465,7 +465,7 @@ const $ = (id) => document.getElementById(id);
         to_user_id: null,
         offered_skill: offered,
         requested_skill: requested,
-        intro_message: intro
+        mensaje: intro
       };
     }
 
@@ -702,9 +702,10 @@ const $ = (id) => document.getElementById(id);
 
     async function rateMatch(matchId, rating) {
       try {
+        const comentario = prompt("Deja un comentario opcional para tu calificacion:") || "";
         await api(`/matches/${encodeURIComponent(matchId)}/rate`, {
           method: "POST",
-          body: JSON.stringify({ user_id: currentUser, rating })
+          body: JSON.stringify({ user_id: currentUser, rating, comentario })
         });
         await loadMyMatches();
       } catch (error) {
@@ -716,10 +717,7 @@ const $ = (id) => document.getElementById(id);
       try {
         const result = await api(`/marketplace/requests/${requestId}/accept`, {
           method: "POST",
-          body: JSON.stringify({
-            accepter_user_id: currentUser,
-            ...(responderToUserId ? { responder_to_user_id: responderToUserId } : {})
-          })
+          body: JSON.stringify({ viewer_user_id: currentUser })
         });
         await loadMarketplace();
         await loadIncomingMatches();

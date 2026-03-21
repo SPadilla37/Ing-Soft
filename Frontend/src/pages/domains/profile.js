@@ -5,11 +5,32 @@ export function normalizeProfileFromUserDomain(user) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+
+  // Soportar tanto nombres de campo del contrato nuevo como del esquema viejo
+  const nombre = profile.nombre || profile.full_name || user.name || user.nombre || "";
+  const apellido = profile.apellido || user.apellido || "";
+  const fullName = apellido ? `${nombre} ${apellido}`.trim() : nombre;
+
+  const teachSkills = Array.isArray(profile.habilidades_ofertadas)
+    ? profile.habilidades_ofertadas
+    : Array.isArray(profile.teach_skills)
+      ? profile.teach_skills
+      : [];
+
+  const learnSkills = Array.isArray(profile.habilidades_buscadas)
+    ? profile.habilidades_buscadas
+    : Array.isArray(profile.learn_skills)
+      ? profile.learn_skills
+      : [];
+
   return {
-    fullName: profile.full_name || user.name || "",
-    bio: profile.bio || "",
-    teachSkills: Array.isArray(profile.teach_skills) ? profile.teach_skills : [],
-    learnSkills: Array.isArray(profile.learn_skills) ? profile.learn_skills : [],
+    fullName,
+    nombre,
+    apellido,
+    bio: profile.biografia || profile.bio || "",
+    foto_url: profile.foto_url || "",
+    teachSkills,
+    learnSkills,
     languages,
     marketplaceMessage: profile.marketplace_message || "",
   };
@@ -30,13 +51,12 @@ export async function persistProfileToApiDomain({ currentUser, api, profile, set
   const result = await api(`/usuarios/${encodeURIComponent(currentUser)}/profile`, {
     method: "PUT",
     body: JSON.stringify({
-      name: profile.fullName,
-      bio: profile.bio,
-      city: "",
-      language: (profile.languages || []).join(", "),
-      teach_skills: profile.teachSkills || [],
-      learn_skills: profile.learnSkills || [],
-      marketplace_message: profile.marketplaceMessage || "",
+      nombre: profile.nombre || profile.fullName || "",
+      apellido: profile.apellido || "",
+      foto_url: profile.foto_url || "",
+      biografia: profile.bio || "",
+      habilidades_ofertadas: profile.teachSkills || [],
+      habilidades_buscadas: profile.learnSkills || [],
     }),
   });
   setCurrentUserRecord(result.user);
