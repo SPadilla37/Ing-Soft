@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import or_, select
 from app.db.database import SessionLocal
-from app.db.models.entities_2 import Intercambio, Conversacion
+from app.db.models.entities_2 import Intercambio, Conversacion, Habilidad, Usuario
 from app.schemas import MarketplaceAcceptRequest, MessageRequestCreate, MessageRequestResponse
 from app.services.core import (
     PUBLIC_MARKETPLACE_USER_ID,
@@ -60,15 +60,34 @@ def list_marketplace_requests(
         if viewer_user_id:
             stmt = stmt.where(Intercambio.usuario_emisor_id != viewer_user_id)
 
-        intercambios = session.execute(
+        intercambios_raw = session.execute(
             stmt.order_by(Intercambio.fecha_creacion.desc())
         ).scalars().all()
 
         serialized = []
-        for item in intercambios:
+        for item in intercambios_raw:
             ser = serialize_intercambio_for_viewer(session, item, viewer_user_id)
             if viewer_user_id and ser.get("viewer_match_state") == "matched":
                 continue
+
+            if q:
+                q_lower = q.lower()
+                matches = False
+                if q_lower in (ser.get("mensaje") or "").lower():
+                    matches = True
+                habilidad = ser.get("habilidad") or {}
+                if q_lower in (habilidad.get("nombre") or "").lower():
+                    matches = True
+                habilidad_sol = ser.get("habilidad_solicitada") or {}
+                if q_lower in (habilidad_sol.get("nombre") or "").lower():
+                    matches = True
+                emisor = ser.get("emisor") or {}
+                emisor_name = f"{(emisor.get('nombre') or '')} {(emisor.get('apellido') or '')}".lower()
+                if q_lower in emisor_name:
+                    matches = True
+                if not matches:
+                    continue
+
             serialized.append(ser)
 
         return {"requests": serialized}
@@ -150,7 +169,7 @@ def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptReques
 
 
 @router.delete("/message-requests/{request_id}")
-def delete_own_message_request(request_id: int, user_id: int = Query(..., min_length=1)) -> dict:
+def delete_own_message_request(request_id: int, user_id: int = Query(...)) -> dict:
     with SessionLocal() as session:
         intercambio = session.get(Intercambio, request_id)
         if not intercambio:

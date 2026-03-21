@@ -51,7 +51,16 @@ async def chat_socket_impl(websocket: WebSocket, conversation_id: int, user_id: 
     try:
         while True:
             raw_text = await websocket.receive_text()
-            incoming = json.loads(raw_text)
+            
+            try:
+                incoming = json.loads(raw_text)
+            except json.JSONDecodeError:
+                await websocket.send_text(json.dumps({
+                    "type": "error",
+                    "detail": "JSON invalido"
+                }))
+                continue
+            
             message_type = incoming.get("type")
 
             if message_type != "message":
@@ -101,6 +110,12 @@ async def chat_socket_impl(websocket: WebSocket, conversation_id: int, user_id: 
                 "at": utc_now_iso(),
             },
         )
+    except Exception:
+        manager.disconnect(str(conversation_id), user_id)
+        try:
+            await websocket.close(code=1011, reason="Error interno del servidor")
+        except Exception:
+            pass
 
 
 @router.websocket("/ws/{conversation_id}/{user_id}")
