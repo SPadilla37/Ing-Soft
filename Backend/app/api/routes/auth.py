@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from app.core.security import hash_password
 from app.db.database import SessionLocal
-from app.db.models.entities_2 import Usuario
+from app.db.models.entities import Usuario
 from app.schemas import UserLoginPayload, UserRegisterPayload
 from app.services.core import serialize_user, utc_now_iso
 

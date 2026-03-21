@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import or_, select
 from app.db.database import SessionLocal
-from app.db.models.entities_2 import Intercambio, Conversacion, Habilidad, Usuario
+from app.db.models.entities import Intercambio, Conversacion, Habilidad, Usuario
 from app.schemas import MarketplaceAcceptRequest, MessageRequestCreate, MessageRequestResponse
 from app.services.core import (
     PUBLIC_MARKETPLACE_USER_ID,

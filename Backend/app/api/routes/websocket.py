@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 from app.db.database import SessionLocal
-from app.db.models.entities_2 import Conversacion, Mensaje
+from app.db.models.entities import Conversacion, Mensaje
 from app.services.core import serialize_message, utc_now_iso
 from app.services.websocket import manager
 

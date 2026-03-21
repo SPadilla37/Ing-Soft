@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import or_, select
 from app.db.database import SessionLocal
-from app.db.models.entities_2 import Conversacion, Mensaje
+from app.db.models.entities import Conversacion, Mensaje
 from app.schemas import ChatMessageCreate, ConversationCreatePayload, MessageCreatePayload
 from app.services.core import get_user_display_name, serialize_message
 

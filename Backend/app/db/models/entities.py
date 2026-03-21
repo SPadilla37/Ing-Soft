@@ -1,97 +1,119 @@
-from datetime import datetime, timezone
-
-from sqlalchemy import DateTime, ForeignKey, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, CheckConstraint
+from sqlalchemy.orm import relationship
 
 from app.db.database import Base
 
 
-class User(Base):
-    __tablename__ = "users"
+class Usuario(Base):
+    __tablename__ = "usuarios"
 
-    id: Mapped[str] = mapped_column(String(120), primary_key=True)
-    name: Mapped[str] = mapped_column(String(120), default="")
-    password_hash: Mapped[str] = mapped_column(String(128), default="")
-    bio: Mapped[str] = mapped_column(Text, default="")
-    city: Mapped[str] = mapped_column(String(120), default="")
-    language: Mapped[str] = mapped_column(String(80), default="")
-    teach_skills: Mapped[str] = mapped_column(Text, default="[]")
-    learn_skills: Mapped[str] = mapped_column(Text, default="[]")
-    marketplace_message: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(25), nullable=False)
+    email = Column(String(50), nullable=False)
+    password_hash = Column(String(100), nullable=False)
+    clerk_id = Column(String(35), nullable=False)
+    nombre = Column(String(35), nullable=False)
+    apellido = Column(String(35), nullable=False)
+    foto_url = Column(String(50), nullable=True)
+    biografia = Column(Text, nullable=True)
+    ultimo_login = Column(TIMESTAMP, nullable=True)
+    fecha_registro = Column(TIMESTAMP, nullable=True)
 
-
-class MessageRequestModel(Base):
-    __tablename__ = "message_requests"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    from_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
-    to_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True, nullable=True)
-    offered_skill: Mapped[str] = mapped_column(String(120))
-    requested_skill: Mapped[str] = mapped_column(String(120))
-    intro_message: Mapped[str] = mapped_column(Text, default="")
-    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    habilidades_ofertadas = relationship("UsuarioHabilidad", foreign_keys="UsuarioHabilidad.usuario_id", back_populates="usuario")
+    intercambios_enviados = relationship("Intercambio", foreign_keys="Intercambio.usuario_emisor_id", back_populates="emisor")
+    intercambios_recibidos = relationship("Intercambio", foreign_keys="Intercambio.usuario_receptor_id", back_populates="receptor")
+    reseñas_autor = relationship("Reseña", foreign_keys="Reseña.autor_id", back_populates="autor")
+    reseñas_receptor = relationship("Reseña", foreign_keys="Reseña.receptor_id", back_populates="receptor")
+    mensajes = relationship("Mensaje", back_populates="remitente")
+    conversaciones_iniciadas = relationship("Conversacion", foreign_keys="Conversacion.usuario_1_id", back_populates="usuario1")
+    conversaciones_recibidas = relationship("Conversacion", foreign_keys="Conversacion.usuario_2_id", back_populates="usuario2")
 
 
-class ConversationModel(Base):
-    __tablename__ = "conversations"
+class Habilidad(Base):
+    __tablename__ = "habilidades"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    request_id: Mapped[str] = mapped_column(String(36), ForeignKey("message_requests.id"), unique=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nombre = Column(String(50), nullable=False, unique=True)
+    categoria = Column(String(30), nullable=False)
 
-
-class ConversationParticipant(Base):
-    __tablename__ = "conversation_participants"
-
-    conversation_id: Mapped[str] = mapped_column(String(36), ForeignKey("conversations.id"), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), primary_key=True)
+    usuarios = relationship("UsuarioHabilidad", back_populates="habilidad")
 
 
-class ChatMessageModel(Base):
-    __tablename__ = "chat_messages"
+class Intercambio(Base):
+    __tablename__ = "intercambios"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    conversation_id: Mapped[str] = mapped_column(String(36), ForeignKey("conversations.id"), index=True)
-    from_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
-    content: Mapped[str] = mapped_column(Text)
-    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    usuario_emisor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    usuario_receptor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    habilidad_id = Column(Integer, ForeignKey("habilidades.id"), nullable=True)
+    habilidad_solicitada_id = Column(Integer, ForeignKey("habilidades.id"), nullable=True)
+    mensaje = Column(Text, nullable=True)
+    estado = Column(String(12), nullable=False)
+    fecha_creacion = Column(TIMESTAMP, nullable=False)
 
+    __table_args__ = (
+        CheckConstraint("estado IN ('pendiente', 'aceptado', 'completado', 'cancelado')", name="intercambios_estado_check"),
+    )
 
-class HiddenConversationModel(Base):
-    __tablename__ = "hidden_conversations"
-
-    conversation_id: Mapped[str] = mapped_column(String(36), ForeignKey("conversations.id"), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), primary_key=True)
-    hidden_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
-
-class MatchIntentModel(Base):
-    __tablename__ = "match_intents"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    from_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
-    to_user_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
-    request_id: Mapped[str] = mapped_column(String(36), ForeignKey("message_requests.id"), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    emisor = relationship("Usuario", foreign_keys=[usuario_emisor_id], back_populates="intercambios_enviados")
+    receptor = relationship("Usuario", foreign_keys=[usuario_receptor_id], back_populates="intercambios_recibidos")
+    habilidad = relationship("Habilidad", foreign_keys=[habilidad_id])
+    habilidad_solicitada = relationship("Habilidad", foreign_keys=[habilidad_solicitada_id])
+    reseñas = relationship("Reseña", back_populates="intercambio")
 
 
-class MatchModel(Base):
-    __tablename__ = "matches"
+class Mensaje(Base):
+    __tablename__ = "mensajes"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_a_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
-    user_b_id: Mapped[str] = mapped_column(String(120), ForeignKey("users.id"), index=True)
-    source_request_id: Mapped[str] = mapped_column(String(36), ForeignKey("message_requests.id"), index=True, nullable=True)
-    conversation_id: Mapped[str] = mapped_column(String(36), ForeignKey("conversations.id"), unique=True, index=True)
-    status: Mapped[str] = mapped_column(String(20), default="in_progress", index=True)
-    finalized_by_a: Mapped[bool] = mapped_column(default=False)
-    finalized_by_b: Mapped[bool] = mapped_column(default=False)
-    rating_by_a: Mapped[int] = mapped_column(default=None, nullable=True)
-    rating_by_b: Mapped[int] = mapped_column(default=None, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=None, nullable=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    remitente_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    conversacion_id = Column(Integer, ForeignKey("conversaciones.id"), nullable=False)
+    contenido = Column(Text, nullable=False)
+    enviado_at = Column(TIMESTAMP, nullable=True)
+
+    remitente = relationship("Usuario", back_populates="mensajes")
+    conversacion = relationship("Conversacion", back_populates="mensajes")
+
+
+class Reseña(Base):
+    __tablename__ = "reseñas"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    intercambio_id = Column(Integer, ForeignKey("intercambios.id"), nullable=True)
+    autor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    receptor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    calificacion = Column(Integer, nullable=False)
+    comentario = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP, nullable=True)
+
+    intercambio = relationship("Intercambio", back_populates="reseñas")
+    autor = relationship("Usuario", foreign_keys=[autor_id], back_populates="reseñas_autor")
+    receptor = relationship("Usuario", foreign_keys=[receptor_id], back_populates="reseñas_receptor")
+
+
+class UsuarioHabilidad(Base):
+    __tablename__ = "usuarios_habilidades"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    habilidad_id = Column(Integer, ForeignKey("habilidades.id"), nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    categoria = Column(String(8), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("categoria IN ('ofertada', 'buscada')", name="usuarios_habilidades_categoria_check"),
+    )
+
+    habilidad = relationship("Habilidad", back_populates="usuarios")
+    usuario = relationship("Usuario", back_populates="habilidades_ofertadas")
+
+
+class Conversacion(Base):
+    __tablename__ = "conversaciones"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    usuario_1_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    usuario_2_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+
+    usuario1 = relationship("Usuario", foreign_keys=[usuario_1_id], back_populates="conversaciones_iniciadas")
+    usuario2 = relationship("Usuario", foreign_keys=[usuario_2_id], back_populates="conversaciones_recibidas")
+    mensajes = relationship("Mensaje", back_populates="conversacion")

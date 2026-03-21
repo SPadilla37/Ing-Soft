@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import delete
 from app.db.database import SessionLocal
-from app.db.models.entities_2 import Usuario, UsuarioHabilidad
+from app.db.models.entities import Usuario, UsuarioHabilidad
 from app.schemas import UserProfileUpdatePayload
 from app.services.core import serialize_user
 

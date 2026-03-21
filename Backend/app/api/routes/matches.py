@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import or_, select
 from app.db.database import SessionLocal
-from app.db.models.entities_2 import Intercambio, Resena
+from app.db.models.entities import Intercambio, Reseña
 from app.schemas import MatchFinalizePayload, MatchRatePayload
 from app.services.core import (
     ensure_user,
@@ -100,15 +100,15 @@ def rate_match(match_id: int, payload: MatchRatePayload) -> dict:
         other_user_id = intercambio.usuario_receptor_id if payload.user_id == intercambio.usuario_emisor_id else intercambio.usuario_emisor_id
 
         existing = session.execute(
-            select(Resena).where(
-                Resena.intercambio_id == match_id,
-                Resena.autor_id == payload.user_id,
+            select(Reseña).where(
+                Reseña.intercambio_id == match_id,
+                Reseña.autor_id == payload.user_id,
             )
         ).scalars().first()
         if existing:
             raise HTTPException(status_code=400, detail="Ya calificaste este match")
 
-        resena = Resena(
+        Reseña = Reseña(
             intercambio_id=match_id,
             autor_id=payload.user_id,
             receptor_id=other_user_id,
@@ -116,7 +116,7 @@ def rate_match(match_id: int, payload: MatchRatePayload) -> dict:
             comentario=payload.comentario,
             created_at=datetime.now(timezone.utc),
         )
-        session.add(resena)
+        session.add(Reseña)
         session.commit()
         session.refresh(intercambio)
         return {"match": serialize_intercambio_for_user(session, intercambio, payload.user_id)}

@@ -1,9 +1,9 @@
-from app.db.models.entities_2 import (
+from app.db.models.entities import (
     Conversacion,
     Habilidad,
     Intercambio,
     Mensaje,
-    Resena,
+    Reseña,
     Usuario,
     UsuarioHabilidad,
 )
@@ -15,5 +15,5 @@ __all__ = [
     "UsuarioHabilidad",
     "Conversacion",
     "Mensaje",
-    "Resena",
+    "Reseña",
 ]

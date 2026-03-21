@@ -4,12 +4,12 @@ from typing import List, Optional
 from fastapi import HTTPException
 from sqlalchemy import or_, select
 
-from app.db.models.entities_2 import (
+from app.db.models.entities import (
     Conversacion,
     Habilidad,
     Intercambio,
     Mensaje,
-    Resena,
+    Reseña,
     Usuario,
     UsuarioHabilidad,
 )
@@ -32,7 +32,7 @@ def ensure_user(session, user_id: int) -> None:
 
 def calculate_received_rating(session, user_id: int) -> dict:
     reseñas = session.execute(
-        select(Resena).where(Resena.receptor_id == user_id)
+        select(Reseña).where(Reseña.receptor_id == user_id)
     ).scalars().all()
 
     if not reseñas:
@@ -100,15 +100,15 @@ def serialize_habilidad(habilidad: Habilidad) -> dict:
     }
 
 
-def serialize_resena(resena: Resena) -> dict:
+def serialize_Reseña(reseña: Reseña) -> dict:
     return {
-        "id": resena.id,
-        "intercambio_id": resena.intercambio_id,
-        "autor_id": resena.autor_id,
-        "receptor_id": resena.receptor_id,
-        "calificacion": resena.calificacion,
-        "comentario": resena.comentario,
-        "created_at": resena.created_at.isoformat() if resena.created_at else utc_now_iso(),
+        "id": reseña.id,
+        "intercambio_id": reseña.intercambio_id,
+        "autor_id": reseña.autor_id,
+        "receptor_id": reseña.receptor_id,
+        "calificacion": reseña.calificacion,
+        "comentario": reseña.comentario,
+        "created_at": reseña.created_at.isoformat() if reseña.created_at else utc_now_iso(),
     }
 
 
@@ -258,16 +258,16 @@ def serialize_intercambio_for_user(session, intercambio: Intercambio, user_id: i
     other_user = session.get(Usuario, other_user_id)
 
     reseñas = session.execute(
-        select(Resena).where(Resena.intercambio_id == intercambio.id)
+        select(Reseña).where(Reseña.intercambio_id == intercambio.id)
     ).scalars().all()
 
     my_reseña = None
     other_reseña = None
     for r in reseñas:
         if r.autor_id == user_id:
-            my_reseña = serialize_resena(r)
+            my_reseña = serialize_Reseña(r)
         if r.autor_id == other_user_id:
-            other_reseña = serialize_resena(r)
+            other_reseña = serialize_Reseña(r)
 
     conversacion = session.execute(
         select(Conversacion).where(
