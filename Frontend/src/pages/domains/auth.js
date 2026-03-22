@@ -17,26 +17,26 @@ export async function signupDomain({
   ensureOnboardingOrDashboard,
   log,
 }) {
-  const name = $("signupName").value.trim();
   const email = $("signupEmail").value.trim().toLowerCase();
+  const username = $("signupUsername").value.trim();
   const pass = $("signupPass").value.trim();
-  if (!name || !email || pass.length < 4) {
-    alert("Completa nombre, correo y una contrasena de al menos 4 caracteres.");
+  if (!email || !username || pass.length < 4) {
+    alert("Completa correo, nombre de usuario y una contrasena de al menos 4 caracteres.");
     return;
   }
 
   try {
     const result = await api("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, name, password: pass }),
+      body: JSON.stringify({ email, username, password: pass }),
     });
     setCurrentUserRecord(result.user);
+    setSession(result.user.id, email);
   } catch (error) {
     alert(error.message);
     return;
   }
 
-  setSession(email);
   setOnboardingTeach(new Set());
   setOnboardingLearn(new Set());
   renderSelectedSummary("teach");
@@ -62,12 +62,12 @@ export async function loginDomain({
       body: JSON.stringify({ email, password: pass }),
     });
     setCurrentUserRecord(result.user);
+    setSession(result.user.id, email);
   } catch (error) {
     alert(error.message);
     return;
   }
 
-  setSession(email);
   await ensureOnboardingOrDashboard();
   log("Sesion iniciada.");
 }
