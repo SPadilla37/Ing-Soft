@@ -234,6 +234,18 @@ def serialize_intercambio_for_viewer(
         if existing_conv:
             serialized["viewer_conversation_id"] = existing_conv.id
 
+        return serialized
+
+    outgoing = session.execute(
+        select(Intercambio).where(
+            Intercambio.usuario_emisor_id == viewer_user_id,
+            Intercambio.usuario_receptor_id == intercambio.usuario_emisor_id,
+            Intercambio.estado == "pendiente",
+        )
+    ).scalars().first()
+    if outgoing:
+        serialized["viewer_match_state"] = "sent"
+
     incoming = session.execute(
         select(Intercambio).where(
             Intercambio.usuario_receptor_id == viewer_user_id,
@@ -242,7 +254,7 @@ def serialize_intercambio_for_viewer(
         )
     ).scalars().first()
     if incoming:
-        serialized["viewer_match_state"] = "received"
+        serialized["viewer_match_state"] = "mutual-pending" if outgoing else "received"
 
     return serialized
 
