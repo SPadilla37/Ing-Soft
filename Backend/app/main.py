@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.conversations import router as conversations_router
+from app.api.routes.habilidades import router as habilidades_router
 from app.api.routes.matches import router as matches_router
 from app.api.routes.requests import router as requests_router
 from app.api.routes.users import router as users_router
@@ -31,6 +32,7 @@ def on_startup() -> None:
 
 
 app.include_router(auth_router)
+app.include_router(habilidades_router)
 app.include_router(matches_router)
 app.include_router(requests_router)
 app.include_router(users_router)

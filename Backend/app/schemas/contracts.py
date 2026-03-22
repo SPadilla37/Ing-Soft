@@ -57,8 +57,6 @@ class MatchRatePayload(BaseModel):
 class UserRegisterPayload(BaseModel):
     email: str = Field(min_length=3, max_length=120)
     username: str = Field(min_length=3, max_length=25)
-    name: str = Field(min_length=1, max_length=120)
-    apellido: str = Field(min_length=1, max_length=35)
     password: str = Field(min_length=4, max_length=200)
     clerk_id: str = Field(default="")
 

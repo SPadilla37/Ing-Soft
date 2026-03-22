@@ -32,8 +32,6 @@ def register_user(payload: UserRegisterPayload) -> dict:
             existing = Usuario(
                 username=payload.username.strip(),
                 email=email,
-                nombre=payload.name.strip(),
-                apellido=payload.apellido.strip(),
                 password_hash=hash_password(payload.password),
                 clerk_id=payload.clerk_id or "",
                 fecha_registro=now,
@@ -41,8 +39,6 @@ def register_user(payload: UserRegisterPayload) -> dict:
             session.add(existing)
         else:
             existing.username = payload.username.strip()
-            existing.nombre = payload.name.strip()
-            existing.apellido = payload.apellido.strip()
             existing.password_hash = hash_password(payload.password)
             if payload.clerk_id:
                 existing.clerk_id = payload.clerk_id
