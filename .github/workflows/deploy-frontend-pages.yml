@@ -47,6 +47,23 @@ jobs:
           VITE_API_BASE: https://ing-soft-5shh.onrender.com
         run: npm run build
 
+      - name: Add root redirect pages
+        run: |
+          cat > Frontend/dist/index.html << 'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta http-equiv="refresh" content="0; url=/Ing-Soft/Frontend/" />
+            <title>Redirecting...</title>
+          </head>
+          <body>
+            <p>Redirecting to <a href="/Ing-Soft/Frontend/">/Ing-Soft/Frontend/</a>...</p>
+          </body>
+          </html>
+          EOF
+          cp Frontend/dist/index.html Frontend/dist/404.html
+
       - name: Debug build output
         run: ls -la Frontend/dist
 
