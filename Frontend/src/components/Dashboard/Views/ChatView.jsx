@@ -13,12 +13,39 @@ const ChatView = () => {
   const [status, setStatus] = useState('Selecciona una conversación.');
   const socketRef = useRef(null);
   const chatBoxRef = useRef(null);
+  const reconnectTimerRef = useRef(null);
+  const reconnectAttemptsRef = useRef(0);
+  const selectedConvRef = useRef(null);
+  const shouldReconnectRef = useRef(false);
+  const outgoingQueueRef = useRef([]);
+
+  useEffect(() => {
+    selectedConvRef.current = selectedConv;
+  }, [selectedConv]);
+
+  const loadMessages = async (convId) => {
+    if (!currentUser || !convId) return;
+    try {
+      const result = await apiRequest(API_BASE, `/conversations/${encodeURIComponent(convId)}/messages?viewer_user_id=${encodeURIComponent(currentUser)}`);
+      setMessages(result.messages || []);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+  };
 
   const loadConversations = async () => {
     if (!currentUser) return;
     try {
       const result = await apiRequest(API_BASE, `/conversations/${encodeURIComponent(currentUser)}`);
-      setConversations(result.conversations);
+      const list = result.conversations || [];
+      setConversations(list);
+
+      if (!selectedConv && list.length > 0) {
+        const first = list[0];
+        setSelectedConv(first);
+        await loadMessages(first.id);
+        connectWs(first.id);
+      }
     } catch (error) {
       console.error('Error loading conversations:', error);
     }
@@ -27,7 +54,14 @@ const ChatView = () => {
   useEffect(() => {
     loadConversations();
     return () => {
-      if (socketRef.current) socketRef.current.close();
+      shouldReconnectRef.current = false;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
     };
   }, [currentUser]);
 
@@ -37,16 +71,52 @@ const ChatView = () => {
     }
   }, [messages]);
 
+  const flushQueue = () => {
+    const ws = socketRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    while (outgoingQueueRef.current.length > 0) {
+      const content = outgoingQueueRef.current.shift();
+      ws.send(JSON.stringify({ type: 'message', content }));
+    }
+  };
+
+  const scheduleReconnect = (convId) => {
+    if (!shouldReconnectRef.current) return;
+    if (!selectedConvRef.current || selectedConvRef.current.id !== convId) return;
+
+    const attempt = reconnectAttemptsRef.current + 1;
+    reconnectAttemptsRef.current = attempt;
+    const delayMs = Math.min(5000, 500 * attempt);
+    setStatus(`Reconectando chat (${attempt})...`);
+
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+    }
+    reconnectTimerRef.current = setTimeout(() => {
+      connectWs(convId);
+    }, delayMs);
+  };
+
   const connectWs = (convId) => {
-    if (socketRef.current) socketRef.current.close();
-    
+    shouldReconnectRef.current = true;
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    if (socketRef.current) {
+      socketRef.current.close();
+    }
+
     setStatus('Conectando chat...');
     const url = wsUrl(API_BASE, convId, currentUser);
     const ws = new WebSocket(url);
     socketRef.current = ws;
 
     ws.onopen = () => {
+      reconnectAttemptsRef.current = 0;
       setStatus('Conectado.');
+      flushQueue();
     };
 
     ws.onmessage = (event) => {
@@ -58,19 +128,36 @@ const ChatView = () => {
       }
     };
 
-    ws.onclose = () => setStatus('Chat desconectado.');
+    ws.onclose = () => {
+      if (socketRef.current === ws) {
+        socketRef.current = null;
+      }
+      setStatus('Chat desconectado.');
+      scheduleReconnect(convId);
+    };
     ws.onerror = () => setStatus('Error en la conexión.');
   };
 
   const handleSelectConv = (conv) => {
     setSelectedConv(conv);
     setMessages([]);
+    outgoingQueueRef.current = [];
+    loadMessages(conv.id);
     connectWs(conv.id);
   };
 
   const handleSend = () => {
-    if (!input.trim() || !socketRef.current) return;
-    socketRef.current.send(JSON.stringify({ type: 'message', content: input }));
+    const content = input.trim();
+    if (!content || !selectedConv) return;
+
+    const ws = socketRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'message', content }));
+    } else {
+      outgoingQueueRef.current.push(content);
+      setStatus('Sin conexión: mensaje en cola, reconectando...');
+      connectWs(selectedConv.id);
+    }
     setInput('');
   };
 
@@ -110,8 +197,11 @@ const ChatView = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              disabled={!selectedConv}
             />
-            <button className="primary-btn" onClick={handleSend}>Enviar</button>
+            <button className="primary-btn" onClick={handleSend} disabled={!selectedConv || !input.trim()}>
+              Enviar
+            </button>
           </div>
         </div>
       </div>
