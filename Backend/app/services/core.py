@@ -177,15 +177,42 @@ def get_match_for_users(
     user_two_id: int,
 ) -> Intercambio | None:
     user_a_id, user_b_id = canonical_match_pair(user_one_id, user_two_id)
-    return session.execute(
+
+    pair_clause = or_(
+        (Intercambio.usuario_emisor_id == user_a_id) & (Intercambio.usuario_receptor_id == user_b_id),
+        (Intercambio.usuario_emisor_id == user_b_id) & (Intercambio.usuario_receptor_id == user_a_id),
+    )
+
+    accepted = session.execute(
         select(Intercambio).where(
-            or_(
-                (Intercambio.usuario_emisor_id == user_a_id) & (Intercambio.usuario_receptor_id == user_b_id),
-                (Intercambio.usuario_emisor_id == user_b_id) & (Intercambio.usuario_receptor_id == user_a_id),
-            ),
+            pair_clause,
             Intercambio.estado == "aceptado",
         )
-    ).scalars().first()
+    ).scalars().all()
+
+    if not accepted:
+        return None
+
+    completed = session.execute(
+        select(Intercambio).where(
+            pair_clause,
+            Intercambio.estado == "completado",
+        )
+    ).scalars().all()
+
+    if completed:
+        latest_completed = max(item.fecha_creacion for item in completed if item.fecha_creacion is not None)
+        accepted = [
+            item
+            for item in accepted
+            if item.fecha_creacion is None or item.fecha_creacion > latest_completed
+        ]
+
+    if not accepted:
+        return None
+
+    accepted.sort(key=lambda item: item.fecha_creacion or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    return accepted[0]
 
 
 def create_conversation_for_intercambio(session, intercambio: Intercambio) -> int:
