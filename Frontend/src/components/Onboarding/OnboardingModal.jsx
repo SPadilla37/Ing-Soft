@@ -5,7 +5,7 @@ import { api as apiRequest } from '../../services/api';
 import { API_BASE } from '../../config/constants';
 
 const OnboardingModal = () => {
-  const { currentUser, setSession, setCurrentUserRecord } = useAuth();
+  const { currentUser, setCurrentUserRecord } = useAuth();
   const [formData, setFormData] = useState({
     fullName: '',
     bio: '',
@@ -22,17 +22,40 @@ const OnboardingModal = () => {
     }
 
     try {
-      const profile = {
-        fullName: formData.fullName,
-        bio: formData.bio,
-        teachSkills: Array.from(formData.teachSkills),
-        learnSkills: Array.from(formData.learnSkills),
-        languages: Array.from(formData.languages)
-      };
+      const skillsResponse = await apiRequest(API_BASE, '/habilidades');
+      const catalog = Array.isArray(skillsResponse.habilidades) ? skillsResponse.habilidades : [];
+      const idByName = new Map(
+        catalog
+          .filter((item) => typeof item?.nombre === 'string' && Number.isInteger(item?.id))
+          .map((item) => [item.nombre.trim().toLowerCase(), item.id])
+      );
 
-      const result = await apiRequest(API_BASE, `/users/${encodeURIComponent(currentUser)}/profile`, {
-        method: 'POST',
-        body: JSON.stringify(profile)
+      const teachSkillIds = Array.from(formData.teachSkills)
+        .map((name) => idByName.get(String(name).trim().toLowerCase()))
+        .filter((id) => Number.isInteger(id));
+
+      const learnSkillIds = Array.from(formData.learnSkills)
+        .map((name) => idByName.get(String(name).trim().toLowerCase()))
+        .filter((id) => Number.isInteger(id));
+
+      if (!teachSkillIds.length || !learnSkillIds.length) {
+        alert('No se pudieron mapear habilidades al catalogo del servidor. Vuelve a seleccionar habilidades.');
+        return;
+      }
+
+      const parts = formData.fullName.trim().split(/\s+/).filter(Boolean);
+      const nombre = parts[0] || '';
+      const apellido = parts.slice(1).join(' ');
+
+      const result = await apiRequest(API_BASE, `/usuarios/${encodeURIComponent(currentUser)}/profile`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          nombre,
+          apellido,
+          biografia: formData.bio,
+          habilidades_ofertadas: teachSkillIds,
+          habilidades_buscadas: learnSkillIds,
+        })
       });
       
       setCurrentUserRecord(result.user);
@@ -40,10 +63,10 @@ const OnboardingModal = () => {
       await apiRequest(API_BASE, `/message-requests`, {
         method: 'POST',
         body: JSON.stringify({
-          from_user_id: currentUser,
+          from_user_id: Number(currentUser),
           to_user_id: null,
-          offered_skill: profile.teachSkills.join(', '),
-          requested_skill: profile.learnSkills.join(', '),
+          habilidad_id: teachSkillIds[0],
+          habilidad_solicitada_id: learnSkillIds[0],
           mensaje: 'Hola! Estoy buscando un intercambio de habilidades.'
         })
       });
