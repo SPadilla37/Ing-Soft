@@ -70,7 +70,7 @@ const ChatView = () => {
 
   const handleSend = () => {
     if (!input.trim() || !socketRef.current) return;
-    socketRef.current.send(JSON.stringify({ type: 'chat_message', content: input }));
+    socketRef.current.send(JSON.stringify({ type: 'message', content: input }));
     setInput('');
   };
 
@@ -86,8 +86,8 @@ const ChatView = () => {
                 className={`list-item ${selectedConv?.id === conv.id ? 'active' : ''}`}
                 onClick={() => handleSelectConv(conv)}
               >
-                <strong>{conv.participants_display?.join(' / ') || conv.participants.join(' / ')}</strong>
-                <div className="muted">{conv.request?.offered_skill}</div>
+                <strong>{conv.other_user_name || `Usuario ${conv.other_user_id}`}</strong>
+                <div className="muted">Conversacion #{conv.id}</div>
               </div>
             ))}
           </div>
