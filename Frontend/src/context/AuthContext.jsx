@@ -7,10 +7,47 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+const normalizeUserRecord = (user) => {
+  if (!user || typeof user !== 'object') return null;
+
+  const teachSkills = Array.isArray(user.habilidades_ofertadas)
+    ? user.habilidades_ofertadas
+        .map((skill) => skill?.nombre)
+        .filter((name) => typeof name === 'string' && name.trim())
+    : [];
+
+  const learnSkills = Array.isArray(user.habilidades_buscadas)
+    ? user.habilidades_buscadas
+        .map((skill) => skill?.nombre)
+        .filter((name) => typeof name === 'string' && name.trim())
+    : [];
+
+  const fullName = [user.nombre, user.apellido]
+    .filter((part) => typeof part === 'string' && part.trim())
+    .join(' ')
+    .trim();
+
+  return {
+    ...user,
+    name: fullName || user.username || user.email || String(user.id),
+    profile: {
+      fullName,
+      bio: user.biografia || '',
+      teachSkills,
+      learnSkills,
+      languages: [],
+    },
+  };
+};
+
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(localStorage.getItem(dbKeySession) || null);
-  const [currentUserRecord, setCurrentUserRecord] = useState(null);
+  const [currentUserRecord, setCurrentUserRecordState] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const setCurrentUserRecord = (userRecord) => {
+    setCurrentUserRecordState(normalizeUserRecord(userRecord));
+  };
 
   const setSession = (userId, token = null) => {
     localStorage.setItem(dbKeySession, userId);
@@ -24,14 +61,14 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(dbKeySession);
     localStorage.removeItem(dbKeyToken);
     setCurrentUser(null);
-    setCurrentUserRecord(null);
+    setCurrentUserRecordState(null);
   };
 
   const loadUserRecord = async (userId) => {
     if (!userId) return;
     try {
       const result = await apiRequest(API_BASE, `/usuarios/${encodeURIComponent(userId)}`);
-      setCurrentUserRecord(result.user);
+      setCurrentUserRecordState(normalizeUserRecord(result.user));
     } catch (error) {
       console.error('Failed to load user record:', error);
     } finally {
