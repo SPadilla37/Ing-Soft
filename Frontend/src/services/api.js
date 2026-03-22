@@ -1,5 +1,9 @@
 import { dbKeyToken } from "../config/constants.js";
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 
 function toErrorMessage(payload) {
   if (!payload) return "Error inesperado";
@@ -35,10 +39,28 @@ export async function api(apiBase, path, options = {}) {
     ...(options.headers || {}),
   };
 
-  const response = await fetch(`${apiBase}${path}`, {
-    headers,
-    ...options,
-  });
+  let response;
+  const maxAttempts = 2;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      response = await fetch(`${apiBase}${path}`, {
+        headers,
+        ...options,
+      });
+      break;
+    } catch (error) {
+      if (attempt < maxAttempts) {
+        await sleep(600);
+        continue;
+      }
+      throw new Error("No se pudo conectar al servidor. Verifica tu conexion e intenta de nuevo.");
+    }
+  }
+
+  if (!response) {
+    throw new Error("No se pudo conectar al servidor. Verifica tu conexion e intenta de nuevo.");
+  }
+
   let data;
   try {
     data = await response.json();
