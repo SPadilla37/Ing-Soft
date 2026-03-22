@@ -66,12 +66,12 @@ def serialize_user(user: Usuario, session=None) -> dict:
         rating_info = calculate_received_rating(session, user.id)
 
     habilidades_ofertadas = []
-    habilidades_busçadas = []
+    habilidades_buscadas = []
     if session is not None:
         ofe = get_user_habilidades(session, user.id, "ofertada")
         bus = get_user_habilidades(session, user.id, "buscada")
         habilidades_ofertadas = [serialize_habilidad(h) for h in ofe]
-        habilidades_busçadas = [serialize_habilidad(h) for h in bus]
+        habilidades_buscadas = [serialize_habilidad(h) for h in bus]
 
     return {
         "id": user.id,
@@ -88,7 +88,7 @@ def serialize_user(user: Usuario, session=None) -> dict:
             "count": rating_info["count"],
         },
         "habilidades_ofertadas": habilidades_ofertadas,
-        "habilidades_busçadas": habilidades_busçadas,
+        "habilidades_buscadas": habilidades_buscadas,
     }
 
 
