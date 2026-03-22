@@ -5,7 +5,6 @@ from app.db.database import SessionLocal
 from app.db.models.entities import Intercambio, Conversacion, Habilidad, Usuario, UsuarioHabilidad
 from app.schemas import MarketplaceAcceptRequest, MessageRequestCreate, MessageRequestResponse
 from app.services.core import (
-    PUBLIC_MARKETPLACE_USER_ID,
     create_conversation_for_intercambio,
     ensure_user,
     get_match_for_users,
@@ -17,6 +16,11 @@ from app.services.core import (
 
 
 router = APIRouter()
+
+
+def _is_public_marketplace_request(intercambio: Intercambio) -> bool:
+    # Public requests are represented as self-addressed rows to keep FK integrity.
+    return intercambio.usuario_receptor_id == intercambio.usuario_emisor_id
 
 
 @router.get("/marketplace/habilidades")
@@ -140,7 +144,7 @@ def create_message_request(payload: MessageRequestCreate) -> dict:
             ensure_user(session, payload.to_user_id)
             receptor_id = payload.to_user_id
         else:
-            receptor_id = PUBLIC_MARKETPLACE_USER_ID
+            receptor_id = payload.from_user_id
 
         now = datetime.now(timezone.utc)
         intercambio = Intercambio(
@@ -189,7 +193,7 @@ def list_marketplace_requests(
     with SessionLocal() as session:
         stmt = select(Intercambio).where(
             Intercambio.estado == "pendiente",
-            Intercambio.usuario_receptor_id == PUBLIC_MARKETPLACE_USER_ID,
+            Intercambio.usuario_receptor_id == Intercambio.usuario_emisor_id,
         )
 
         if viewer_user_id:
@@ -238,7 +242,7 @@ def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptReques
         if intercambio.estado != "pendiente":
             raise HTTPException(status_code=400, detail="Esta solicitud ya no esta disponible")
 
-        if intercambio.usuario_receptor_id != PUBLIC_MARKETPLACE_USER_ID:
+        if not _is_public_marketplace_request(intercambio):
             raise HTTPException(status_code=400, detail="Esta solicitud no es publica")
 
         ensure_user(session, payload.viewer_user_id)
@@ -307,7 +311,7 @@ def delete_own_message_request(request_id: int, user_id: int = Query(...)) -> di
         if intercambio.usuario_emisor_id != user_id:
             raise HTTPException(status_code=403, detail="Solo puedes borrar tus propias solicitudes")
 
-        if intercambio.estado != "pendiente" or intercambio.usuario_receptor_id != PUBLIC_MARKETPLACE_USER_ID:
+        if intercambio.estado != "pendiente" or not _is_public_marketplace_request(intercambio):
             raise HTTPException(status_code=400, detail="Solo puedes borrar solicitudes publicas pendientes")
 
         session.delete(intercambio)

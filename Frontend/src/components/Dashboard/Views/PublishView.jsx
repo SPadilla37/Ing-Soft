@@ -26,7 +26,7 @@ const PublishView = () => {
     try {
       const result = await apiRequest(API_BASE, `/message-requests/${encodeURIComponent(currentUser)}/outgoing`);
       const list = Array.isArray(result.requests) ? result.requests : [];
-      setOwnRequests(list.filter((r) => r.estado === 'pendiente' && r.usuario_receptor_id === 0));
+      setOwnRequests(list.filter((r) => r.estado === 'pendiente' && r.usuario_receptor_id === r.usuario_emisor_id));
     } catch (error) {
       console.error('Error loading own requests:', error);
     }
