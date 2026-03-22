@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import SkillPicker from '../Common/SkillPicker';
 import { api as apiRequest } from '../../services/api';
 import { API_BASE } from '../../config/constants';
+import { ensureSkillIds } from '../../services/skills';
 
 const OnboardingModal = () => {
   const { currentUser, setCurrentUserRecord } = useAuth();
@@ -22,24 +23,11 @@ const OnboardingModal = () => {
     }
 
     try {
-      const skillsResponse = await apiRequest(API_BASE, '/habilidades');
-      const catalog = Array.isArray(skillsResponse.habilidades) ? skillsResponse.habilidades : [];
-      const idByName = new Map(
-        catalog
-          .filter((item) => typeof item?.nombre === 'string' && Number.isInteger(item?.id))
-          .map((item) => [item.nombre.trim().toLowerCase(), item.id])
-      );
-
-      const teachSkillIds = Array.from(formData.teachSkills)
-        .map((name) => idByName.get(String(name).trim().toLowerCase()))
-        .filter((id) => Number.isInteger(id));
-
-      const learnSkillIds = Array.from(formData.learnSkills)
-        .map((name) => idByName.get(String(name).trim().toLowerCase()))
-        .filter((id) => Number.isInteger(id));
+      const teachSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.teachSkills));
+      const learnSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.learnSkills));
 
       if (!teachSkillIds.length || !learnSkillIds.length) {
-        alert('No se pudieron mapear habilidades al catalogo del servidor. Vuelve a seleccionar habilidades.');
+        alert('No se pudieron resolver las habilidades seleccionadas. Intentalo de nuevo.');
         return;
       }
 
