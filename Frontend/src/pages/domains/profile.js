@@ -89,7 +89,6 @@ export async function openPublicProfileDomain({
   publicProfileName,
   publicProfileBio,
   publicProfileSummary,
-  publicProfileLanguages,
   publicProfileTeachChips,
   publicProfileLearnChips,
   publicProfileRating,
@@ -125,7 +124,6 @@ export async function openPublicProfileDomain({
 
     renderSummaryChips(publicProfileTeachChips, normalized.teachSkills || []);
     renderSummaryChips(publicProfileLearnChips, normalized.learnSkills || []);
-    publicProfileLanguages.innerHTML = "";
 
     if (averageRating === null || averageRating === undefined || !ratingCount) {
       publicProfileRating.innerHTML = "<span class=\"stars-detail\">No reviews yet</span>";

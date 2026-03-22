@@ -56,7 +56,6 @@ const publicProfileAvatar = $("publicProfileAvatar");
 const publicProfileName = $("publicProfileName");
 const publicProfileBio = $("publicProfileBio");
 const publicProfileSummary = $("publicProfileSummary");
-const publicProfileLanguages = $("publicProfileLanguages");
 const publicProfileRating = $("publicProfileRating");
 const publicProfileTeachChips = $("publicProfileTeachChips");
 const publicProfileLearnChips = $("publicProfileLearnChips");
@@ -201,7 +200,6 @@ async function openPublicProfile(userId, returnView = "matchesView") {
     publicProfileName,
     publicProfileBio,
     publicProfileSummary,
-    publicProfileLanguages,
     publicProfileTeachChips,
     publicProfileLearnChips,
     publicProfileRating,
