@@ -109,7 +109,18 @@ def finalize_match(match_id: int, payload: MatchFinalizePayload) -> dict:
                 intercambio.usuario_emisor_id in confirmed_users
                 and intercambio.usuario_receptor_id in confirmed_users
             ):
-                intercambio.estado = "completado"
+                pair_rows = session.execute(
+                    select(Intercambio).where(
+                        or_(
+                            (Intercambio.usuario_emisor_id == intercambio.usuario_emisor_id) & (Intercambio.usuario_receptor_id == intercambio.usuario_receptor_id),
+                            (Intercambio.usuario_emisor_id == intercambio.usuario_receptor_id) & (Intercambio.usuario_receptor_id == intercambio.usuario_emisor_id),
+                        ),
+                        Intercambio.estado == "aceptado",
+                    )
+                ).scalars().all()
+
+                for row in pair_rows:
+                    row.estado = "completado"
 
         session.commit()
         session.refresh(intercambio)
