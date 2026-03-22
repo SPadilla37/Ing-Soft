@@ -3,12 +3,14 @@ import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE, skillsCatalog } from '../../../config/constants';
 import MarketplaceCard from '../MarketplaceCard';
+import PublicProfileModal from '../PublicProfileModal';
 
 const MatchesView = ({ searchQuery }) => {
   const { currentUser } = useAuth();
   const [requests, setRequests] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [profileUserId, setProfileUserId] = useState(null);
 
   const loadMarketplace = async () => {
     if (!currentUser) return;
@@ -91,11 +93,18 @@ const MatchesView = ({ searchQuery }) => {
              key={req.id} 
              request={req} 
              onAccept={handleAccept}
-             onProfile={(userId) => console.log('Open profile', userId)}
+             onProfile={(userId) => setProfileUserId(userId)}
            />
          ))
         }
       </div>
+
+      {profileUserId ? (
+        <PublicProfileModal
+          userId={profileUserId}
+          onClose={() => setProfileUserId(null)}
+        />
+      ) : null}
     </section>
   );
 };
