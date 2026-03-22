@@ -34,6 +34,8 @@ def register_user(payload: UserRegisterPayload) -> dict:
                 email=email,
                 password_hash=hash_password(payload.password),
                 clerk_id=payload.clerk_id or "",
+                nombre="",
+                apellido="",
                 fecha_registro=now,
             )
             session.add(existing)

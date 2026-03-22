@@ -67,8 +67,8 @@ class UserLoginPayload(BaseModel):
 
 
 class UserProfileUpdatePayload(BaseModel):
-    nombre: Optional[str] = Field(default=None, min_length=1, max_length=35)
-    apellido: Optional[str] = Field(default=None, min_length=1, max_length=35)
+    nombre: Optional[str] = Field(default=None, min_length=0, max_length=35)
+    apellido: Optional[str] = Field(default=None, min_length=0, max_length=35)
     foto_url: Optional[str] = Field(default=None, max_length=50)
     biografia: Optional[str] = Field(default=None, max_length=2000)
     habilidades_ofertadas: Optional[List[int]] = Field(default=None)
