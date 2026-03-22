@@ -108,7 +108,7 @@ def rate_match(match_id: int, payload: MatchRatePayload) -> dict:
         if existing:
             raise HTTPException(status_code=400, detail="Ya calificaste este match")
 
-        Reseña = Reseña(
+        nueva_reseña = Reseña(
             intercambio_id=match_id,
             autor_id=payload.user_id,
             receptor_id=other_user_id,
@@ -116,7 +116,7 @@ def rate_match(match_id: int, payload: MatchRatePayload) -> dict:
             comentario=payload.comentario,
             created_at=datetime.now(timezone.utc),
         )
-        session.add(Reseña)
+        session.add(nueva_reseña)
         session.commit()
         session.refresh(intercambio)
         return {"match": serialize_intercambio_for_user(session, intercambio, payload.user_id)}
