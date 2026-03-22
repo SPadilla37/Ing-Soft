@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import or_, select
 from app.db.database import SessionLocal
-from app.db.models.entities import Intercambio, Reseña
+from app.db.models.entities import Intercambio, IntercambioFinalizacion, Reseña
 from app.schemas import MatchFinalizePayload, MatchRatePayload
 from app.services.core import (
     ensure_user,
@@ -76,8 +76,40 @@ def finalize_match(match_id: int, payload: MatchFinalizePayload) -> dict:
         if intercambio.estado not in {"aceptado", "completado"}:
             raise HTTPException(status_code=400, detail="Solo puedes finalizar matches aceptados")
 
-        if intercambio.estado != "completado":
-            intercambio.estado = "completado"
+        if intercambio.estado == "aceptado":
+            existing_confirmation = session.execute(
+                select(IntercambioFinalizacion).where(
+                    IntercambioFinalizacion.intercambio_id == match_id,
+                    IntercambioFinalizacion.usuario_id == payload.user_id,
+                )
+            ).scalars().first()
+
+            if not existing_confirmation:
+                session.add(
+                    IntercambioFinalizacion(
+                        intercambio_id=match_id,
+                        usuario_id=payload.user_id,
+                        created_at=datetime.now(timezone.utc),
+                    )
+                )
+                session.flush()
+
+            confirmations = session.execute(
+                select(IntercambioFinalizacion).where(
+                    IntercambioFinalizacion.intercambio_id == match_id,
+                    IntercambioFinalizacion.usuario_id.in_([
+                        intercambio.usuario_emisor_id,
+                        intercambio.usuario_receptor_id,
+                    ]),
+                )
+            ).scalars().all()
+
+            confirmed_users = {item.usuario_id for item in confirmations}
+            if (
+                intercambio.usuario_emisor_id in confirmed_users
+                and intercambio.usuario_receptor_id in confirmed_users
+            ):
+                intercambio.estado = "completado"
 
         session.commit()
         session.refresh(intercambio)
