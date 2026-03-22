@@ -1,10 +1,12 @@
-import { displayUserName, getInitials } from "./ui.js";
+import { getInitials } from "./ui.js";
 import { renderMatchStatusLabel, renderRatingStars } from "./matches.js";
 
 function marketplaceMatchesCategory(request, selectedCategory) {
   if (selectedCategory === "All") return true;
-  return request.offered_skill.toLowerCase().includes(selectedCategory.toLowerCase())
-    || request.requested_skill.toLowerCase().includes(selectedCategory.toLowerCase());
+  const offered = (request.habilidad?.nombre || "").toLowerCase();
+  const requested = (request.habilidad_solicitada?.nombre || "").toLowerCase();
+  return offered.includes(selectedCategory.toLowerCase())
+    || requested.includes(selectedCategory.toLowerCase());
 }
 
 export function renderMarketplaceSection({
@@ -48,8 +50,11 @@ export function renderMarketplaceSection({
   }
 
   filtered.forEach((request) => {
-    const author = displayUserName(request, "from");
+    const emisor = request.emisor || {};
+    const author = `${emisor.nombre || ""} ${emisor.apellido || ""}`.trim() || "Usuario";
     const matchState = request.viewer_match_state || "none";
+    const offeredSkill = request.habilidad?.nombre || "-";
+    const requestedSkill = request.habilidad_solicitada?.nombre || "-";
     const card = document.createElement("article");
     card.className = "match-card";
     card.innerHTML = `
@@ -62,15 +67,15 @@ export function renderMarketplaceSection({
       </div>
       <div>
         <div class="muted">Puedes aprender de ${author}:</div>
-        <div class="strong-list">${request.offered_skill}</div>
+        <div class="strong-list">${offeredSkill}</div>
       </div>
       <div>
         <div class="muted">${author} quiere aprender:</div>
-        <div class="strong-list">${request.requested_skill}</div>
+        <div class="strong-list">${requestedSkill}</div>
       </div>
       <div>
         <div class="muted">Mensaje</div>
-        <div>${request.intro_message || "Sin descripcion"}</div>
+        <div>${request.mensaje || "Sin descripcion"}</div>
       </div>
     `;
 
@@ -98,7 +103,7 @@ export function renderMarketplaceSection({
     detailsBtn.className = "ghost-btn";
     detailsBtn.type = "button";
     detailsBtn.textContent = "Go to profile";
-    detailsBtn.onclick = () => onShowRequestDetails(request, "matchesView");
+    detailsBtn.onclick = () => onShowRequestDetails({ from_user_id: emisor.id || request.usuario_emisor_id }, "matchesView");
 
     actions.appendChild(acceptBtn);
     actions.appendChild(detailsBtn);
@@ -125,8 +130,10 @@ export function renderIncomingMatchesSection({
   }
 
   items.forEach((item) => {
-    const request = item.request;
-    const author = item.from_user_name || item.from_user_id || "Usuario";
+    const emisor = item.emisor || {};
+    const author = `${emisor.nombre || ""} ${emisor.apellido || ""}`.trim() || "Usuario";
+    const offeredSkill = item.habilidad?.nombre || "-";
+    const requestedSkill = item.habilidad_solicitada?.nombre || "-";
     const card = document.createElement("article");
     card.className = "match-card";
     card.innerHTML = `
@@ -139,15 +146,15 @@ export function renderIncomingMatchesSection({
       </div>
       <div>
         <div class="muted">Te puede ensenar</div>
-        <div class="strong-list">${request.requested_skill}</div>
+        <div class="strong-list">${requestedSkill}</div>
       </div>
       <div>
         <div class="muted">Quiere aprender</div>
-        <div class="strong-list">${request.offered_skill}</div>
+        <div class="strong-list">${offeredSkill}</div>
       </div>
       <div>
         <div class="muted">Mensaje</div>
-        <div>${request.intro_message || "Sin descripcion"}</div>
+        <div>${item.mensaje || "Sin descripcion"}</div>
       </div>
     `;
 
@@ -158,13 +165,13 @@ export function renderIncomingMatchesSection({
     respondBtn.className = "primary-btn";
     respondBtn.type = "button";
     respondBtn.textContent = "Responder match";
-    respondBtn.onclick = () => onAcceptRequest(request.id, item.from_user_id);
+    respondBtn.onclick = () => onAcceptRequest(item.id, emisor.id || item.usuario_emisor_id);
 
     const profileBtn = document.createElement("button");
     profileBtn.className = "ghost-btn";
     profileBtn.type = "button";
     profileBtn.textContent = "Go to profile";
-    profileBtn.onclick = () => onShowRequestDetails({ from_user_id: item.from_user_id }, "incomingMatchesView");
+    profileBtn.onclick = () => onShowRequestDetails({ from_user_id: emisor.id || item.usuario_emisor_id }, "incomingMatchesView");
 
     actions.appendChild(respondBtn);
     actions.appendChild(profileBtn);
@@ -194,8 +201,9 @@ export function renderMyMatchesSection({
   }
 
   items.forEach((match) => {
-    const author = match.other_user_name || match.other_user_id;
-    const request = match.request || {};
+    const author = match.other_user_name || String(match.other_user_id);
+    const offeredSkill = match.habilidad?.nombre || "-";
+    const requestedSkill = match.habilidad_solicitada?.nombre || "-";
     const card = document.createElement("article");
     card.className = "match-card";
     card.innerHTML = `
@@ -208,7 +216,7 @@ export function renderMyMatchesSection({
       </div>
       <div>
         <div class="muted">Intercambio</div>
-        <div class="strong-list">${request.offered_skill || "-"} ↔ ${request.requested_skill || "-"}</div>
+        <div class="strong-list">${offeredSkill} ↔ ${requestedSkill}</div>
       </div>
       <div>
         <div class="muted">Calificacion</div>
@@ -235,7 +243,7 @@ export function renderMyMatchesSection({
     profileBtn.onclick = () => onShowRequestDetails({ from_user_id: match.other_user_id }, "myMatchesView");
     actions.appendChild(profileBtn);
 
-    if (match.status === "in_progress") {
+    if (match.estado === "aceptado") {
       const finalizeBtn = document.createElement("button");
       finalizeBtn.type = "button";
       if (match.can_finalize) {
@@ -250,7 +258,7 @@ export function renderMyMatchesSection({
       actions.appendChild(finalizeBtn);
     }
 
-    if (match.status === "completed" && match.can_rate) {
+    if (match.estado === "completado" && match.can_rate) {
       const ratingInput = document.createElement("div");
       ratingInput.className = "rating-input";
 
