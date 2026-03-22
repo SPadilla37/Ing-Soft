@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
-from app.core.security import hash_password
+from app.core.security import create_access_token, hash_password, needs_rehash, verify_password
 from app.db.database import SessionLocal
 from app.db.models.entities import Usuario
-from app.schemas import UserLoginPayload, UserRegisterPayload
+from app.schemas import AuthTokenResponse, UserLoginPayload, UserRegisterPayload
 from app.services.core import serialize_user, utc_now_iso
 
 
@@ -17,7 +17,7 @@ def health() -> dict:
 
 
 @router.post("/auth/register")
-def register_user(payload: UserRegisterPayload) -> dict:
+def register_user(payload: UserRegisterPayload) -> AuthTokenResponse:
     email = payload.email.strip().lower()
     with SessionLocal() as session:
         existing = session.execute(
@@ -47,11 +47,17 @@ def register_user(payload: UserRegisterPayload) -> dict:
 
         session.commit()
         session.refresh(existing)
-        return {"user": serialize_user(existing, session)}
+
+        access_token = create_access_token({"sub": str(existing.id), "email": existing.email})
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": serialize_user(existing, session),
+        }
 
 
 @router.post("/auth/login")
-def login_user(payload: UserLoginPayload) -> dict:
+def login_user(payload: UserLoginPayload) -> AuthTokenResponse:
     email = payload.email.strip().lower()
     with SessionLocal() as session:
         user = session.execute(
@@ -60,10 +66,19 @@ def login_user(payload: UserLoginPayload) -> dict:
 
         if not user or not user.password_hash:
             raise HTTPException(status_code=401, detail="Correo o contrasena incorrectos")
-        if user.password_hash != hash_password(payload.password):
+        if not verify_password(payload.password, user.password_hash):
             raise HTTPException(status_code=401, detail="Correo o contrasena incorrectos")
+
+        if needs_rehash(user.password_hash):
+            user.password_hash = hash_password(payload.password)
 
         user.ultimo_login = datetime.now(timezone.utc)
         session.commit()
         session.refresh(user)
-        return {"user": serialize_user(user, session)}
+
+        access_token = create_access_token({"sub": str(user.id), "email": user.email})
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": serialize_user(user, session),
+        }

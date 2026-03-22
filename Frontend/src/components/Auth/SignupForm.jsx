@@ -21,18 +21,18 @@ const SignupForm = ({ onLoginTab }) => {
 
   const handleSignup = async () => {
     const { name, email, password, username, apellido } = formData;
-    if (!name || !email || !password || password.length < 4) {
-      alert('Completa nombre, correo y una contraseña de al menos 4 caracteres.');
+    if (!name || !username || !email || !password || password.length < 4) {
+      alert('Completa nombre, usuario, correo y una contraseña de al menos 4 caracteres.');
       return;
     }
     setLoading(true);
     try {
       const result = await apiRequest(API_BASE, '/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ email, username, name, apellido, password }),
+        body: JSON.stringify({ email, username, password, clerk_id: '' }),
       });
       setCurrentUserRecord(result.user);
-      setSession(result.user.id);
+      setSession(result.user.id, result.access_token || null);
     } catch (error) {
       alert(error.message);
     } finally {

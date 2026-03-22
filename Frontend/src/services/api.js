@@ -1,6 +1,16 @@
+import { dbKeyToken } from "../config/constants.js";
+
+
 export async function api(apiBase, path, options = {}) {
+  const token = localStorage.getItem(dbKeyToken);
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
+  };
+
   const response = await fetch(`${apiBase}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers,
     ...options,
   });
   const data = await response.json();

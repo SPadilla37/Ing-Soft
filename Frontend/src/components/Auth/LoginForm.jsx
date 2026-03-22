@@ -21,7 +21,7 @@ const LoginForm = ({ onSignupTab }) => {
         body: JSON.stringify({ email, password }),
       });
       setCurrentUserRecord(result.user);
-      setSession(result.user.id);
+      setSession(result.user.id, result.access_token || null);
     } catch (error) {
       alert(error.message);
     } finally {
