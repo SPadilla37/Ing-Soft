@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
+import { ensureSkillIds } from '../../../services/skills';
+
+function parseSkillsInput(value) {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 const PublishView = () => {
   const { currentUser, currentUserRecord } = useAuth();
@@ -17,7 +25,8 @@ const PublishView = () => {
     if (!currentUser) return;
     try {
       const result = await apiRequest(API_BASE, `/message-requests/${encodeURIComponent(currentUser)}/outgoing`);
-      setOwnRequests(result.requests.filter(r => r.status === 'pending' && r.to_user_id === '__PUBLIC__'));
+      const list = Array.isArray(result.requests) ? result.requests : [];
+      setOwnRequests(list.filter((r) => r.estado === 'pendiente' && r.usuario_receptor_id === 0));
     } catch (error) {
       console.error('Error loading own requests:', error);
     }
@@ -40,12 +49,25 @@ const PublishView = () => {
       return;
     }
     try {
+      const offeredNames = parseSkillsInput(formData.offered_skill);
+      const requestedNames = parseSkillsInput(formData.requested_skill);
+
+      const offeredIds = await ensureSkillIds(API_BASE, offeredNames);
+      const requestedIds = await ensureSkillIds(API_BASE, requestedNames);
+
+      if (!offeredIds.length || !requestedIds.length) {
+        setStatus('Error: No se pudieron resolver las habilidades seleccionadas.');
+        return;
+      }
+
       await apiRequest(API_BASE, '/message-requests', {
         method: 'POST',
         body: JSON.stringify({
-          from_user_id: currentUser,
+          from_user_id: Number(currentUser),
           to_user_id: null,
-          ...formData
+          habilidad_id: offeredIds[0],
+          habilidad_solicitada_id: requestedIds[0],
+          mensaje: formData.mensaje || ''
         })
       });
       setStatus('Solicitud publicada correctamente.');
@@ -98,8 +120,8 @@ const PublishView = () => {
           <div className="list">
             {ownRequests.map(req => (
               <div key={req.id} className="list-item">
-                <strong>{req.offered_skill}</strong>
-                <div className="muted">Quiere aprender: {req.requested_skill}</div>
+                <strong>{req.habilidad?.nombre || 'Sin habilidad ofertada'}</strong>
+                <div className="muted">Quiere aprender: {req.habilidad_solicitada?.nombre || 'Sin habilidad solicitada'}</div>
                 <button className="mini-btn" onClick={() => handleDelete(req.id)}>Borrar</button>
               </div>
             ))}
