@@ -53,18 +53,20 @@ const MyMatchesView = () => {
                <div className="match-avatar">M</div>
                <div>
                  <h3>{match.other_user_name || match.other_user_id}</h3>
-                 <div className="muted">Estado: {match.status}</div>
+                 <div className="muted">Estado: {match.estado || 'pendiente'}</div>
                </div>
              </div>
              <div>
                <div className="muted">Intercambio</div>
-               <div className="strong-list">{match.request?.offered_skill} ↔ {match.request?.requested_skill}</div>
+               <div className="strong-list">
+                 {(match.habilidad?.nombre || 'Sin habilidad')} ↔ {(match.habilidad_solicitada?.nombre || 'Sin habilidad')}
+               </div>
              </div>
              <div className="card-actions">
                {match.conversation_id && (
                  <button className="secondary-btn">Abrir chat</button>
                )}
-               {match.status === 'in_progress' && (
+               {(match.estado === 'aceptado' || match.can_finalize) && (
                  <button 
                    className={match.can_finalize ? "primary-btn" : "secondary-btn"}
                    onClick={() => match.can_finalize && handleFinalize(match.id)}
