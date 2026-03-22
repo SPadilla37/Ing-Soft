@@ -8,6 +8,7 @@ from app.db.models.entities import (
     Conversacion,
     Habilidad,
     Intercambio,
+    IntercambioFinalizacion,
     Mensaje,
     Reseña,
     Usuario,
@@ -182,7 +183,7 @@ def get_match_for_users(
                 (Intercambio.usuario_emisor_id == user_a_id) & (Intercambio.usuario_receptor_id == user_b_id),
                 (Intercambio.usuario_emisor_id == user_b_id) & (Intercambio.usuario_receptor_id == user_a_id),
             ),
-            Intercambio.estado.in_(["aceptado", "completado"]),
+            Intercambio.estado == "aceptado",
         )
     ).scalars().first()
 
@@ -295,6 +296,14 @@ def serialize_intercambio_for_user(session, intercambio: Intercambio, user_id: i
     habilidad_sol_obj = session.get(Habilidad, getattr(intercambio, "habilidad_solicitada_id", None))
     habilidad_solicitada = serialize_habilidad(habilidad_sol_obj) if habilidad_sol_obj else None
 
+    confirmations = session.execute(
+        select(IntercambioFinalizacion).where(IntercambioFinalizacion.intercambio_id == intercambio.id)
+    ).scalars().all()
+    finalized_user_ids = {item.usuario_id for item in confirmations}
+    finalized_by_me = user_id in finalized_user_ids
+    finalized_by_other = other_user_id in finalized_user_ids
+    can_finalize = intercambio.estado == "aceptado" and not finalized_by_me
+
     return {
         "id": intercambio.id,
         "conversation_id": conversacion.id if conversacion else None,
@@ -304,7 +313,10 @@ def serialize_intercambio_for_user(session, intercambio: Intercambio, user_id: i
         "other_user_name": get_user_display_name(session, other_user_id) if other_user else str(other_user_id),
         "my_reseña": my_reseña,
         "other_reseña": other_reseña,
-        "can_finalize":intercambio.estado == "aceptado",
+        "can_finalize": can_finalize,
+        "finalized_by_me": finalized_by_me,
+        "finalized_by_other": finalized_by_other,
+        "awaiting_other_finalize": intercambio.estado == "aceptado" and finalized_by_me and not finalized_by_other,
         "can_rate":intercambio.estado == "completado" and my_reseña is None,
         "habilidad": habilidad,
         "habilidad_solicitada": habilidad_solicitada,
