@@ -28,9 +28,9 @@ const IncomingMatchesView = () => {
 
   const handleAccept = async (requestId) => {
     try {
-      await apiRequest(API_BASE, `/marketplace/requests/${requestId}/accept`, {
-        method: 'POST',
-        body: JSON.stringify({ viewer_user_id: currentUser })
+      await apiRequest(API_BASE, `/message-requests/${requestId}/respond`, {
+        method: 'PATCH',
+        body: JSON.stringify({ user_id: Number(currentUser), action: 'accept' })
       });
       loadIncoming();
     } catch (error) {
