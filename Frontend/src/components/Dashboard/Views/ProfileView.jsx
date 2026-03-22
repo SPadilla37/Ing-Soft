@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 import SkillPicker from '../../Common/SkillPicker';
+import { ensureSkillIds } from '../../../services/skills';
 
 const ProfileView = () => {
   const { currentUser, currentUserRecord, setCurrentUserRecord } = useAuth();
@@ -32,21 +33,8 @@ const ProfileView = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const skillsResponse = await apiRequest(API_BASE, '/habilidades');
-      const catalog = Array.isArray(skillsResponse.habilidades) ? skillsResponse.habilidades : [];
-      const idByName = new Map(
-        catalog
-          .filter((item) => typeof item?.nombre === 'string' && Number.isInteger(item?.id))
-          .map((item) => [item.nombre.trim().toLowerCase(), item.id])
-      );
-
-      const teachSkillIds = Array.from(formData.teachSkills)
-        .map((name) => idByName.get(String(name).trim().toLowerCase()))
-        .filter((id) => Number.isInteger(id));
-
-      const learnSkillIds = Array.from(formData.learnSkills)
-        .map((name) => idByName.get(String(name).trim().toLowerCase()))
-        .filter((id) => Number.isInteger(id));
+      const teachSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.teachSkills));
+      const learnSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.learnSkills));
 
       const parts = formData.fullName.trim().split(/\s+/).filter(Boolean);
       const nombre = parts[0] || '';
