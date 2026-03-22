@@ -24,7 +24,7 @@ def get_incoming_match_intents(user_id: int) -> dict:
             select(Intercambio)
             .where(
                 Intercambio.usuario_receptor_id == user_id,
-                Intercambio.estado == "pendiente",
+                Intercambio.estado.in_(["pendiente", "aceptado"]),
             )
             .order_by(Intercambio.fecha_creacion.desc())
         ).scalars().all()

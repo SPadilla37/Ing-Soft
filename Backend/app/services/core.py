@@ -278,17 +278,24 @@ def serialize_intercambio_for_user(session, intercambio: Intercambio, user_id: i
         )
     ).scalars().first()
 
+    habilidad_obj = session.get(Habilidad, getattr(intercambio, "habilidad_id", None))
+    habilidad = serialize_habilidad(habilidad_obj) if habilidad_obj else None
+    habilidad_sol_obj = session.get(Habilidad, getattr(intercambio, "habilidad_solicitada_id", None))
+    habilidad_solicitada = serialize_habilidad(habilidad_sol_obj) if habilidad_sol_obj else None
+
     return {
         "id": intercambio.id,
         "conversation_id": conversacion.id if conversacion else None,
-        "estado": intercambio.estado,
-        "fecha_creacion": intercambio.fecha_creacion.isoformat() if intercambio.fecha_creacion else utc_now_iso(),
+        "estado":intercambio.estado,
+        "fecha_creacion":intercambio.fecha_creacion.isoformat() if intercambio.fecha_creacion else utc_now_iso(),
         "other_user_id": other_user_id,
         "other_user_name": get_user_display_name(session, other_user_id) if other_user else str(other_user_id),
         "my_reseña": my_reseña,
         "other_reseña": other_reseña,
-        "can_finalize": intercambio.estado == "aceptado",
-        "can_rate": intercambio.estado == "completado" and my_reseña is None,
+        "can_finalize":intercambio.estado == "aceptado",
+        "can_rate":intercambio.estado == "completado" and my_reseña is None,
+        "habilidad": habilidad,
+        "habilidad_solicitada": habilidad_solicitada,
     }
 
 

@@ -331,16 +331,6 @@ function renderTopBar() {
   $("topMeta").textContent = email || currentUser;
 }
 
-function requestMatchesMyLearning(request) {
-  const profile = getProfile() || {};
-  const learnSkills = (profile.learnSkills || []).map((skill) => String(skill).toLowerCase().trim()).filter(Boolean);
-  if (!learnSkills.length) {
-    return true;
-  }
-  const offeredText = String(request.habilidad?.nombre || "").toLowerCase();
-  return learnSkills.some((skill) => offeredText.includes(skill));
-}
-
 function activateView(viewId) {
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
   document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === viewId));
@@ -510,6 +500,7 @@ async function loadLatestOwnRequest() {
     ownPendingRequests = result.requests.filter(
       (item) => item.estado === "pendiente" && item.usuario_receptor_id === 0
     );
+    console.debug("[SkillSwap] loadLatestOwnRequest:", result.requests.length, "total, filtered:", ownPendingRequests.length, result.requests);
   } catch {
     ownPendingRequests = [];
   }
@@ -604,15 +595,14 @@ function renderLatestRequest() {
   });
 }
 
-function renderMarketplace(requests) {
+function renderMarketplace(users) {
   renderMarketplaceSection({
-    requests,
+    users,
     selectedCategory,
     searchQuery: $("searchInput").value.trim(),
     marketplaceGrid,
     marketplaceTotalEl: $("marketplaceTotal"),
     matchesCountBadgeEl: $("matchesCountBadge"),
-    requestMatchesMyLearning,
     onAcceptRequest: acceptRequest,
     onOpenMatchedConversation: openMatchedConversation,
     onShowRequestDetails: showRequestDetails,
@@ -664,8 +654,9 @@ async function loadMarketplace() {
     const params = new URLSearchParams({ viewer_user_id: String(currentUser) });
     const query = $("searchInput").value.trim();
     if (query) params.append("q", query);
-    const result = await api(`/marketplace/requests?${params.toString()}`);
-    currentMarketplace = result.requests;
+    const result = await api(`/marketplace/habilidades?${params.toString()}`);
+    currentMarketplace = result.users;
+    console.debug("[SkillSwap] loadMarketplace:", result.users.length, "users", result.users);
     renderMarketplace(currentMarketplace);
   } catch (error) {
     log(`Error cargando marketplace: ${error.message}`);
@@ -677,6 +668,7 @@ async function loadIncomingMatches() {
   try {
     const result = await api(`/matches/${currentUser}/incoming`);
     currentIncomingMatches = result.incoming || [];
+    console.debug("[SkillSwap] loadIncomingMatches:", currentIncomingMatches.length, "items", currentIncomingMatches);
     renderIncomingMatches(currentIncomingMatches);
   } catch (error) {
     currentIncomingMatches = [];
@@ -690,6 +682,7 @@ async function loadMyMatches() {
   try {
     const result = await api(`/matches/${currentUser}`);
     currentMyMatches = result.matches || [];
+    console.debug("[SkillSwap] loadMyMatches:", currentMyMatches.length, "matches", currentMyMatches);
     renderMyMatches(currentMyMatches);
   } catch (error) {
     currentMyMatches = [];
@@ -722,27 +715,58 @@ async function rateMatch(matchId, rating) {
   }
 }
 
-async function acceptRequest(requestId, responderToUserId = null) {
+async function acceptRequest(userId, requestId = null) {
+  const profile = getProfile() || {};
+  const teachSkills = profile.teachSkills || [];
+  const learnSkills = profile.learnSkills || [];
+
+  let habilidadId = null;
+  let habilidadSolicitadaId = null;
+
+  if (teachSkills.length > 0) {
+    habilidadId = skillsMap[teachSkills[0].toLowerCase()] || null;
+  }
+  if (learnSkills.length > 0) {
+    habilidadSolicitadaId = skillsMap[learnSkills[0].toLowerCase()] || null;
+  }
+
+  if (!habilidadId || !habilidadSolicitadaId) {
+    setChatStatus("Completa tu perfil con habilidades para poder hacer match.", "error");
+    log("Faltan habilidades en el perfil para hacer match");
+    return;
+  }
+
   try {
-    const result = await api(`/marketplace/requests/${requestId}/accept`, {
+    const payload = {
+      from_user_id: currentUser,
+      to_user_id: userId,
+      habilidad_id: habilidadId,
+      habilidad_solicitada_id: habilidadSolicitadaId,
+      mensaje: `Quiero intercambiar habilidades contigo!`,
+    };
+
+    const result = await api("/message-requests", {
       method: "POST",
-      body: JSON.stringify({ viewer_user_id: currentUser }),
+      body: JSON.stringify(payload),
     });
+    console.debug("[SkillSwap] acceptRequest response:", result);
     await loadMarketplace();
     await loadIncomingMatches();
     await loadMyMatches();
+
     if (result.matched && result.conversation_id) {
       selectedConversationId = result.conversation_id;
       $("conversationId").value = selectedConversationId;
       activateView("chatView");
       await loadConversations();
       connectWs(true);
-      setChatStatus("Hubo match mutuo. Chat habilitado.", "ok");
+      setChatStatus("Hubo match mutuo! Chat habilitado.", "ok");
       log(`Match mutuo. Conversacion: ${selectedConversationId}`);
       return;
     }
-    setChatStatus("Interes enviado. El chat se abrira solo si la otra persona tambien hace match.", "info");
-    log(`Interes enviado para la solicitud ${requestId}`);
+
+    setChatStatus("Interes enviado. El chat se abrira automaticamente cuando ambos hagan match.", "ok");
+    log(`Interes enviado al usuario ${userId}`);
   } catch (error) {
     setChatStatus(`No se pudo procesar el match: ${error.message}`, "error");
     log(`Error procesando match: ${error.message}`);
@@ -796,6 +820,7 @@ async function loadConversations() {
   try {
     const result = await api(`/conversations/${currentUser}`);
     currentConversations = result.conversations;
+    console.debug("[SkillSwap] loadConversations:", currentConversations.length, "conversations", currentConversations);
     if (selectedConversationId) {
       const exists = currentConversations.some((conversation) => conversation.id === selectedConversationId);
       if (!exists) {
