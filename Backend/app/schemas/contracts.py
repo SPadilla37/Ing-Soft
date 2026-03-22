@@ -78,7 +78,7 @@ class UserProfileUpdatePayload(BaseModel):
     foto_url: Optional[str] = Field(default=None, max_length=50)
     biografia: Optional[str] = Field(default=None, max_length=2000)
     habilidades_ofertadas: Optional[List[int]] = Field(default=None)
-    habilidades_busçadas: Optional[List[int]] = Field(default=None)
+    habilidades_buscadas: Optional[List[int]] = Field(default=None)
 
 
 class HabilidadCreate(BaseModel):

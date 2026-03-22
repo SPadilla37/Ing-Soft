@@ -30,31 +30,31 @@ def list_marketplace_habilidades(
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
         viewer_ofertadas = get_user_habilidades(session, viewer_user_id, "ofertada")
-        viewer_busçadas = get_user_habilidades(session, viewer_user_id, "buscada")
+        viewer_buscadas = get_user_habilidades(session, viewer_user_id, "buscada")
 
         viewer_ofertadas_ids = {h.id for h in viewer_ofertadas}
-        viewer_busçadas_ids = {h.id for h in viewer_busçadas}
+        viewer_buscadas_ids = {h.id for h in viewer_buscadas}
 
         all_users = session.execute(select(Usuario).where(Usuario.id != viewer_user_id)).scalars().all()
 
         compatible_users = []
         for user in all_users:
             user_ofertadas = get_user_habilidades(session, user.id, "ofertada")
-            user_busçadas = get_user_habilidades(session, user.id, "buscada")
+            user_buscadas = get_user_habilidades(session, user.id, "buscada")
 
             user_ofertadas_ids = {h.id for h in user_ofertadas}
-            user_busçadas_ids = {h.id for h in user_busçadas}
+            user_buscadas_ids = {h.id for h in user_buscadas}
 
-            if viewer_busçadas_ids & user_ofertadas_ids and viewer_ofertadas_ids & user_busçadas_ids:
+            if viewer_buscadas_ids & user_ofertadas_ids and viewer_ofertadas_ids & user_buscadas_ids:
                 compatible_users.append(user)
 
         result = []
         for user in compatible_users:
             user_ofertadas = get_user_habilidades(session, user.id, "ofertada")
-            user_busçadas = get_user_habilidades(session, user.id, "buscada")
+            user_buscadas = get_user_habilidades(session, user.id, "buscada")
 
             habilidades_ofertadas = [serialize_habilidad(h) for h in user_ofertadas]
-            habilidades_busçadas = [serialize_habilidad(h) for h in user_busçadas]
+            habilidades_buscadas = [serialize_habilidad(h) for h in user_buscadas]
 
             existing_match = get_match_for_users(session, viewer_user_id, user.id)
 
@@ -105,7 +105,7 @@ def list_marketplace_habilidades(
                 "foto_url": user.foto_url or "",
                 "biografia": user.biografia or "",
                 "habilidades_ofertadas": habilidades_ofertadas,
-                "habilidades_busçadas": habilidades_busçadas,
+                "habilidades_buscadas": habilidades_buscadas,
                 "viewer_match_state": match_state,
                 "viewer_conversation_id": match_conv,
             }
@@ -117,7 +117,7 @@ def list_marketplace_habilidades(
                     if q_lower in h.nombre.lower():
                         matches = True
                         break
-                for h in user_busçadas:
+                for h in user_buscadas:
                     if q_lower in h.nombre.lower():
                         matches = True
                         break
