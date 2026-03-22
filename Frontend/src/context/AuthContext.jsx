@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { dbKeySession } from '../config/constants';
+import { dbKeySession, dbKeyToken } from '../config/constants';
 import { api as apiRequest } from '../services/api';
 import { API_BASE } from '../config/constants';
 
@@ -12,13 +12,17 @@ export const AuthProvider = ({ children }) => {
   const [currentUserRecord, setCurrentUserRecord] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const setSession = (userId) => {
+  const setSession = (userId, token = null) => {
     localStorage.setItem(dbKeySession, userId);
+    if (token) {
+      localStorage.setItem(dbKeyToken, token);
+    }
     setCurrentUser(userId);
   };
 
   const clearSession = () => {
     localStorage.removeItem(dbKeySession);
+    localStorage.removeItem(dbKeyToken);
     setCurrentUser(null);
     setCurrentUserRecord(null);
   };
@@ -26,8 +30,8 @@ export const AuthProvider = ({ children }) => {
   const loadUserRecord = async (userId) => {
     if (!userId) return;
     try {
-      const user = await apiRequest(API_BASE, `/users/${encodeURIComponent(userId)}`);
-      setCurrentUserRecord(user);
+      const result = await apiRequest(API_BASE, `/usuarios/${encodeURIComponent(userId)}`);
+      setCurrentUserRecord(result.user);
     } catch (error) {
       console.error('Failed to load user record:', error);
     } finally {

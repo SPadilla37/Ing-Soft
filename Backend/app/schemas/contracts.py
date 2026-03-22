@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -64,6 +64,12 @@ class UserRegisterPayload(BaseModel):
 class UserLoginPayload(BaseModel):
     email: str = Field(min_length=3, max_length=120)
     password: str = Field(min_length=4, max_length=200)
+
+
+class AuthTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: dict[str, Any]
 
 
 class UserProfileUpdatePayload(BaseModel):
