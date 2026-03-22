@@ -48,8 +48,10 @@ const MatchesView = ({ searchQuery }) => {
     const matchState = req.viewer_match_state || 'none';
     if (matchState === 'matched' && req.viewer_conversation_id) return false;
     if (selectedCategory === 'All') return true;
-    return req.offered_skill.toLowerCase().includes(selectedCategory.toLowerCase()) || 
-           req.requested_skill.toLowerCase().includes(selectedCategory.toLowerCase());
+      const offered = req.habilidad?.nombre || '';
+      const requested = req.habilidad_solicitada?.nombre || '';
+      return offered.toLowerCase().includes(selectedCategory.toLowerCase()) ||
+        requested.toLowerCase().includes(selectedCategory.toLowerCase());
   });
 
   return (

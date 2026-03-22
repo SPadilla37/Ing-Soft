@@ -270,10 +270,31 @@ def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptReques
                 "match_state": "matched",
             }
 
-        matched = session.execute(
+        outgoing = session.execute(
             select(Intercambio).where(
                 Intercambio.usuario_emisor_id == viewer,
                 Intercambio.usuario_receptor_id == target,
+                Intercambio.estado == "pendiente",
+            )
+        ).scalars().first()
+
+        if not outgoing:
+            outgoing = Intercambio(
+                usuario_emisor_id=viewer,
+                usuario_receptor_id=target,
+                habilidad_id=intercambio.habilidad_solicitada_id,
+                habilidad_solicitada_id=intercambio.habilidad_id,
+                mensaje="Interesado en tu intercambio publico",
+                estado="pendiente",
+                fecha_creacion=datetime.now(timezone.utc),
+            )
+            session.add(outgoing)
+            session.flush()
+
+        matched = session.execute(
+            select(Intercambio).where(
+                Intercambio.usuario_emisor_id == target,
+                Intercambio.usuario_receptor_id == viewer,
                 Intercambio.estado == "pendiente",
             )
         ).scalars().first()
@@ -283,18 +304,19 @@ def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptReques
 
         if matched:
             matched.estado = "aceptado"
-            matched.usuario_receptor_id = target
+            outgoing.estado = "aceptado"
             session.flush()
-            conversation_id = create_conversation_for_intercambio(session, matched)
+            conversation_id = create_conversation_for_intercambio(session, outgoing)
             match_state = "matched"
 
         session.commit()
         session.refresh(intercambio)
+        session.refresh(outgoing)
         if matched:
             session.refresh(matched)
 
         return {
-            "request": serialize_intercambio_for_viewer(session, matched if matched else intercambio, viewer),
+            "request": serialize_intercambio_for_viewer(session, intercambio, viewer),
             "matched": matched is not None,
             "match_state": match_state,
             "conversation_id": conversation_id,
