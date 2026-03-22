@@ -3,11 +3,13 @@ import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 import MarketplaceCard from '../MarketplaceCard';
+import PublicProfileModal from '../PublicProfileModal';
 
 const IncomingMatchesView = () => {
   const { currentUser } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [profileUserId, setProfileUserId] = useState(null);
 
   const loadIncoming = async () => {
     if (!currentUser) return;
@@ -53,11 +55,18 @@ const IncomingMatchesView = () => {
              key={item.id}
              request={{ ...item, viewer_match_state: item.viewer_match_state || 'received' }}
              onAccept={() => handleAccept(item.id)}
-             onProfile={(userId) => console.log('Open profile', userId)}
+             onProfile={(userId) => setProfileUserId(userId)}
            />
          ))
         }
       </div>
+
+      {profileUserId ? (
+        <PublicProfileModal
+          userId={profileUserId}
+          onClose={() => setProfileUserId(null)}
+        />
+      ) : null}
     </section>
   );
 };
