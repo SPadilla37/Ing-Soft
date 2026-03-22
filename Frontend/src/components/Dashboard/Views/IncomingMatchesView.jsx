@@ -50,9 +50,9 @@ const IncomingMatchesView = () => {
          items.length === 0 ? <p>Aún no recibes matches.</p> :
          items.map(item => (
            <MarketplaceCard 
-             key={item.request.id} 
-             request={{...item.request, from_user_name: item.from_user_name, viewer_match_state: 'received'}} 
-             onAccept={() => handleAccept(item.request.id)}
+             key={item.id}
+             request={{ ...item, viewer_match_state: item.viewer_match_state || 'received' }}
+             onAccept={() => handleAccept(item.id)}
              onProfile={(userId) => console.log('Open profile', userId)}
            />
          ))
