@@ -18,10 +18,10 @@ const MatchesView = ({ searchQuery }) => {
     if (!currentUser) return;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ viewer_user_id: currentUser });
-      if (searchQuery) params.append('q', searchQuery);
-      const result = await apiRequest(API_BASE, `/marketplace/requests?${params.toString()}`);
-      setRequests(result.requests);
+      const queryParams = new URLSearchParams({ viewer_user_id: currentUser });
+      if (searchQuery) queryParams.append('q', searchQuery);
+      const result = await apiRequest(API_BASE, `/marketplace/habilidades?${queryParams}`);
+      setRequests(result.users || []);
     } catch (error) {
       console.error('Error loading marketplace:', error);
     } finally {
@@ -61,13 +61,41 @@ const MatchesView = ({ searchQuery }) => {
     };
   }, []);
 
-  const handleAccept = async (request) => {
+  const handleAccept = async (user) => {
+    const matchState = user.viewer_match_state || 'none';
+    
+    if (matchState === 'matched' && user.viewer_conversation_id) {
+      setPopup('Ya puedes abrir el chat con este usuario.');
+      return;
+    }
+    
+    if (matchState === 'sent') {
+      setPopup('Ya enviaste interés a este usuario. Espera su respuesta.');
+      return;
+    }
+    
+    if (matchState === 'received') {
+      setPopup('Este usuario te envió una solicitud. Ve a "Intereses recibidos" para aceptar.');
+      return;
+    }
+    
     try {
-      const result = await apiRequest(API_BASE, `/marketplace/requests/${request.id}/accept`, {
+      const habilidadQueBusco = user.habilidades_ofertadas?.[0]?.id;
+      const habilidadQueOfrezco = user.habilidades_buscadas?.[0]?.id;
+      
+      const result = await apiRequest(API_BASE, '/message-requests', {
         method: 'POST',
-        body: JSON.stringify({ viewer_user_id: currentUser })
+        body: JSON.stringify({
+          from_user_id: Number(currentUser),
+          to_user_id: user.id,
+          habilidad_id: habilidadQueOfrezco,
+          habilidad_solicitada_id: habilidadQueBusco,
+          mensaje: 'Me interesa tu intercambio'
+        })
       });
+      
       loadMarketplace();
+      
       if (result.matched && result.conversation_id) {
         setPopup('¡Hubo match mutuo! Ya puedes abrir el chat.');
       } else {
@@ -83,8 +111,8 @@ const MatchesView = ({ searchQuery }) => {
     if (matchState === 'matched' && req.viewer_conversation_id) return false;
     if (selectedCategory === 'All') return true;
 
-    const offeredCategory = req.habilidad?.categoria || '';
-    const requestedCategory = req.habilidad_solicitada?.categoria || '';
+    const offeredCategory = req.habilidades_ofertadas?.[0]?.categoria || '';
+    const requestedCategory = req.habilidades_buscadas?.[0]?.categoria || '';
     return offeredCategory === selectedCategory || requestedCategory === selectedCategory;
   });
 

@@ -1,11 +1,10 @@
 import React from 'react';
 
 const MarketplaceCard = ({ request, onAccept, onProfile }) => {
-  const emisor = request.emisor || {};
-  const author = [emisor.nombre, emisor.apellido].filter(Boolean).join(' ').trim() || `Usuario ${request.usuario_emisor_id}`;
-  const offeredSkill = request.habilidad?.nombre || 'Sin habilidad ofertada';
-  const requestedSkill = request.habilidad_solicitada?.nombre || 'Sin habilidad solicitada';
-  const introMessage = request.mensaje || 'Sin descripcion';
+  const author = [request.nombre, request.apellido].filter(Boolean).join(' ').trim() || `Usuario ${request.id}`;
+  const offeredSkill = request.habilidades_ofertadas?.[0]?.nombre || 'Sin habilidad ofertada';
+  const requestedSkill = request.habilidades_buscadas?.[0]?.nombre || 'Sin habilidad solicitada';
+  const introMessage = request.biografia || 'Sin descripción';
   const matchState = request.viewer_match_state || 'none';
 
   const getInitials = (name) => {
@@ -19,7 +18,7 @@ const MarketplaceCard = ({ request, onAccept, onProfile }) => {
         <div className="match-avatar">{getInitials(author)}</div>
         <div>
           <h3>{author}</h3>
-          <div className="muted">Solicitud publica</div>
+          <div className="muted">Usuario compatible</div>
         </div>
       </div>
       <div>
@@ -44,7 +43,7 @@ const MarketplaceCard = ({ request, onAccept, onProfile }) => {
            matchState === 'sent' ? 'Interes enviado' : 
            (matchState === 'received' || matchState === 'mutual-pending') ? 'Responder match' : 'Match'}
         </button>
-        <button className="ghost-btn" onClick={() => onProfile(request.usuario_emisor_id)}>
+        <button className="ghost-btn" onClick={() => onProfile(request.id)}>
           Go to profile
         </button>
       </div>
