@@ -205,6 +205,15 @@ def list_marketplace_requests(
     q: str | None = Query(default=None),
 ) -> dict:
     with SessionLocal() as session:
+        viewer_habilidades_ofertadas_ids: set[int] = set()
+        viewer_habilidades_buscadas_ids: set[int] = set()
+
+        if viewer_user_id:
+            viewer_habilidades = get_user_habilidades(session, viewer_user_id, "ofertada")
+            viewer_habilidades_ofertadas_ids = {h.id for h in viewer_habilidades}
+            viewer_habilidades = get_user_habilidades(session, viewer_user_id, "buscada")
+            viewer_habilidades_buscadas_ids = {h.id for h in viewer_habilidades}
+
         stmt = select(Intercambio).where(
             Intercambio.estado == "pendiente",
             Intercambio.usuario_receptor_id == Intercambio.usuario_emisor_id,
@@ -219,6 +228,28 @@ def list_marketplace_requests(
 
         serialized = []
         for item in intercambios_raw:
+            if viewer_user_id:
+                emisor_habilidades_ofertadas = get_user_habilidades(session, item.usuario_emisor_id, "ofertada")
+                emisor_habilidades_buscadas = get_user_habilidades(session, item.usuario_emisor_id, "buscada")
+                emisor_habilidades_ofertadas_ids = {h.id for h in emisor_habilidades_ofertadas}
+                emisor_habilidades_buscadas_ids = {h.id for h in emisor_habilidades_buscadas}
+
+                viewer_busca_algo = len(viewer_habilidades_buscadas_ids) > 0
+                viewer_ofrece_algo = len(viewer_habilidades_ofertadas_ids) > 0
+                emisor_busca_algo = len(emisor_habilidades_buscadas_ids) > 0
+                emisor_ofrece_algo = len(emisor_habilidades_ofertadas_ids) > 0
+
+                tiene_match = False
+                if viewer_busca_algo and emisor_ofrece_algo:
+                    if viewer_habilidades_buscadas_ids & emisor_habilidades_ofertadas_ids:
+                        tiene_match = True
+                if viewer_ofrece_algo and emisor_busca_algo:
+                    if viewer_habilidades_ofertadas_ids & emisor_habilidades_buscadas_ids:
+                        tiene_match = True
+
+                if not tiene_match:
+                    continue
+
             ser = serialize_intercambio_for_viewer(session, item, viewer_user_id)
             if viewer_user_id and ser.get("viewer_match_state") == "matched":
                 continue
