@@ -69,6 +69,9 @@ const ProfileView = () => {
           <div className="profile-avatar-panel">
             <div className="profile-avatar-large">{getInitials(formData.fullName)}</div>
             <div className="profile-avatar-note">Tu avatar se genera con tu inicial.</div>
+            {currentUserRecord?.username && (
+              <div className="profile-username">@{currentUserRecord.username}</div>
+            )}
           </div>
 
           <div className="profile-form-shell">

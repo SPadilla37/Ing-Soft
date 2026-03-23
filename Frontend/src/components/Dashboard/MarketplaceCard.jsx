@@ -2,6 +2,7 @@ import React from 'react';
 
 const MarketplaceCard = ({ request, onAccept, onProfile, onReject }) => {
   const author = [request.nombre, request.apellido].filter(Boolean).join(' ').trim() || `Usuario ${request.id}`;
+  const username = request.username ? `@${request.username}` : '';
   
   // Use intersected matches if available, otherwise just use the first skill defensively as fallback
   const offeredSkills = matchDetails?.theyOfferIWant?.length > 0 
@@ -26,7 +27,7 @@ const MarketplaceCard = ({ request, onAccept, onProfile, onReject }) => {
       <div className="match-head">
         <div className="match-avatar">{getInitials(author)}</div>
         <div>
-          <h3>{author} {rating != null && <span className="rating-star">★ {Number(rating).toFixed(1)}</span>}</h3>
+          <h3>{author} {username && <span className="username">{username}</span>} {rating != null && <span className="rating-star">★ {Number(rating).toFixed(1)}</span>}</h3>
           <div className="muted">Usuario compatible</div>
         </div>
       </div>
