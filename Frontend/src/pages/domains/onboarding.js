@@ -3,20 +3,18 @@ export function getPickerSelectionDomain({
   source,
   profileTeachDraft,
   profileLearnDraft,
-  profileLanguagesDraft,
   onboardingTeach,
   onboardingLearn,
-  onboardingLanguages,
 }) {
   if (source === "profile") {
     if (mode === "teach") return profileTeachDraft;
     if (mode === "learn") return profileLearnDraft;
-    return profileLanguagesDraft;
+    return new Set();
   }
 
   if (mode === "teach") return onboardingTeach;
   if (mode === "learn") return onboardingLearn;
-  return onboardingLanguages;
+  return new Set();
 }
 
 export function renderSelectedSummaryDomain({
@@ -26,43 +24,34 @@ export function renderSelectedSummaryDomain({
   getPickerSelection,
   profileTeachChips,
   profileLearnChips,
-  profileLanguageChips,
   teachSummary,
   learnSummary,
-  languageSummary,
   updateProfileTriggerTexts,
 }) {
   const selected = Array.from(getPickerSelection(type, source));
   if (source === "profile") {
     if (type === "teach") renderSummaryChips(profileTeachChips, selected);
     else if (type === "learn") renderSummaryChips(profileLearnChips, selected);
-    else renderSummaryChips(profileLanguageChips, selected);
     updateProfileTriggerTexts();
     return;
   }
 
   if (type === "teach") renderSummaryChips(teachSummary, selected);
   else if (type === "learn") renderSummaryChips(learnSummary, selected);
-  else renderSummaryChips(languageSummary, selected);
 }
 
 export function renderPickerCategoriesDomain({
   pickerMode,
   pickerCategory,
   pickerCategoryChips,
-  skillsCatalog,
+  skillsByCategory,
   setPickerCategory,
   renderPickerCategories,
   renderPickerSkills,
 }) {
   pickerCategoryChips.innerHTML = "";
-  if (pickerMode === "language") {
-    pickerCategoryChips.classList.add("hidden");
-    return;
-  }
-
-  pickerCategoryChips.classList.remove("hidden");
-  Object.keys(skillsCatalog).forEach((category) => {
+  const categories = Object.keys(skillsByCategory).sort();
+  categories.forEach((category) => {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = `chip${pickerCategory === category ? " active" : ""}`;
@@ -82,8 +71,7 @@ export function renderPickerSkillsDomain({
   pickerSource,
   pickerSearchInput,
   pickerSkillsList,
-  skillsCatalog,
-  languagesCatalog,
+  skillsByCategory,
   getPickerSelection,
   renderSelectedSummary,
 }) {
@@ -91,92 +79,50 @@ export function renderPickerSkillsDomain({
   const query = pickerSearchInput.value.trim().toLowerCase();
   pickerSkillsList.innerHTML = "";
 
-  if (pickerMode === "language") {
+  const categories = Object.keys(skillsByCategory).sort();
+  categories.forEach((category) => {
+    if (pickerCategory !== "All" && category !== pickerCategory) return;
+
+    const skills = (skillsByCategory[category] || []).filter((skill) => skill.toLowerCase().includes(query));
+    if (!skills.length) return;
+
+    const block = document.createElement("div");
+    block.className = "category-block";
+    const title = document.createElement("strong");
+    title.textContent = category;
+    block.appendChild(title);
+
     const wrap = document.createElement("div");
-    wrap.className = "picker-option-list";
-
-    languagesCatalog
-      .filter((language) => language.toLowerCase().includes(query))
-      .forEach((language) => {
-        const item = document.createElement("button");
-        item.type = "button";
-        item.className = `picker-option${selected.has(language) ? " active" : ""}`;
-        item.innerHTML = `<span>${language}</span><span>${selected.has(language) ? "Seleccionado" : "+"}</span>`;
-        item.onclick = () => {
-          if (selected.has(language)) selected.delete(language);
-          else selected.add(language);
-          renderPickerSkillsDomain({
-            pickerMode,
-            pickerCategory,
-            pickerSource,
-            pickerSearchInput,
-            pickerSkillsList,
-            skillsCatalog,
-            languagesCatalog,
-            getPickerSelection,
-            renderSelectedSummary,
-          });
-          renderSelectedSummary("language", pickerSource);
-        };
-        wrap.appendChild(item);
-      });
-
-    if (!wrap.children.length) {
-      const empty = document.createElement("div");
-      empty.className = "muted";
-      empty.textContent = "No hay idiomas para esa busqueda.";
-      pickerSkillsList.appendChild(empty);
-    } else {
-      pickerSkillsList.appendChild(wrap);
-    }
-    return;
-  }
-
-  Object.entries(skillsCatalog)
-    .filter(([category]) => category !== "All")
-    .filter(([category]) => pickerCategory === "All" || category === pickerCategory)
-    .forEach(([category, skills]) => {
-      const filteredSkills = skills.filter((skill) => skill.toLowerCase().includes(query));
-      if (!filteredSkills.length) return;
-
-      const block = document.createElement("div");
-      block.className = "category-block";
-      const title = document.createElement("strong");
-      title.textContent = category;
-      block.appendChild(title);
-
-      const wrap = document.createElement("div");
-      wrap.className = "skills-wrap";
-      filteredSkills.forEach((skill) => {
-        const chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = `skill-chip${selected.has(skill) ? " active" : ""}`;
-        chip.textContent = skill;
-        chip.onclick = () => {
-          if (selected.has(skill)) {
-            selected.delete(skill);
-          } else {
-            selected.add(skill);
-          }
-          renderPickerSkillsDomain({
-            pickerMode,
-            pickerCategory,
-            pickerSource,
-            pickerSearchInput,
-            pickerSkillsList,
-            skillsCatalog,
-            languagesCatalog,
-            getPickerSelection,
-            renderSelectedSummary,
-          });
-          renderSelectedSummary(pickerMode, pickerSource);
-        };
-        wrap.appendChild(chip);
-      });
-
-      block.appendChild(wrap);
-      pickerSkillsList.appendChild(block);
+    wrap.className = "skills-wrap";
+    skills.forEach((skill) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = `skill-chip${selected.has(skill) ? " active" : ""}`;
+      chip.textContent = skill;
+      chip.onclick = () => {
+        if (selected.has(skill)) {
+          selected.delete(skill);
+        } else {
+          selected.add(skill);
+        }
+        renderPickerSkillsDomain({
+          pickerMode,
+          pickerCategory,
+          pickerSource,
+          pickerSearchInput,
+          pickerSkillsList,
+          skillsByCategory,
+          getPickerSelection,
+          renderSelectedSummary,
+        });
+        renderSelectedSummary(pickerMode, pickerSource);
+      };
+      wrap.appendChild(chip);
     });
+
+    block.appendChild(wrap);
+    pickerSkillsList.appendChild(block);
+  });
 
   if (!pickerSkillsList.children.length) {
     const empty = document.createElement("div");
@@ -202,10 +148,9 @@ export function openSkillPickerDomain({
   setPickerSource(source);
   setPickerCategory("All");
   pickerSearchInput.value = "";
-  pickerSearchInput.placeholder = mode === "language" ? "Search languages..." : "Search skills...";
+  pickerSearchInput.placeholder = "Buscar habilidades...";
   if (mode === "teach") pickerTitle.textContent = source === "profile" ? "Skills you want to teach" : "Selecciona habilidades para ofrecer";
   else if (mode === "learn") pickerTitle.textContent = source === "profile" ? "Skills you want to learn" : "Selecciona habilidades para aprender";
-  else pickerTitle.textContent = "Languages you speak";
   renderPickerCategories();
   renderPickerSkills();
   skillPickerOverlay.classList.remove("hidden");
@@ -219,7 +164,6 @@ export async function completeOnboardingDomain({
   $,
   onboardingTeach,
   onboardingLearn,
-  onboardingLanguages,
   saveProfile,
   persistProfileToApi,
   hydrateProfileUI,
@@ -227,24 +171,29 @@ export async function completeOnboardingDomain({
   publishRequest,
 }) {
   const fullName = $("fullName").value.trim();
+  const lastName = $("lastName").value.trim();
   const bio = $("bio").value.trim();
-  if (!fullName || !bio || !onboardingTeach.size || !onboardingLearn.size || !onboardingLanguages.size) {
-    alert("Completa todos los datos y selecciona habilidades e idiomas.");
+  if (!fullName || !bio || !onboardingTeach.size || !onboardingLearn.size) {
+    alert("Completa todos los datos y selecciona habilidades para ofrecer y aprender.");
     return;
   }
 
   const profile = {
-    fullName,
+    fullName: fullName + (lastName ? " " + lastName : ""),
     bio,
     teachSkills: Array.from(onboardingTeach),
     learnSkills: Array.from(onboardingLearn),
-    languages: Array.from(onboardingLanguages),
     marketplaceMessage: `Hola, puedo ensenar ${Array.from(onboardingTeach).join(", ")} y quiero aprender ${Array.from(onboardingLearn).join(", ")}.`,
+  };
+
+  const persistData = {
+    ...profile,
+    lastName,
   };
 
   saveProfile(profile);
   try {
-    await persistProfileToApi(profile);
+    await persistProfileToApi(persistData);
   } catch (error) {
     alert(`No se pudo guardar el perfil en la base de datos: ${error.message}`);
     return;

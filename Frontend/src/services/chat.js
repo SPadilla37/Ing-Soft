@@ -19,17 +19,10 @@ export function renderConversationsSection({
   }
 
   currentConversations.forEach((conversation) => {
-    const participantsLabel = (conversation.participants_display && conversation.participants_display.length)
-      ? conversation.participants_display.join(" / ")
-      : conversation.participants.join(" / ");
-
+    const otherName = conversation.other_user_name || String(conversation.other_user_id);
     const item = document.createElement("div");
     item.className = `list-item${selectedConversationId === conversation.id ? " active" : ""}`;
-    item.innerHTML = `
-      <strong>${participantsLabel}</strong>
-      <div class="muted">${conversation.request?.offered_skill || "-"}</div>
-      <div class="muted">${conversation.request?.requested_skill || "-"}</div>
-    `;
+    item.innerHTML = `<strong>${otherName}</strong>`;
     item.onclick = () => onSelectConversation(conversation.id);
     conversationsList.appendChild(item);
   });

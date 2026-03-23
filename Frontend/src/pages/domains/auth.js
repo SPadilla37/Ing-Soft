@@ -19,8 +19,8 @@ export async function signupDomain({
   ensureOnboardingOrDashboard,
   log,
 }) {
-  const name = $("signupName").value.trim();
   const email = $("signupEmail").value.trim().toLowerCase();
+  const username = $("signupUsername").value.trim();
   const pass = $("signupPass").value.trim();
   if (!name || !email || pass.length < 6) {
     alert("Completa nombre, correo y una contrasena de al menos 6 caracteres.");
@@ -30,15 +30,15 @@ export async function signupDomain({
   try {
     const result = await api("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, name, password: pass }),
+      body: JSON.stringify({ email, username, password: pass }),
     });
     setCurrentUserRecord(result.user);
+    setSession(result.user.id, email);
   } catch (error) {
     alert(error.message);
     return;
   }
 
-  setSession(email);
   setOnboardingTeach(new Set());
   setOnboardingLearn(new Set());
   renderSelectedSummary("teach");
@@ -76,14 +76,14 @@ export async function loginDomain({
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ username: email, password: pass }).toString(),
     });
-    setAuthToken(result.access_token);
-    setCurrentUserRecord({ id: email });
+
+    setCurrentUserRecord(result.user);
+    setSession(result.user.id, email);
   } catch (error) {
     alert(error.message || "No se pudo iniciar sesion.");
     return;
   }
 
-  setSession(email);
   await ensureOnboardingOrDashboard();
   log("Sesion iniciada.");
 }

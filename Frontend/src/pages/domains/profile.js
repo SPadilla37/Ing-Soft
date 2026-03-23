@@ -1,23 +1,23 @@
 export function normalizeProfileFromUserDomain(user) {
   if (!user) return null;
-  const profile = user.profile || {};
-  const languages = String(profile.language || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const teachSkills = Array.isArray(user.habilidades_ofertadas)
+    ? user.habilidades_ofertadas.map((h) => h.nombre)
+    : [];
+  const learnSkills = Array.isArray(user.habilidades_busçadas)
+    ? user.habilidades_busçadas.map((h) => h.nombre)
+    : [];
   return {
-    fullName: profile.full_name || user.name || "",
-    bio: profile.bio || "",
-    teachSkills: Array.isArray(profile.teach_skills) ? profile.teach_skills : [],
-    learnSkills: Array.isArray(profile.learn_skills) ? profile.learn_skills : [],
-    languages,
-    marketplaceMessage: profile.marketplace_message || "",
+    fullName: `${user.nombre || ""} ${user.apellido || ""}`.trim() || "",
+    bio: user.biografia || "",
+    teachSkills,
+    learnSkills,
+    marketplaceMessage: user.biografia || "",
   };
 }
 
-export async function loadCurrentUserFromApiDomain({ currentUser, api, setCurrentUserRecord, saveProfile }) {
+export async function loadCurrentUserFromApiDomain({ currentUser, api, saveProfile, setCurrentUserRecord }) {
   if (!currentUser) return;
-  const result = await api(`/usuarios/${encodeURIComponent(currentUser)}`);
+  const result = await api(`/usuarios/${currentUser}`);
   setCurrentUserRecord(result.user);
   const normalized = normalizeProfileFromUserDomain(result.user);
   if (normalized) {
@@ -25,25 +25,31 @@ export async function loadCurrentUserFromApiDomain({ currentUser, api, setCurren
   }
 }
 
-export async function persistProfileToApiDomain({ currentUser, api, profile, setCurrentUserRecord, saveProfile }) {
+export async function persistProfileToApiDomain({ currentUser, api, profile, saveProfile }) {
   if (!currentUser) return;
-  const result = await api(`/usuarios/${encodeURIComponent(currentUser)}/profile`, {
+  const fullNameParts = (profile.fullName || "").split(" ");
+  const nombre = fullNameParts[0] || "";
+  const apellido = profile.lastName?.trim() || fullNameParts.slice(1).join(" ") || "";
+
+  const { getSkillIdByName } = await import("../../config/constants.js");
+  const habilidadesOfertadas = (profile.teachSkills || [])
+    .map((name) => getSkillIdByName(name))
+    .filter((id) => id != null);
+  const habilidadesBuscadas = (profile.learnSkills || [])
+    .map((name) => getSkillIdByName(name))
+    .filter((id) => id != null);
+
+  const result = await api(`/usuarios/${currentUser}/profile`, {
     method: "PUT",
     body: JSON.stringify({
-      name: profile.fullName,
-      bio: profile.bio,
-      city: "",
-      language: (profile.languages || []).join(", "),
-      teach_skills: profile.teachSkills || [],
-      learn_skills: profile.learnSkills || [],
-      marketplace_message: profile.marketplaceMessage || "",
+      nombre,
+      apellido,
+      biografia: profile.bio || "",
+      habilidades_ofertadas: habilidadesOfertadas,
+      habilidades_busçadas: habilidadesBuscadas,
     }),
   });
-  setCurrentUserRecord(result.user);
-  const normalized = normalizeProfileFromUserDomain(result.user);
-  if (normalized) {
-    saveProfile(normalized);
-  }
+  saveProfile(profile);
 }
 
 export async function fetchProfileForPublicViewDomain({
@@ -53,22 +59,20 @@ export async function fetchProfileForPublicViewDomain({
   getCurrentUserRecord,
   api,
 }) {
-  if (userId === currentUser) {
+  if (String(userId) === String(currentUser)) {
     const currentProfile = getProfile() || {};
     return {
       id: currentUser,
-      name: currentProfile.fullName || getCurrentUserRecord()?.name || currentUser,
-      profile: {
-        full_name: currentProfile.fullName || getCurrentUserRecord()?.name || currentUser,
-        bio: currentProfile.bio || "",
-        teach_skills: currentProfile.teachSkills || [],
-        learn_skills: currentProfile.learnSkills || [],
-        language: (currentProfile.languages || []).join(", "),
-      },
+      nombre: currentProfile.fullName || getCurrentUserRecord()?.nombre || "",
+      apellido: "",
+      habilidades_ofertadas: (currentProfile.teachSkills || []).map((n) => ({ nombre: n })),
+      habilidades_busçadas: (currentProfile.learnSkills || []).map((n) => ({ nombre: n })),
+      biografia: currentProfile.bio || "",
+      rating: getCurrentUserRecord()?.rating || { average: null, count: 0 },
     };
   }
 
-  const result = await api(`/usuarios/${encodeURIComponent(userId)}`);
+  const result = await api(`/usuarios/${userId}`);
   return result.user;
 }
 
@@ -85,7 +89,6 @@ export async function openPublicProfileDomain({
   publicProfileName,
   publicProfileBio,
   publicProfileSummary,
-  publicProfileLanguages,
   publicProfileTeachChips,
   publicProfileLearnChips,
   publicProfileRating,
@@ -111,14 +114,14 @@ export async function openPublicProfileDomain({
     setPublicProfileUserId(user.id);
     setPublicProfileReturnView(returnView);
 
-    publicProfileAvatar.textContent = getInitials(normalized.fullName || user.name || user.id);
-    publicProfileName.textContent = normalized.fullName || user.name || user.id;
+    const fullName = normalized.fullName || `${user.nombre || ""} ${user.apellido || ""}`.trim();
+    publicProfileAvatar.textContent = getInitials(fullName || String(userId));
+    publicProfileName.textContent = fullName || String(userId);
     publicProfileBio.textContent = normalized.bio || "Sin descripcion publica todavia.";
     publicProfileSummary.textContent = user.id === currentUser
-      ? "Estos son los idiomas visibles en tu perfil publico."
-      : `Idiomas visibles en el perfil publico de ${normalized.fullName || user.name || user.id}.`;
+      ? "Este es tu perfil publico."
+      : `Perfil de ${fullName || userId}.`;
 
-    renderSummaryChips(publicProfileLanguages, normalized.languages || []);
     renderSummaryChips(publicProfileTeachChips, normalized.teachSkills || []);
     renderSummaryChips(publicProfileLearnChips, normalized.learnSkills || []);
 
@@ -129,7 +132,7 @@ export async function openPublicProfileDomain({
       publicProfileRating.innerHTML = `<span class="stars-line">${starText(averageValue, 5)}</span><div class="stars-detail">${averageValue.toFixed(2)} / 5 (${ratingCount} calificaciones)</div>`;
     }
 
-    if (user.id === currentUser) {
+    if (String(user.id) === String(currentUser)) {
       publicProfilePrimaryBtn.textContent = "Edit Profile";
       publicProfilePrimaryBtn.onclick = () => {
         activateView("profileView");
@@ -152,16 +155,13 @@ export function closePublicProfileDomain({ publicProfileReturnView, setPublicPro
   activateView(publicProfileReturnView || "matchesView");
 }
 
-export function updateProfileTriggerTextsDomain({ $, profileTeachDraft, profileLearnDraft, profileLanguagesDraft }) {
+export function updateProfileTriggerTextsDomain({ $, profileTeachDraft, profileLearnDraft }) {
   $("openProfileTeachPickerBtn").textContent = profileTeachDraft.size
     ? Array.from(profileTeachDraft).join(", ")
     : "Seleccionar habilidades";
   $("openProfileLearnPickerBtn").textContent = profileLearnDraft.size
     ? Array.from(profileLearnDraft).join(", ")
     : "Seleccionar habilidades";
-  $("openProfileLanguagePickerBtn").textContent = profileLanguagesDraft.size
-    ? Array.from(profileLanguagesDraft).join(", ")
-    : "Seleccionar idiomas";
 }
 
 export function hydrateProfileUIDomain({
@@ -176,19 +176,16 @@ export function hydrateProfileUIDomain({
   learnPreview,
   setProfileTeachDraft,
   setProfileLearnDraft,
-  setProfileLanguagesDraft,
 }) {
   const profile = getProfile() || {};
   $("profileFullName").value = profile.fullName || "";
   $("profileBio").value = profile.bio || "";
-  $("publishOfferedSkill").value = (profile.teachSkills || []).join(", ");
-  $("publishRequestedSkill").value = (profile.learnSkills || []).join(", ");
   $("publishIntroMessage").value = profile.marketplaceMessage || "";
-  profileAvatarLarge.textContent = getInitials(profile.fullName || currentUser);
+  const visibleName = profile.fullName || String(currentUser);
+  profileAvatarLarge.textContent = getInitials(visibleName);
 
   setProfileTeachDraft(new Set(profile.teachSkills || []));
   setProfileLearnDraft(new Set(profile.learnSkills || []));
-  setProfileLanguagesDraft(new Set(profile.languages || []));
 
   teachPreview.innerHTML = "";
   learnPreview.innerHTML = "";
@@ -209,10 +206,9 @@ export function hydrateProfileUIDomain({
 
   renderSelectedSummary("teach", "profile");
   renderSelectedSummary("learn", "profile");
-  renderSelectedSummary("language", "profile");
 
   $("publishSummaryText").textContent = profile.fullName
-    ? `${profile.fullName}. Puedes editar tus habilidades e idiomas en Perfil.`
+    ? `${profile.fullName}. Puedes editar tus habilidades en Perfil.`
     : "Completa tu perfil y publica tu solicitud para aparecer aqui.";
   renderTopBar();
 }
@@ -222,7 +218,6 @@ export async function saveProfileFromDashboardDomain({
   getProfile,
   profileTeachDraft,
   profileLearnDraft,
-  profileLanguagesDraft,
   saveProfile,
   persistProfileToApi,
   hydrateProfileUI,
@@ -235,7 +230,6 @@ export async function saveProfileFromDashboardDomain({
     bio: $("profileBio").value.trim(),
     teachSkills: Array.from(profileTeachDraft),
     learnSkills: Array.from(profileLearnDraft),
-    languages: Array.from(profileLanguagesDraft),
     marketplaceMessage: previous.marketplaceMessage || $("publishIntroMessage").value.trim(),
   };
 
