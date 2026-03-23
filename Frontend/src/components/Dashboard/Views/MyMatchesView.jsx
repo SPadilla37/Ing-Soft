@@ -65,6 +65,9 @@ const MyMatchesView = ({ onOpenChat = () => {} }) => {
     }
   };
 
+  // Filtrar matches que no estén completados
+  const activeMatches = matches.filter(m => m.estado !== 'completado');
+
   return (
     <section id="myMatchesView" className="view active">
       <div className="incoming-shell">
@@ -74,8 +77,8 @@ const MyMatchesView = ({ onOpenChat = () => {} }) => {
 
       <div className="cards-grid">
         {loading ? <p>Cargando...</p> : 
-         matches.length === 0 ? <p>Aún no tienes matches mutuos.</p> :
-         matches.map(match => (
+         activeMatches.length === 0 ? <p>Aún no tienes matches mutuos.</p> :
+         activeMatches.map(match => (
            <article key={match.id} className="match-card">
              <div className="match-head">
                <div className="match-avatar">M</div>
