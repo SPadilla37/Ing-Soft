@@ -56,6 +56,7 @@ const PublicProfileModal = ({ userId, onClose }) => {
         {!loading && !error && user ? (
           <div className="profile-modal-content">
             <h3>{fullName}</h3>
+            {user.username && <div className="profile-username">@{user.username}</div>}
             <p>{user.biografia || 'Sin biografia.'}</p>
 
             <div className="profile-modal-rating">

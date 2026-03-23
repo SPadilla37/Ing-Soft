@@ -76,7 +76,7 @@ const HistoryView = () => {
              <div className="match-head">
                <div className="match-avatar">M</div>
                <div>
-                 <h3>{match.other_user_name || match.other_user_id}</h3>
+                 <h3>{match.other_user_name || match.other_user_id} {match.other_user_username && <span className="username">@{match.other_user_username}</span>}</h3>
                  <div className="muted">Estado: {match.estado}</div>
                </div>
              </div>
