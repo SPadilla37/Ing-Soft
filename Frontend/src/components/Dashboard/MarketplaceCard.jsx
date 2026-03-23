@@ -1,6 +1,6 @@
 import React from 'react';
 
-const MarketplaceCard = ({ request, onAccept, onProfile }) => {
+const MarketplaceCard = ({ request, onAccept, onProfile, onReject }) => {
   const author = [request.nombre, request.apellido].filter(Boolean).join(' ').trim() || `Usuario ${request.id}`;
   const offeredSkill = request.habilidades_ofertadas?.[0]?.nombre || 'Sin habilidad ofertada';
   const requestedSkill = request.habilidades_buscadas?.[0]?.nombre || 'Sin habilidad solicitada';
@@ -44,6 +44,16 @@ const MarketplaceCard = ({ request, onAccept, onProfile }) => {
            matchState === 'sent' ? 'Interes enviado' : 
            (matchState === 'received' || matchState === 'mutual-pending') ? 'Responder match' : 'Match'}
         </button>
+        
+        {(matchState === 'received' || matchState === 'mutual-pending') && onReject && (
+          <button 
+            className="danger-btn"
+            onClick={() => onReject(request)}
+          >
+            Rechazar
+          </button>
+        )}
+        
         <button className="ghost-btn" onClick={() => onProfile(request.id)}>
           Go to profile
         </button>

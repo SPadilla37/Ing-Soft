@@ -42,6 +42,19 @@ const IncomingMatchesView = () => {
     }
   };
 
+  const handleReject = async (requestId) => {
+    try {
+      await apiRequest(API_BASE, `/message-requests/${requestId}/respond`, {
+        method: 'PATCH',
+        body: JSON.stringify({ user_id: Number(currentUser), action: 'reject' })
+      });
+      setPopup('Solicitud rechazada.');
+      loadIncoming();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
   return (
     <section id="incomingMatchesView" className="view active">
       <div className="incoming-shell">
@@ -53,13 +66,14 @@ const IncomingMatchesView = () => {
         {loading ? <p>Cargando...</p> : 
          items.length === 0 ? <p>Aún no recibes matches.</p> :
          items.map(item => (
-           <MarketplaceCard 
-             key={item.id}
-             request={{ ...item, viewer_match_state: item.viewer_match_state || 'received' }}
-             onAccept={() => handleAccept(item.id)}
-             onProfile={(userId) => setProfileUserId(userId)}
-           />
-         ))
+            <MarketplaceCard 
+              key={item.id}
+              request={{ ...item, viewer_match_state: item.viewer_match_state || 'received' }}
+              onAccept={() => handleAccept(item.id)}
+              onReject={() => handleReject(item.id)}
+              onProfile={(userId) => setProfileUserId(userId)}
+            />
+          ))
         }
       </div>
 
