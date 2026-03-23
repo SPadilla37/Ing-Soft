@@ -15,7 +15,7 @@ export async function loadSkillsCatalog(api) {
 
     skillsMap = {};
     skillsByCategory = {};
-    categoriesList = ["All"];
+    categoriesList = ["Todos"];
 
     habilidades.forEach((hab) => {
       skillsMap[hab.nombre.toLowerCase()] = hab.id;
@@ -29,15 +29,15 @@ export async function loadSkillsCatalog(api) {
     });
 
     categoriesList.sort((a, b) => {
-      if (a === "All") return -1;
-      if (b === "All") return 1;
+      if (a === "Todos") return -1;
+      if (b === "Todos") return 1;
       return a.localeCompare(b);
     });
   } catch (error) {
     console.warn("[SkillSwap] No se pudo cargar el catalogo de habilidades:", error.message);
     skillsMap = {};
     skillsByCategory = {};
-    categoriesList = ["All"];
+    categoriesList = ["Todos"];
   }
 }
 

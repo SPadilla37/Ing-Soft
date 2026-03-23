@@ -9,7 +9,7 @@ export function renderAuthScreen() {
     <div class="auth-container">
       <h2>Bienvenido a SkillSwap</h2>
       <div class="auth-tabs">
-        <button class="tab-btn active" data-mode="login">Login</button>
+        <button class="tab-btn active" data-mode="login">Ingresar</button>
         <button class="tab-btn" data-mode="register">Registrarse</button>
       </div>
       <form class="auth-form active" data-mode="login">
@@ -24,7 +24,7 @@ export function renderAuthScreen() {
         <button type="submit">Registrarse</button>
       </form>
       <div class="auth-footer">
-        <p>Backend API: <a href="/Backend" target="_blank">/api/docs</a></p>
+        <p>API del backend: <a href="/Backend" target="_blank">/api/docs</a></p>
       </div>
     </div>
     <style>
@@ -60,7 +60,7 @@ export function renderAuthScreen() {
       await loginUser(email, password);
       location.reload();
     } catch (err) {
-      alert('Login falló: ' + err.message);
+      alert('El ingreso falló: ' + err.message);
     }
   });
 

@@ -126,14 +126,14 @@ export async function openPublicProfileDomain({
     renderSummaryChips(publicProfileLearnChips, normalized.learnSkills || []);
 
     if (averageRating === null || averageRating === undefined || !ratingCount) {
-      publicProfileRating.innerHTML = "<span class=\"stars-detail\">No reviews yet</span>";
+      publicProfileRating.innerHTML = "<span class=\"stars-detail\">Aun no hay reseñas</span>";
     } else {
       const averageValue = Number(averageRating);
       publicProfileRating.innerHTML = `<span class="stars-line">${starText(averageValue, 5)}</span><div class="stars-detail">${averageValue.toFixed(2)} / 5 (${ratingCount} calificaciones)</div>`;
     }
 
     if (String(user.id) === String(currentUser)) {
-      publicProfilePrimaryBtn.textContent = "Edit Profile";
+      publicProfilePrimaryBtn.textContent = "Editar perfil";
       publicProfilePrimaryBtn.onclick = () => {
         activateView("profileView");
       };

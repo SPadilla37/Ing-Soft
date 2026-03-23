@@ -8,7 +8,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.db.database import SessionLocal
-from app.db.models.entities import User
+from app.db.models.entities import Usuario
 
 import os
 
@@ -18,7 +18,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -40,27 +40,30 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def verify_token(token: str) -> Optional[str]:
+def verify_token(token: str) -> Optional[int]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        return email
+        sub = payload.get("sub")
+        if sub is None:
+            return None
+        # El JWT guarda el id del usuario en `sub`.
+        return int(sub)
     except JWTError:
         return None
 
 
 def get_current_user(
     db: Session = Depends(SessionLocal), token: str = Depends(oauth2_scheme)
-) -> User:
+) -> Usuario:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    email = verify_token(token)
-    if email is None:
+    user_id = verify_token(token)
+    if user_id is None:
         raise credentials_exception
-    user = db.get(User, email)
+    user = db.get(Usuario, user_id)
     if user is None:
         raise credentials_exception
     return user

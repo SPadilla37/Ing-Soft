@@ -65,7 +65,7 @@ const deleteConfirmModal = $("deleteConfirmModal");
 let currentUser = null;
 let currentUserRecord = null;
 const socketState = { socket: null, connectedConversationId: "" };
-let selectedCategory = "All";
+let selectedCategory = "Todos";
 let selectedConversationId = "";
 let onboardingTeach = new Set();
 let onboardingLearn = new Set();
@@ -280,23 +280,37 @@ function renderPickerSkills() {
 }
 
 function openSkillPicker(mode, source = "onboarding") {
-  openSkillPickerDomain({
-    mode,
-    source,
-    pickerSearchInput,
-    pickerTitle,
-    skillPickerOverlay,
-    setPickerMode: (value) => {
-      pickerMode = value;
-    },
-    setPickerSource: (value) => {
-      pickerSource = value;
-    },
-    setPickerCategory: (value) => {
-      pickerCategory = value;
-    },
-    renderPickerCategories,
-    renderPickerSkills,
+  // Asegura que el catálogo de habilidades esté cargado antes de renderizar el picker.
+  // Esto evita que el usuario vea el picker vacío si el `loadSkillsCatalog` falló o
+  // aún no terminó al momento de abrirlo.
+  const ensureCatalog = async () => {
+    if (Object.keys(skillsByCategory || {}).length > 0) return;
+    try {
+      await loadSkillsCatalog(api);
+    } catch (error) {
+      log(`No se pudo cargar el catalogo de habilidades: ${error.message}`);
+    }
+  };
+
+  ensureCatalog().finally(() => {
+    openSkillPickerDomain({
+      mode,
+      source,
+      pickerSearchInput,
+      pickerTitle,
+      skillPickerOverlay,
+      setPickerMode: (value) => {
+        pickerMode = value;
+      },
+      setPickerSource: (value) => {
+        pickerSource = value;
+      },
+      setPickerCategory: (value) => {
+        pickerCategory = value;
+      },
+      renderPickerCategories,
+      renderPickerSkills,
+    });
   });
 }
 
@@ -452,31 +466,13 @@ function buildMarketplacePayload(fromProfile = false) {
     if (teachNames.length > 0) {
       habilidadId = skillsMap[teachNames[0].toLowerCase()] || null;
     }
-<<<<<<< HEAD
 
-function clearSession() {
-  localStorage.removeItem("auth_token");
-  setAuthToken(null);
-  localStorage.removeItem(dbKeySession);
-  currentUser = null;
-  currentUserRecord = null;
-  selectedConversationId = "";
-  ownPendingRequests = [];
-  disconnectConversationSocket({ socketState, setChatStatus });
-  setPublishStatus("Sesion cerrada.", "info");
-  authScreen.classList.remove("hidden");
-  onboardingModal.classList.add("hidden");
-  skillPickerOverlay.classList.add("hidden");
-  dashboard.classList.add("hidden");
-  activateView("matchesView");
-}
-=======
     if (learnNames.length > 0) {
       habilidadSolicitadaId = skillsMap[learnNames[0].toLowerCase()] || null;
     }
     mensaje = $("publishIntroMessage").value.trim();
   }
->>>>>>> Develop
+
 
   return {
     from_user_id: currentUser,

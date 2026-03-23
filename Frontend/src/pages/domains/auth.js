@@ -22,8 +22,8 @@ export async function signupDomain({
   const email = $("signupEmail").value.trim().toLowerCase();
   const username = $("signupUsername").value.trim();
   const pass = $("signupPass").value.trim();
-  if (!name || !email || pass.length < 6) {
-    alert("Completa nombre, correo y una contrasena de al menos 6 caracteres.");
+  if (!username || !email || pass.length < 6) {
+    alert("Completa nombre de usuario, correo y una contrasena de al menos 6 caracteres.");
     return;
   }
 
@@ -33,6 +33,7 @@ export async function signupDomain({
       body: JSON.stringify({ email, username, password: pass }),
     });
     setCurrentUserRecord(result.user);
+    if (result.access_token) setAuthToken(result.access_token);
     setSession(result.user.id, email);
   } catch (error) {
     alert(error.message);
@@ -78,6 +79,7 @@ export async function loginDomain({
     });
 
     setCurrentUserRecord(result.user);
+    if (result.access_token) setAuthToken(result.access_token);
     setSession(result.user.id, email);
   } catch (error) {
     alert(error.message || "No se pudo iniciar sesion.");

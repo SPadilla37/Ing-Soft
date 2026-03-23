@@ -19,7 +19,7 @@
             <span>SkillSwap</span>
           </div>
           <div class="welcome-copy">
-            <h1>Learn. Teach. <span>Connect.</span></h1>
+            <h1>Aprende. Enseña. <span>Conecta.</span></h1>
             <p>Encuentra personas que quieran aprender lo que tu dominas y que puedan ensenarte algo que tu necesitas. Publica tu intercambio, aparece en el buscador y activa el chat solo cuando alguien acepte.</p>
           </div>
         </div>
@@ -29,7 +29,7 @@
             <span>Agrega tus datos basicos y las habilidades que ofreces y quieres aprender.</span>
           </div>
           <div class="auth-point">
-            <strong>2. Aparece en Marketplace</strong>
+            <strong>2. Aparece en el Mercado</strong>
             <span>Tu solicitud se vuelve visible para otros usuarios en el dashboard.</span>
           </div>
           <div class="auth-point">
@@ -46,7 +46,7 @@
         </div>
 
         <div id="loginPane" class="form-shell">
-          <h2>Welcome back</h2>
+          <h2>Bienvenido/a de nuevo</h2>
           <p>Ingresa con tu correo para continuar en tu dashboard de intercambios.</p>
           <label>Correo</label>
           <input id="loginEmail" type="email" placeholder="correo@ejemplo.com" />
@@ -56,7 +56,7 @@
         </div>
 
         <div id="signupPane" class="form-shell hidden">
-          <h2>Create your account</h2>
+          <h2>Crea tu cuenta</h2>
           <p>Crea tu cuenta con correo y contrasena. Luego completas el perfil con tus habilidades.</p>
           <label>Nombre de usuario</label>
           <input id="signupUsername" placeholder="pedro123" />
@@ -72,7 +72,7 @@
 
   <section id="onboardingModal" class="auth-modal hidden">
     <div class="modal-card glass">
-      <h2>Set Up Your Profile</h2>
+      <h2>Configura tu perfil</h2>
       <p>Completa tu perfil inicial para entrar en el marketplace de intercambio.</p>
 
       <div class="field-grid">
@@ -92,21 +92,21 @@
 
       <div class="selector-row">
         <div class="select-card">
-          <h3>Skills you want to teach</h3>
+          <h3>Habilidades que quieres enseñar</h3>
           <small>Selecciona una o varias habilidades que ofreces.</small>
           <div id="teachSummary" class="summary-row"></div>
           <button id="openTeachPickerBtn" class="ghost-btn" type="button">Elegir habilidades para ofrecer</button>
         </div>
 
         <div class="select-card">
-          <h3>Skills you want to learn</h3>
+          <h3>Habilidades que quieres aprender</h3>
           <small>Selecciona las habilidades que quieres recibir.</small>
           <div id="learnSummary" class="summary-row"></div>
           <button id="openLearnPickerBtn" class="ghost-btn" type="button">Elegir habilidades para aprender</button>
         </div>
       </div>
 
-      <button id="completeOnboardingBtn" class="primary-btn" type="button">Continue</button>
+      <button id="completeOnboardingBtn" class="primary-btn" type="button">Continuar</button>
     </div>
   </section>
 
@@ -117,8 +117,8 @@
       <div id="pickerCategoryChips" class="chip-row" style="margin-top: 0.8rem;"></div>
       <div id="pickerSkillsList" class="skills-list"></div>
       <div class="picker-actions">
-        <button id="savePickerBtn" class="primary-btn" type="button">Save</button>
-        <button id="clearPickerBtn" class="picker-clear" type="button">Clear all</button>
+        <button id="savePickerBtn" class="primary-btn" type="button">Guardar</button>
+        <button id="clearPickerBtn" class="picker-clear" type="button">Limpiar todo</button>
         <button id="cancelPickerBtn" class="ghost-btn" type="button">Cancelar</button>
       </div>
     </div>
@@ -150,7 +150,7 @@
       </div>
 
       <div class="nav-list">
-        <button class="nav-btn active" data-view="matchesView" type="button">Marketplace <span id="matchesCountBadge">0</span></button>
+        <button class="nav-btn active" data-view="matchesView" type="button">Mercado <span id="matchesCountBadge">0</span></button>
         <button class="nav-btn" data-view="incomingMatchesView" type="button">Intereses recibidos <span id="incomingMatchesCountBadge">0</span></button>
         <button class="nav-btn" data-view="myMatchesView" type="button">Mis matches <span id="myMatchesCountBadge">0</span></button>
         <button class="nav-btn" data-view="publishView" type="button">Publicar</button>
@@ -166,7 +166,7 @@
     <main class="main-shell">
       <div class="top-shell">
         <div class="search-shell">
-          <input id="searchInput" placeholder="Search skills..." />
+          <input id="searchInput" placeholder="Buscar habilidades..." />
           <button id="searchBtn" class="secondary-btn" type="button">Buscar</button>
         </div>
         <div class="top-user">
@@ -273,7 +273,7 @@
             <p class="muted">El chat se activa solo si la solicitud fue aceptada.</p>
             <div class="chat-controls">
               <div>
-                <label>Conversation ID</label>
+                <label>ID de conversacion</label>
                 <input id="conversationId" placeholder="Selecciona una conversacion" />
               </div>
               <button id="disconnectWsBtn" class="danger-btn" type="button">Cerrar</button>
@@ -294,38 +294,38 @@
           <div class="profile-layout">
             <div class="profile-avatar-panel">
               <div id="profileAvatarLarge" class="profile-avatar-large">P</div>
-              <button id="changeAvatarBtn" class="primary-btn" type="button">Change Avatar</button>
+              <button id="changeAvatarBtn" class="primary-btn" type="button">Cambiar avatar</button>
               <div class="profile-avatar-note">Tu avatar actual se genera con tu inicial.</div>
             </div>
 
             <div class="profile-form-shell">
               <div>
-                <label>Your name</label>
+                <label>Tu nombre</label>
                 <input id="profileFullName" placeholder="Tu nombre" />
               </div>
 
               <div>
-                <label>Profile description</label>
+                <label>Descripcion del perfil</label>
                 <textarea id="profileBio" class="profile-textarea" placeholder="Habla de tus intereses y experiencia"></textarea>
               </div>
 
               <div class="profile-meta-row">
                 <div class="profile-summary-block">
-                  <label>Skills you want to teach</label>
+                  <label>Habilidades que quieres enseñar</label>
                   <button id="openProfileTeachPickerBtn" class="picker-trigger" type="button">Seleccionar habilidades</button>
                   <div id="profileTeachChips" class="summary-row"></div>
                 </div>
 
                 <div class="profile-summary-block">
-                  <label>Skills you want to learn</label>
+                  <label>Habilidades que quieres aprender</label>
                   <button id="openProfileLearnPickerBtn" class="picker-trigger" type="button">Seleccionar habilidades</button>
                   <div id="profileLearnChips" class="summary-row"></div>
                 </div>
               </div>
 
               <div class="profile-actions">
-                <button id="saveProfileBtn" class="primary-btn" type="button">Save Profile</button>
-                <button id="viewPublicProfileBtn" class="ghost-btn" type="button">View My Public Profile</button>
+                <button id="saveProfileBtn" class="primary-btn" type="button">Guardar perfil</button>
+                <button id="viewPublicProfileBtn" class="ghost-btn" type="button">Ver mi perfil publico</button>
               </div>
             </div>
           </div>
@@ -343,7 +343,7 @@
                 <div id="publicProfileBio" class="public-profile-bio">Descripcion publica del perfil.</div>
                 <p id="publicProfileSummary" class="muted">Resumen del perfil.</p>
                 <div class="public-profile-subactions">
-                  <button id="publicProfilePrimaryBtn" class="primary-btn" type="button">Edit Profile</button>
+                  <button id="publicProfilePrimaryBtn" class="primary-btn" type="button">Editar perfil</button>
                 </div>
               </div>
             </div>
@@ -354,20 +354,20 @@
           </div>
 
           <div class="public-profile-panel">
-            <h3>Rating</h3>
-            <p id="publicProfileRating">No reviews yet</p>
+            <h3>Calificacion</h3>
+            <p id="publicProfileRating">Aun no hay reseñas</p>
           </div>
 
-          <h3 class="public-profile-section-title">Skills</h3>
+          <h3 class="public-profile-section-title">Habilidades</h3>
 
           <div class="public-profile-skills">
             <div class="public-skill-card">
-              <h4>Skills you teach</h4>
+              <h4>Habilidades que enseñas</h4>
               <div id="publicProfileTeachChips" class="summary-row"></div>
             </div>
 
             <div class="public-skill-card">
-              <h4>Skills you're learning</h4>
+              <h4>Habilidades que estas aprendiendo</h4>
               <div id="publicProfileLearnChips" class="summary-row"></div>
             </div>
           </div>

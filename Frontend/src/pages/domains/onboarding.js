@@ -149,8 +149,8 @@ export function openSkillPickerDomain({
   setPickerCategory("All");
   pickerSearchInput.value = "";
   pickerSearchInput.placeholder = "Buscar habilidades...";
-  if (mode === "teach") pickerTitle.textContent = source === "profile" ? "Skills you want to teach" : "Selecciona habilidades para ofrecer";
-  else if (mode === "learn") pickerTitle.textContent = source === "profile" ? "Skills you want to learn" : "Selecciona habilidades para aprender";
+  if (mode === "teach") pickerTitle.textContent = source === "profile" ? "Habilidades que quieres enseñar" : "Selecciona habilidades para ofrecer";
+  else if (mode === "learn") pickerTitle.textContent = source === "profile" ? "Habilidades que quieres aprender" : "Selecciona habilidades para aprender";
   renderPickerCategories();
   renderPickerSkills();
   skillPickerOverlay.classList.remove("hidden");

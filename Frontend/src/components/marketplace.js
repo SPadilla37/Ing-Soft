@@ -2,7 +2,7 @@ import { getInitials } from "./ui.js";
 import { renderMatchStatusLabel, renderRatingStars } from "./matches.js";
 
 function userMatchesCategory(user, selectedCategory) {
-  if (selectedCategory === "All") return true;
+  if (selectedCategory === "Todos") return true;
   const categoryLower = selectedCategory.toLowerCase();
   const offered = user.habilidades_ofertadas || [];
   const searched = user.habilidades_busçadas || [];
@@ -59,7 +59,7 @@ export function renderMarketplaceSection({
         <div class="match-avatar">${getInitials(authorName)}</div>
         <div>
           <h3>${authorName}</h3>
-          <div class="muted">${matchState === "received" ? "Quiere hacer match contigo" : matchState === "sent" ? "Match pendiente" : matchState === "mutual-pending" ? "Match mutuo pendiente" : "Compatible contigo"}</div>
+          <div class="muted">${matchState === "received" ? "Quiere intercambiar contigo" : matchState === "sent" ? "Intercambio pendiente" : matchState === "mutual-pending" ? "Intercambio mutuo pendiente" : "Compatible contigo"}</div>
         </div>
       </div>
       ${bio ? `<div><div class="muted">Biografia</div><div>${bio}</div></div>` : ""}
@@ -84,7 +84,7 @@ export function renderMarketplaceSection({
       matchBtn.onclick = () => onOpenMatchedConversation(user.viewer_conversation_id);
     } else if (matchState === "mutual-pending") {
       matchBtn.className = "primary-btn";
-      matchBtn.textContent = "Match";
+      matchBtn.textContent = "Aceptar";
       matchBtn.onclick = () => onAcceptRequest(user.id);
     } else if (matchState === "sent") {
       matchBtn.className = "secondary-btn";
@@ -92,18 +92,18 @@ export function renderMarketplaceSection({
       matchBtn.disabled = true;
     } else if (matchState === "received") {
       matchBtn.className = "primary-btn";
-      matchBtn.textContent = "Match";
+      matchBtn.textContent = "Aceptar";
       matchBtn.onclick = () => onAcceptRequest(user.id);
     } else {
       matchBtn.className = "primary-btn";
-      matchBtn.textContent = "Match";
+      matchBtn.textContent = "Aceptar";
       matchBtn.onclick = () => onAcceptRequest(user.id);
     }
 
     const detailsBtn = document.createElement("button");
     detailsBtn.className = "ghost-btn";
     detailsBtn.type = "button";
-    detailsBtn.textContent = "Go to profile";
+    detailsBtn.textContent = "Ir al perfil";
     detailsBtn.onclick = () => onShowRequestDetails({ from_user_id: user.id }, "matchesView");
 
     actions.appendChild(matchBtn);
@@ -172,7 +172,7 @@ export function renderIncomingMatchesSection({
     const profileBtn = document.createElement("button");
     profileBtn.className = "ghost-btn";
     profileBtn.type = "button";
-    profileBtn.textContent = "Go to profile";
+    profileBtn.textContent = "Ir al perfil";
     profileBtn.onclick = () => onShowRequestDetails({ from_user_id: emisorId }, "incomingMatchesView");
 
     actions.appendChild(respondBtn);
@@ -241,7 +241,7 @@ export function renderMyMatchesSection({
     const profileBtn = document.createElement("button");
     profileBtn.className = "ghost-btn";
     profileBtn.type = "button";
-    profileBtn.textContent = "Go to profile";
+    profileBtn.textContent = "Ir al perfil";
     profileBtn.onclick = () => onShowRequestDetails({ from_user_id: match.other_user_id }, "myMatchesView");
     actions.appendChild(profileBtn);
 
