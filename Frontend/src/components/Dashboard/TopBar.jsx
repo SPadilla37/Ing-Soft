@@ -3,9 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 
 const TopBar = ({ onSearch }) => {
   const { currentUser, currentUserRecord, clearSession } = useAuth();
-  
-  const profile = currentUserRecord?.profile || {};
-  const visibleName = profile.fullName || currentUserRecord?.name || currentUser;
+
+  const visibleName = currentUserRecord?.username || currentUserRecord?.name || currentUser;
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -26,7 +25,7 @@ const TopBar = ({ onSearch }) => {
         <div className="avatar">{getInitials(visibleName)}</div>
         <div>
           <strong>{visibleName}</strong>
-          <div className="muted">{(profile.languages || []).join(' · ') || 'Tu dashboard'}</div>
+          <div className="muted">Tu dashboard</div>
         </div>
         <button className="mini-btn" onClick={clearSession}>Salir</button>
       </div>
