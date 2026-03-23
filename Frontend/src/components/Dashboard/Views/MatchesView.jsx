@@ -13,17 +13,23 @@ const MatchesView = ({ searchQuery }) => {
   const [loading, setLoading] = useState(true);
   const [profileUserId, setProfileUserId] = useState(null);
   const [popup, setPopup] = useState('');
+  const [currentUserProfile, setCurrentUserProfile] = useState(null);
 
   const loadMarketplace = async () => {
     if (!currentUser) return;
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams({ viewer_user_id: currentUser });
-      if (searchQuery) queryParams.append('q', searchQuery);
-      const result = await apiRequest(API_BASE, `/marketplace/habilidades?${queryParams}`);
-      setRequests(result.users || []);
+      // Fetch both the marketplace requests and the current user's profile in parallel
+      const [marketResult, profileResult] = await Promise.all([
+        apiRequest(API_BASE, `/marketplace/habilidades?viewer_user_id=${currentUser}${searchQuery ? `&q=${searchQuery}` : ''}`),
+        apiRequest(API_BASE, `/usuarios/${currentUser}`)
+      ]);
+      
+      setCurrentUserProfile(profileResult.user || profileResult);
+      setRequests(marketResult.users || []);
+
     } catch (error) {
-      console.error('Error loading marketplace:', error);
+      console.error('Error loading marketplace data:', error);
     } finally {
       setLoading(false);
     }
@@ -61,7 +67,7 @@ const MatchesView = ({ searchQuery }) => {
     };
   }, []);
 
-  const handleAccept = async (user) => {
+  const handleAccept = async (user, matchDetails) => {
     const matchState = user.viewer_match_state || 'none';
     
     if (matchState === 'matched' && user.viewer_conversation_id) {
@@ -80,8 +86,9 @@ const MatchesView = ({ searchQuery }) => {
     }
     
     try {
-      const habilidadQueBusco = user.habilidades_ofertadas?.[0]?.id;
-      const habilidadQueOfrezco = user.habilidades_buscadas?.[0]?.id;
+      // User the first matched skill for the official request creation
+      const habilidadQueBusco = matchDetails.theyOfferIWant[0]?.id || user.habilidades_ofertadas?.[0]?.id;
+      const habilidadQueOfrezco = matchDetails.iOfferTheyWant[0]?.id || user.habilidades_buscadas?.[0]?.id;
       
       const result = await apiRequest(API_BASE, '/message-requests', {
         method: 'POST',
@@ -106,14 +113,38 @@ const MatchesView = ({ searchQuery }) => {
     }
   };
 
+  const getMatchDetails = (req) => {
+    if (!currentUserProfile) return { iOfferTheyWant: [], theyOfferIWant: [] };
+    
+    const myOfferedIds = new Set(currentUserProfile.habilidades_ofertadas?.map(h => h.id) || []);
+    const mySoughtIds = new Set(currentUserProfile.habilidades_buscadas?.map(h => h.id) || []);
+    
+    return {
+      // What I offer that they want (intersection of my offered and their sought)
+      iOfferTheyWant: (req.habilidades_buscadas || []).filter(h => myOfferedIds.has(h.id)),
+      // What they offer that I want (intersection of their offered and my sought)
+      theyOfferIWant: (req.habilidades_ofertadas || []).filter(h => mySoughtIds.has(h.id))
+    };
+  };
+
   const filteredRequests = requests.filter(req => {
     const matchState = req.viewer_match_state || 'none';
     if (matchState === 'matched' && req.viewer_conversation_id) return false;
     if (selectedCategory === 'All') return true;
 
-    const offeredCategory = req.habilidades_ofertadas?.[0]?.categoria || '';
-    const requestedCategory = req.habilidades_buscadas?.[0]?.categoria || '';
-    return offeredCategory === selectedCategory || requestedCategory === selectedCategory;
+    const matchDetails = getMatchDetails(req);
+    // Check if any of the matched skills belong to the selected category
+    const hasCategoryMatch = [...matchDetails.iOfferTheyWant, ...matchDetails.theyOfferIWant]
+      .some(h => h.categoria === selectedCategory);
+      
+    // Fallback exactly like old behavior if no profile (or no intersection due to some weird state)
+    if (!hasCategoryMatch && matchDetails.iOfferTheyWant.length === 0 && matchDetails.theyOfferIWant.length === 0) {
+      const offeredCategory = req.habilidades_ofertadas?.[0]?.categoria || '';
+      const requestedCategory = req.habilidades_buscadas?.[0]?.categoria || '';
+      return offeredCategory === selectedCategory || requestedCategory === selectedCategory;
+    }
+    
+    return hasCategoryMatch;
   });
 
   return (
@@ -148,14 +179,18 @@ const MatchesView = ({ searchQuery }) => {
       <div className="cards-grid">
         {loading ? <p>Cargando matches...</p> : 
          filteredRequests.length === 0 ? <p>No se encontraron resultados.</p> :
-         filteredRequests.map(req => (
-           <MarketplaceCard 
-             key={req.id} 
-             request={req} 
-             onAccept={handleAccept}
-             onProfile={(userId) => setProfileUserId(userId)}
-           />
-         ))
+         filteredRequests.map(req => {
+           const matchDetails = getMatchDetails(req);
+           return (
+             <MarketplaceCard 
+               key={req.id} 
+               request={req} 
+               matchDetails={matchDetails}
+               onAccept={(user) => handleAccept(user, matchDetails)}
+               onProfile={(userId) => setProfileUserId(userId)}
+             />
+           );
+         })
         }
       </div>
 
@@ -180,3 +215,4 @@ const MatchesView = ({ searchQuery }) => {
 };
 
 export default MatchesView;
+

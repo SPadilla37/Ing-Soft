@@ -5,12 +5,24 @@ from app.db.models.entities import Habilidad
 
 
 DEFAULT_SKILLS_BY_CATEGORY: dict[str, list[str]] = {
-    "Creative & Arts": ["Graphic Design", "UI/UX Design", "Illustration", "Animation", "Photography"],
-    "Tech & Development": ["Python", "JavaScript", "React", "SQL", "Data Analysis"],
-    "Language & Communication": ["English", "Spanish", "Public Speaking", "Writing", "French"],
-    "Business & Marketing": ["Marketing", "Branding", "Sales", "SEO", "Storytelling"],
-    "Career & Soft Skills": ["Leadership", "Productivity", "Interview Prep", "Negotiation", "Teamwork"],
-    "Lifestyle, Games & Hobbies": ["Cooking", "Fitness", "Guitar", "Gardening", "Chess"],
+    "Creatividad y Artes": [
+        "Diseño Gráfico", "UI/UX Design", "Ilustración", "Animación", "Fotografía"
+    ],
+    "Tecnología y Desarrollo": [
+        "Python", "JavaScript", "React", "SQL", "Data Analysis"
+    ],
+    "Idiomas y Comunicación": [
+        "Inglés", "Español", "Oratoria", "Escritura", "Francés"
+    ],
+    "Negocios y Marketing": [
+        "Marketing", "Branding", "Ventas", "SEO", "Narrativa / Storytelling"
+    ],
+    "Carrera y Habilidades Blandas": [
+        "Liderazgo", "Productividad", "Preparación para entrevistas", "Negociación", "Trabajo en equipo"
+    ],
+    "Estilo de Vida, Juegos y Pasatiempos": [
+        "Cocina", "Ejercicio / Fitness", "Guitarra", "Jardinería", "Ajedrez"
+    ],
 }
 
 
