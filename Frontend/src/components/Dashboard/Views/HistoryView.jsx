@@ -12,9 +12,45 @@ const HistoryView = () => {
     if (!currentUser) return;
     setLoading(true);
     try {
-      const result = await apiRequest(API_BASE, `/matches/${encodeURIComponent(currentUser)}`);
+      const [result, profileResult] = await Promise.all([
+        apiRequest(API_BASE, `/matches/${encodeURIComponent(currentUser)}`),
+        apiRequest(API_BASE, `/usuarios/${currentUser}`)
+      ]);
+      const myProfile = profileResult.user || profileResult;
+      
       // Filtrar solo los matches completados
-      setMatches((result.matches || []).filter(m => m.estado === 'completado'));
+      const completedMatches = (result.matches || []).filter(m => m.estado === 'completado');
+
+      // Fetch the profiles for all matched users to calculate skill overlap in the frontend
+      const matchesWithDetails = await Promise.all(
+        completedMatches.map(async (match) => {
+          try {
+            const otherProfileRes = await apiRequest(API_BASE, `/usuarios/${match.other_user_id}`);
+            const otherProfile = otherProfileRes.user || otherProfileRes;
+            
+            const myOfferedIds = new Set(myProfile.habilidades_ofertadas?.map(h => h.id) || []);
+            const mySoughtIds = new Set(myProfile.habilidades_buscadas?.map(h => h.id) || []);
+            
+            const iOfferTheyWant = (otherProfile.habilidades_buscadas || []).filter(h => myOfferedIds.has(h.id));
+            const theyOfferIWant = (otherProfile.habilidades_ofertadas || []).filter(h => mySoughtIds.has(h.id));
+            
+            return {
+              ...match,
+              intersectIOfferTheyWant: iOfferTheyWant.length > 0 ? iOfferTheyWant : [match.habilidad_solicitada].filter(Boolean),
+              intersectTheyOfferIWant: theyOfferIWant.length > 0 ? theyOfferIWant : [match.habilidad].filter(Boolean)
+            };
+          } catch (err) {
+            console.error('Failed to augment match skills', err);
+            return {
+              ...match,
+              intersectIOfferTheyWant: [match.habilidad_solicitada].filter(Boolean),
+              intersectTheyOfferIWant: [match.habilidad].filter(Boolean)
+            };
+          }
+        })
+      );
+
+      setMatches(matchesWithDetails);
     } catch (error) {
       console.error('Error loading completed matches:', error);
     } finally {
@@ -47,7 +83,7 @@ const HistoryView = () => {
              <div>
                <div className="muted">Intercambio</div>
                <div className="strong-list">
-                 {(match.habilidad?.nombre || 'Sin habilidad')} ↔ {(match.habilidad_solicitada?.nombre || 'Sin habilidad')}
+                 {match.intersectTheyOfferIWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'} ↔ {match.intersectIOfferTheyWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'}
                </div>
              </div>
            </article>
