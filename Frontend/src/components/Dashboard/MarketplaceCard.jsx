@@ -6,6 +6,7 @@ const MarketplaceCard = ({ request, onAccept, onProfile }) => {
   const requestedSkill = request.habilidades_buscadas?.[0]?.nombre || 'Sin habilidad solicitada';
   const introMessage = request.biografia || 'Sin descripción';
   const matchState = request.viewer_match_state || 'none';
+  const rating = request.rating?.average;
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -17,7 +18,7 @@ const MarketplaceCard = ({ request, onAccept, onProfile }) => {
       <div className="match-head">
         <div className="match-avatar">{getInitials(author)}</div>
         <div>
-          <h3>{author}</h3>
+          <h3>{author} {rating != null && <span className="rating-star">★ {Number(rating).toFixed(1)}</span>}</h3>
           <div className="muted">Usuario compatible</div>
         </div>
       </div>

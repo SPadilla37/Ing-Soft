@@ -5,6 +5,7 @@ from app.db.database import SessionLocal
 from app.db.models.entities import Intercambio, Conversacion, Habilidad, Usuario, UsuarioHabilidad
 from app.schemas import MarketplaceAcceptRequest, MessageRequestCreate, MessageRequestResponse
 from app.services.core import (
+    calculate_received_rating,
     create_conversation_for_intercambio,
     ensure_user,
     get_match_for_users,
@@ -112,6 +113,7 @@ def list_marketplace_habilidades(
                 "habilidades_buscadas": habilidades_buscadas,
                 "viewer_match_state": match_state,
                 "viewer_conversation_id": match_conv,
+                "rating": calculate_received_rating(session, user.id),
             }
 
             if q:
