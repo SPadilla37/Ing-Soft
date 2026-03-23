@@ -249,6 +249,13 @@
       margin-top: 0;
     }
 
+    .error-message {
+      color: #dc3545;
+      font-size: 12px;
+      margin-top: 4px;
+      display: block;
+    }
+
     .auth-modal {
       position: fixed;
       inset: 0;

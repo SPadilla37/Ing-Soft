@@ -68,7 +68,6 @@ const ProfileView = () => {
         <div className="profile-layout">
           <div className="profile-avatar-panel">
             <div className="profile-avatar-large">{getInitials(formData.fullName)}</div>
-            <button className="primary-btn" type="button">Cambiar avatar</button>
             <div className="profile-avatar-note">Tu avatar se genera con tu inicial.</div>
           </div>
 

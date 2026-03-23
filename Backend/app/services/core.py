@@ -18,9 +18,6 @@ from app.services.matching import canonical_match_pair
 from app.services.reputation import average_rating
 
 
-PUBLIC_MARKETPLACE_USER_ID: int = 0
-
-
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
