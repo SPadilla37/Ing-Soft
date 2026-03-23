@@ -41,21 +41,8 @@ def get_habilidad(habilidad_id: int) -> dict:
 
 @router.post("/habilidades")
 def create_habilidad(payload: HabilidadCreate) -> dict:
-    with SessionLocal() as session:
-        existing = session.execute(
-            select(Habilidad).where(Habilidad.nombre == payload.nombre)
-        ).scalars().first()
-        if existing:
-            raise HTTPException(status_code=409, detail="Ya existe una habilidad con ese nombre")
-        try:
-            habilidad = Habilidad(nombre=payload.nombre, categoria=payload.categoria)
-            session.add(habilidad)
-            session.commit()
-            session.refresh(habilidad)
-            return {"habilidad": serialize_habilidad(habilidad)}
-        except IntegrityError:
-            session.rollback()
-            raise HTTPException(status_code=409, detail="Ya existe una habilidad con ese nombre")
+    # Bloquear la creación de nuevas habilidades desde el frontend
+    raise HTTPException(status_code=403, detail="No está permitido crear nuevas habilidades desde la aplicación. Solo se pueden seleccionar habilidades existentes.")
 
 
 @router.put("/habilidades/{habilidad_id}")
