@@ -65,12 +65,21 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loadUserRecord = async (userId) => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     try {
       const result = await apiRequest(API_BASE, `/usuarios/${encodeURIComponent(userId)}`);
+      if (!result || !result.user) {
+        clearSession();
+        return;
+      }
       setCurrentUserRecordState(normalizeUserRecord(result.user));
     } catch (error) {
+      // Si falla la carga del usuario, limpiar sesión y forzar login
       console.error('Failed to load user record:', error);
+      clearSession();
     } finally {
       setLoading(false);
     }
