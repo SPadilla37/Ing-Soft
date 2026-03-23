@@ -8,7 +8,7 @@ const Sidebar = ({ activeView, setActiveView, badges }) => {
     { id: 'matchesView', label: 'Matches', badgeKey: 'matches' },
     { id: 'incomingMatchesView', label: 'Intereses recibidos', badgeKey: 'incoming' },
     { id: 'myMatchesView', label: 'Mis matches', badgeKey: 'myMatches' },
-    { id: 'publishView', label: 'Publicar' },
+    { id: 'historyView', label: 'Historial' },
     { id: 'chatView', label: 'Chat', badgeKey: 'chat' },
     { id: 'profileView', label: 'Perfil' },
   ];

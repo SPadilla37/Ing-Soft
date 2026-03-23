@@ -4,7 +4,7 @@ import TopBar from './TopBar';
 import MatchesView from './Views/MatchesView';
 import IncomingMatchesView from './Views/IncomingMatchesView';
 import MyMatchesView from './Views/MyMatchesView';
-import PublishView from './Views/PublishView';
+import HistoryView from './Views/HistoryView';
 import ChatView from './Views/ChatView';
 import ProfileView from './Views/ProfileView';
 
@@ -34,8 +34,8 @@ const Dashboard = () => {
             }}
           />
         );
-      case 'publishView':
-        return <PublishView />;
+      case 'historyView':
+        return <HistoryView />;
       case 'chatView':
         return <ChatView initialConversationId={chatConversationId} />;
       case 'profileView':
