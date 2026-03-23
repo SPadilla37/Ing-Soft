@@ -146,6 +146,20 @@ def create_message_request(payload: MessageRequestCreate) -> dict:
         else:
             receptor_id = payload.from_user_id
 
+            active_public_requests = session.execute(
+                select(Intercambio).where(
+                    Intercambio.usuario_emisor_id == payload.from_user_id,
+                    Intercambio.usuario_receptor_id == payload.from_user_id,
+                    Intercambio.estado == "pendiente",
+                )
+            ).scalars().all()
+
+            if len(active_public_requests) >= 3:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Ya alcanzaste el limite de 3 publicaciones activas. Borra una para publicar otra.",
+                )
+
         now = datetime.now(timezone.utc)
         intercambio = Intercambio(
             usuario_emisor_id=payload.from_user_id,

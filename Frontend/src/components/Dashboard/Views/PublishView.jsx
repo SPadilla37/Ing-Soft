@@ -3,23 +3,20 @@ import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 import { ensureSkillIds } from '../../../services/skills';
-
-function parseSkillsInput(value) {
-  return String(value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
+import SkillPicker from '../../Common/SkillPicker';
 
 const PublishView = () => {
+  const MAX_ACTIVE_PUBLICATIONS = 3;
   const { currentUser, currentUserRecord } = useAuth();
   const [formData, setFormData] = useState({
-    offered_skill: '',
-    requested_skill: '',
+    offeredSkills: new Set(),
+    requestedSkills: new Set(),
     mensaje: ''
   });
   const [ownRequests, setOwnRequests] = useState([]);
   const [status, setStatus] = useState('Aún no publicas una solicitud en esta sesión.');
+  const [pickerConfig, setPickerConfig] = useState(null);
+  const [popup, setPopup] = useState('');
 
   const loadOwnRequests = async () => {
     if (!currentUser) return;
@@ -36,21 +33,30 @@ const PublishView = () => {
     loadOwnRequests();
     if (currentUserRecord?.profile) {
       setFormData({
-        offered_skill: currentUserRecord.profile.teachSkills?.join(', ') || '',
-        requested_skill: currentUserRecord.profile.learnSkills?.join(', ') || '',
+        offeredSkills: new Set(currentUserRecord.profile.teachSkills || []),
+        requestedSkills: new Set(currentUserRecord.profile.learnSkills || []),
         mensaje: ''
       });
     }
   }, [currentUser, currentUserRecord]);
 
   const handlePublish = async () => {
-    if (!formData.offered_skill || !formData.requested_skill) {
-      alert('Debes indicar las habilidades.');
+    if (!formData.offeredSkills.size || !formData.requestedSkills.size) {
+      setPopup('Debes indicar las habilidades para ofrecer y aprender.');
+      setStatus('Error: Debes indicar las habilidades para ofrecer y aprender.');
       return;
     }
+
+    if (ownRequests.length >= MAX_ACTIVE_PUBLICATIONS) {
+      const limitMessage = 'Ya alcanzaste el limite de 3 publicaciones activas. Borra una para publicar otra.';
+      setStatus(`Error: ${limitMessage}`);
+      setPopup(limitMessage);
+      return;
+    }
+
     try {
-      const offeredNames = parseSkillsInput(formData.offered_skill);
-      const requestedNames = parseSkillsInput(formData.requested_skill);
+      const offeredNames = Array.from(formData.offeredSkills);
+      const requestedNames = Array.from(formData.requestedSkills);
 
       const offeredIds = await ensureSkillIds(API_BASE, offeredNames);
       const requestedIds = await ensureSkillIds(API_BASE, requestedNames);
@@ -71,9 +77,11 @@ const PublishView = () => {
         })
       });
       setStatus('Solicitud publicada correctamente.');
-      loadOwnRequests();
+      setPopup('Tu solicitud se publicó exitosamente.');
+      await loadOwnRequests();
     } catch (error) {
       setStatus(`Error: ${error.message}`);
+      setPopup(error.message || 'No se pudo publicar la solicitud.');
     }
   };
 
@@ -93,18 +101,33 @@ const PublishView = () => {
       <div className="panel-grid">
         <div className="surface-card stack">
           <h2>Publica o actualiza tu intercambio</h2>
+          <p className="muted">Publicaciones activas: {ownRequests.length}/{MAX_ACTIVE_PUBLICATIONS}</p>
           <label>Habilidades que ofreces</label>
-          <input 
-            placeholder="Ej: Python, JavaScript" 
-            value={formData.offered_skill}
-            onChange={(e) => setFormData({...formData, offered_skill: e.target.value})}
-          />
+          <div className="summary-row">
+            {Array.from(formData.offeredSkills).map((skill) => (
+              <span key={`off-${skill}`} className="chip">{skill}</span>
+            ))}
+          </div>
+          <button
+            className="ghost-btn"
+            onClick={() => setPickerConfig({ mode: 'teach', initial: formData.offeredSkills })}
+          >
+            Elegir habilidades para ofrecer
+          </button>
+
           <label>Habilidades que quieres aprender</label>
-          <input 
-            placeholder="Ej: Figma, Inglés" 
-            value={formData.requested_skill}
-            onChange={(e) => setFormData({...formData, requested_skill: e.target.value})}
-          />
+          <div className="summary-row">
+            {Array.from(formData.requestedSkills).map((skill) => (
+              <span key={`req-${skill}`} className="chip">{skill}</span>
+            ))}
+          </div>
+          <button
+            className="ghost-btn"
+            onClick={() => setPickerConfig({ mode: 'learn', initial: formData.requestedSkills })}
+          >
+            Elegir habilidades para aprender
+          </button>
+
           <label>Mensaje para otros usuarios</label>
           <textarea 
             placeholder="Explica brevemente..." 
@@ -128,6 +151,29 @@ const PublishView = () => {
           </div>
         </div>
       </div>
+
+      {pickerConfig && (
+        <SkillPicker
+          mode={pickerConfig.mode}
+          initialSelection={pickerConfig.initial}
+          onSave={(selection) => {
+            const field = pickerConfig.mode === 'teach' ? 'offeredSkills' : 'requestedSkills';
+            setFormData((prev) => ({ ...prev, [field]: selection }));
+            setPickerConfig(null);
+          }}
+          onCancel={() => setPickerConfig(null)}
+        />
+      )}
+
+      {popup ? (
+        <section className="auth-modal" onClick={() => setPopup('')}>
+          <div className="modal-card glass" onClick={(e) => e.stopPropagation()}>
+            <h2>Notificación</h2>
+            <p>{popup}</p>
+            <button className="primary-btn" onClick={() => setPopup('')}>Aceptar</button>
+          </div>
+        </section>
+      ) : null}
     </section>
   );
 };

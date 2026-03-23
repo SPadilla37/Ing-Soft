@@ -10,6 +10,7 @@ const IncomingMatchesView = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [profileUserId, setProfileUserId] = useState(null);
+  const [popup, setPopup] = useState('');
 
   const loadIncoming = async () => {
     if (!currentUser) return;
@@ -34,6 +35,7 @@ const IncomingMatchesView = () => {
         method: 'PATCH',
         body: JSON.stringify({ user_id: Number(currentUser), action: 'accept' })
       });
+      setPopup('Interés aceptado. Si ambos se aceptaron, ya tienen chat disponible.');
       loadIncoming();
     } catch (error) {
       alert(error.message);
@@ -66,6 +68,16 @@ const IncomingMatchesView = () => {
           userId={profileUserId}
           onClose={() => setProfileUserId(null)}
         />
+      ) : null}
+
+      {popup ? (
+        <section className="auth-modal" onClick={() => setPopup('')}>
+          <div className="modal-card glass" onClick={(e) => e.stopPropagation()}>
+            <h2>Notificación</h2>
+            <p>{popup}</p>
+            <button className="primary-btn" onClick={() => setPopup('')}>Aceptar</button>
+          </div>
+        </section>
       ) : null}
     </section>
   );
