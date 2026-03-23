@@ -11,7 +11,6 @@ const MatchesView = ({ searchQuery }) => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [profileUserId, setProfileUserId] = useState(null);
-  const [popup, setPopup] = useState('');
 
   const loadMarketplace = async () => {
     if (!currentUser) return;
@@ -40,9 +39,7 @@ const MatchesView = ({ searchQuery }) => {
       });
       loadMarketplace();
       if (result.matched && result.conversation_id) {
-        setPopup('¡Match aceptado por ambos! Ya puedes abrir el chat.');
-      } else {
-        setPopup('Interés enviado correctamente. Si la otra persona acepta, se abrirá el chat.');
+        alert('¡Hubo match mutuo! Puedes abrir el chat ahora.');
       }
     } catch (error) {
       alert(error.message);
@@ -107,16 +104,6 @@ const MatchesView = ({ searchQuery }) => {
           userId={profileUserId}
           onClose={() => setProfileUserId(null)}
         />
-      ) : null}
-
-      {popup ? (
-        <section className="auth-modal" onClick={() => setPopup('')}>
-          <div className="modal-card glass" onClick={(e) => e.stopPropagation()}>
-            <h2>Notificación</h2>
-            <p>{popup}</p>
-            <button className="primary-btn" onClick={() => setPopup('')}>Aceptar</button>
-          </div>
-        </section>
       ) : null}
     </section>
   );

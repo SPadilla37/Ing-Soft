@@ -128,10 +128,8 @@ def get_user_display_name(session, user_id: int) -> str | None:
     if not user_id:
         return None
     user = session.get(Usuario, user_id)
-    if user and user.username and user.username.strip():
-        return user.username.strip()
     if user and user.nombre and user.nombre.strip():
-        return f"{user.nombre.strip()} {user.apellido.strip()}".strip()
+        return f"{user.nombre.strip()} {user.apellido.strip()}"
     return str(user_id)
 
 
@@ -144,7 +142,6 @@ def serialize_intercambio_with_names(session, intercambio: Intercambio) -> dict:
     if emisor:
         serialized["emisor"] = {
             "id": emisor.id,
-            "username": emisor.username,
             "nombre": emisor.nombre,
             "apellido": emisor.apellido,
             "foto_url": emisor.foto_url or "",
@@ -154,7 +151,6 @@ def serialize_intercambio_with_names(session, intercambio: Intercambio) -> dict:
     if receptor:
         serialized["receptor"] = {
             "id": receptor.id,
-            "username": receptor.username,
             "nombre": receptor.nombre,
             "apellido": receptor.apellido,
             "foto_url": receptor.foto_url or "",
@@ -217,6 +213,11 @@ def get_match_for_users(
 
     accepted.sort(key=lambda item: item.fecha_creacion or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     return accepted[0]
+
+
+def can_users_chat(session, user_one_id: int, user_two_id: int) -> bool:
+    # Chat remains available only while there is an active accepted match for the pair.
+    return get_match_for_users(session, user_one_id, user_two_id) is not None
 
 
 def create_conversation_for_intercambio(session, intercambio: Intercambio) -> int:
@@ -334,6 +335,7 @@ def serialize_intercambio_for_user(session, intercambio: Intercambio, user_id: i
     finalized_by_me = user_id in finalized_user_ids
     finalized_by_other = other_user_id in finalized_user_ids
     can_finalize = intercambio.estado == "aceptado" and not finalized_by_me
+    can_chat = can_users_chat(session, user_id, other_user_id)
 
     return {
         "id": intercambio.id,
@@ -348,6 +350,7 @@ def serialize_intercambio_for_user(session, intercambio: Intercambio, user_id: i
         "finalized_by_me": finalized_by_me,
         "finalized_by_other": finalized_by_other,
         "awaiting_other_finalize": intercambio.estado == "aceptado" and finalized_by_me and not finalized_by_other,
+        "can_chat": can_chat,
         "can_rate":intercambio.estado == "completado" and my_reseña is None,
         "habilidad": habilidad,
         "habilidad_solicitada": habilidad_solicitada,

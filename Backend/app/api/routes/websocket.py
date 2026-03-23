@@ -4,7 +4,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 from app.db.database import SessionLocal
 from app.db.models.entities import Conversacion, Mensaje
-from app.services.core import serialize_message, utc_now_iso
+from app.services.core import can_users_chat, serialize_message, utc_now_iso
 from app.services.websocket import manager
 
 
@@ -80,6 +80,17 @@ async def chat_socket_impl(websocket: WebSocket, conversation_id: int, user_id: 
                 continue
 
             with SessionLocal() as session:
+                if not can_users_chat(session, conversation.usuario_1_id, conversation.usuario_2_id):
+                    await websocket.send_text(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "detail": "No puedes enviar mensajes: el match ya fue finalizado",
+                            }
+                        )
+                    )
+                    continue
+
                 mensaje = Mensaje(
                     conversacion_id=conversation_id,
                     remitente_id=user_id,

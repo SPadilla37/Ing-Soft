@@ -50,8 +50,13 @@ const ChatView = ({ initialConversationId = null }) => {
 
       if (target) {
         setSelectedConv(target);
+        selectedConvRef.current = target;
         await loadMessages(target.id);
-        connectWs(target.id);
+        if (target.can_chat) {
+          connectWs(target.id);
+        } else {
+          setStatus('Chat cerrado: el match fue finalizado.');
+        }
       }
     } catch (error) {
       console.error('Error loading conversations:', error);
@@ -106,6 +111,12 @@ const ChatView = ({ initialConversationId = null }) => {
   };
 
   const connectWs = (convId) => {
+    const selected = selectedConvRef.current;
+    if (selected && !selected.can_chat) {
+      setStatus('Chat cerrado: el match fue finalizado.');
+      return;
+    }
+
     shouldReconnectRef.current = true;
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
@@ -132,6 +143,8 @@ const ChatView = ({ initialConversationId = null }) => {
         setMessages(data.messages);
       } else if (data.type === 'chat_message') {
         setMessages(prev => [...prev, data.message]);
+      } else if (data.type === 'error') {
+        setStatus(data.detail || 'No se pudo enviar el mensaje.');
       }
     };
 
@@ -147,15 +160,29 @@ const ChatView = ({ initialConversationId = null }) => {
 
   const handleSelectConv = (conv) => {
     setSelectedConv(conv);
+    selectedConvRef.current = conv;
     setMessages([]);
     outgoingQueueRef.current = [];
     loadMessages(conv.id);
-    connectWs(conv.id);
+    if (conv.can_chat) {
+      connectWs(conv.id);
+    } else {
+      shouldReconnectRef.current = false;
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+      setStatus('Chat cerrado: el match fue finalizado.');
+    }
   };
 
   const handleSend = () => {
     const content = input.trim();
     if (!content || !selectedConv) return;
+    if (!selectedConv.can_chat) {
+      setStatus('No puedes enviar mensajes porque el match ya fue finalizado.');
+      return;
+    }
 
     const ws = socketRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -170,7 +197,7 @@ const ChatView = ({ initialConversationId = null }) => {
 
   const getSenderDisplayName = (fromUserId) => {
     if (String(fromUserId) === String(currentUser)) {
-      return currentUserRecord?.username || currentUserRecord?.name || 'Tú';
+      return currentUserRecord?.name || 'Tú';
     }
     if (selectedConv?.other_user_name) {
       return selectedConv.other_user_name;
@@ -191,7 +218,7 @@ const ChatView = ({ initialConversationId = null }) => {
                 onClick={() => handleSelectConv(conv)}
               >
                 <strong>{conv.other_user_name || `Usuario ${conv.other_user_id}`}</strong>
-                <div className="muted">Conversación #{conv.id}</div>
+                <div className="muted">Conversación #{conv.id}{!conv.can_chat ? ' - finalizada' : ''}</div>
               </div>
             ))}
           </div>
@@ -210,13 +237,13 @@ const ChatView = ({ initialConversationId = null }) => {
           </div>
           <div className="composer">
             <input 
-              placeholder="Escribe mensaje..." 
+              placeholder={selectedConv?.can_chat ? 'Escribe mensaje...' : 'Chat cerrado por match finalizado'}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              disabled={!selectedConv}
+              disabled={!selectedConv || !selectedConv.can_chat}
             />
-            <button className="primary-btn" onClick={handleSend} disabled={!selectedConv || !input.trim()}>
+            <button className="primary-btn" onClick={handleSend} disabled={!selectedConv || !selectedConv.can_chat || !input.trim()}>
               Enviar
             </button>
           </div>
