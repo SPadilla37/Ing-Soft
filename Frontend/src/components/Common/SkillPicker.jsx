@@ -1,10 +1,65 @@
-import React, { useState } from 'react';
-import { skillsCatalog, languagesCatalog } from '../../config/constants';
+import React, { useEffect, useState } from 'react';
+import { API_BASE, languagesCatalog } from '../../config/constants';
+import { api as apiRequest } from '../../services/api';
 
 const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Set() }) => {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selection, setSelection] = useState(new Set(initialSelection));
+  const [skillsCatalog, setSkillsCatalog] = useState({ All: [] });
+  const [catalogLoading, setCatalogLoading] = useState(mode !== 'language');
+
+  useEffect(() => {
+    if (mode === 'language') {
+      setCatalogLoading(false);
+      return;
+    }
+
+    let active = true;
+    const loadCatalog = async () => {
+      setCatalogLoading(true);
+      try {
+        const result = await apiRequest(API_BASE, '/habilidades');
+        const habilidades = Array.isArray(result?.habilidades) ? result.habilidades : [];
+        const grouped = { All: [] };
+
+        habilidades.forEach((hab) => {
+          const nombre = typeof hab?.nombre === 'string' ? hab.nombre.trim() : '';
+          if (!nombre) return;
+          const categoria = typeof hab?.categoria === 'string' && hab.categoria.trim() ? hab.categoria.trim() : 'Otros';
+
+          if (!grouped[categoria]) grouped[categoria] = [];
+          grouped[categoria].push(nombre);
+          grouped.All.push(nombre);
+        });
+
+        Object.keys(grouped).forEach((categoria) => {
+          grouped[categoria].sort((a, b) => a.localeCompare(b));
+        });
+
+        if (active) {
+          setSkillsCatalog(grouped);
+        }
+      } catch (error) {
+        console.error('Error loading skills catalog:', error);
+        if (active) setSkillsCatalog({ All: [] });
+      } finally {
+        if (active) setCatalogLoading(false);
+      }
+    };
+
+    loadCatalog();
+    return () => {
+      active = false;
+    };
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode === 'language') return;
+    if (!skillsCatalog[selectedCategory]) {
+      setSelectedCategory('All');
+    }
+  }, [mode, selectedCategory, skillsCatalog]);
 
   const toggleSkill = (skill) => {
     const newSelection = new Set(selection);
@@ -46,7 +101,8 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
           </div>
         )}
         <div className="skills-list">
-          {filteredSkills.map(skill => (
+          {catalogLoading && mode !== 'language' ? <p>Cargando habilidades...</p> : null}
+          {!catalogLoading && filteredSkills.map(skill => (
             <button 
               key={skill} 
               className={`skill-chip ${selection.has(skill) ? 'active' : ''}`}

@@ -9,7 +9,9 @@ from app.api.routes.matches import router as matches_router
 from app.api.routes.requests import router as requests_router
 from app.api.routes.users import router as users_router
 from app.api.routes.websocket import router as websocket_router
+from app.core.skills_seed import seed_default_habilidades
 from app.db.database import Base, engine
+from app.db.database import SessionLocal
 
 
 app = FastAPI(title="Skill Exchange Messaging API", version="1.0.0")
@@ -29,6 +31,8 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
+    with SessionLocal() as session:
+        seed_default_habilidades(session)
 
 
 app.include_router(auth_router)
