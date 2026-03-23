@@ -2,7 +2,7 @@ import React from 'react';
 
 const MarketplaceCard = ({ request, onAccept, onProfile }) => {
   const emisor = request.emisor || {};
-  const author = [emisor.nombre, emisor.apellido].filter(Boolean).join(' ').trim() || `Usuario ${request.usuario_emisor_id}`;
+  const author = emisor.username || [emisor.nombre, emisor.apellido].filter(Boolean).join(' ').trim() || `Usuario ${request.usuario_emisor_id}`;
   const offeredSkill = request.habilidad?.nombre || 'Sin habilidad ofertada';
   const requestedSkill = request.habilidad_solicitada?.nombre || 'Sin habilidad solicitada';
   const introMessage = request.mensaje || 'Sin descripcion';
@@ -45,7 +45,7 @@ const MarketplaceCard = ({ request, onAccept, onProfile }) => {
            (matchState === 'received' || matchState === 'mutual-pending') ? 'Responder match' : 'Match'}
         </button>
         <button className="ghost-btn" onClick={() => onProfile(request.usuario_emisor_id)}>
-          Go to profile
+          Ver perfil
         </button>
       </div>
     </article>

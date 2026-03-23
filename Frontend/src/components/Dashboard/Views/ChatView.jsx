@@ -170,7 +170,7 @@ const ChatView = ({ initialConversationId = null }) => {
 
   const getSenderDisplayName = (fromUserId) => {
     if (String(fromUserId) === String(currentUser)) {
-      return currentUserRecord?.name || 'Tú';
+      return currentUserRecord?.username || currentUserRecord?.name || 'Tú';
     }
     if (selectedConv?.other_user_name) {
       return selectedConv.other_user_name;

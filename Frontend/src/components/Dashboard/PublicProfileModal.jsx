@@ -39,7 +39,7 @@ const PublicProfileModal = ({ userId, onClose }) => {
   }, [userId]);
 
   const fullName = user
-    ? [user.nombre, user.apellido].filter(Boolean).join(' ').trim() || user.username || user.email || `Usuario ${user.id}`
+    ? user.username || [user.nombre, user.apellido].filter(Boolean).join(' ').trim() || user.email || `Usuario ${user.id}`
     : '';
 
   return (

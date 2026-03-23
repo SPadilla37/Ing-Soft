@@ -128,8 +128,10 @@ def get_user_display_name(session, user_id: int) -> str | None:
     if not user_id:
         return None
     user = session.get(Usuario, user_id)
+    if user and user.username and user.username.strip():
+        return user.username.strip()
     if user and user.nombre and user.nombre.strip():
-        return f"{user.nombre.strip()} {user.apellido.strip()}"
+        return f"{user.nombre.strip()} {user.apellido.strip()}".strip()
     return str(user_id)
 
 
@@ -142,6 +144,7 @@ def serialize_intercambio_with_names(session, intercambio: Intercambio) -> dict:
     if emisor:
         serialized["emisor"] = {
             "id": emisor.id,
+            "username": emisor.username,
             "nombre": emisor.nombre,
             "apellido": emisor.apellido,
             "foto_url": emisor.foto_url or "",
@@ -151,6 +154,7 @@ def serialize_intercambio_with_names(session, intercambio: Intercambio) -> dict:
     if receptor:
         serialized["receptor"] = {
             "id": receptor.id,
+            "username": receptor.username,
             "nombre": receptor.nombre,
             "apellido": receptor.apellido,
             "foto_url": receptor.foto_url or "",
