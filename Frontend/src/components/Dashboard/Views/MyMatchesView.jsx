@@ -100,8 +100,8 @@ const MyMatchesView = ({ onOpenChat = () => {} }) => {
     }
   };
 
-  // Filtrar matches que no estén completados
-  const activeMatches = matches.filter(m => m.estado !== 'completado');
+  // Filtrar matches que el usuario NO ha calificado (my_reseña no existe)
+  const activeMatches = matches.filter(m => !m.my_reseña);
 
   return (
     <section id="myMatchesView" className="view active">
