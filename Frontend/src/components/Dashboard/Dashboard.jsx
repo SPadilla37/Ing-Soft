@@ -10,6 +10,7 @@ import ProfileView from './Views/ProfileView';
 
 const Dashboard = () => {
   const [activeView, setActiveView] = useState('matchesView');
+  const [chatConversationId, setChatConversationId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [badges, setBadges] = useState({
     matches: 0,
@@ -25,11 +26,18 @@ const Dashboard = () => {
       case 'incomingMatchesView':
         return <IncomingMatchesView />;
       case 'myMatchesView':
-        return <MyMatchesView />;
+        return (
+          <MyMatchesView
+            onOpenChat={(conversationId) => {
+              setChatConversationId(conversationId);
+              setActiveView('chatView');
+            }}
+          />
+        );
       case 'publishView':
         return <PublishView />;
       case 'chatView':
-        return <ChatView />;
+        return <ChatView initialConversationId={chatConversationId} />;
       case 'profileView':
         return <ProfileView />;
       default:

@@ -8,17 +8,22 @@ import { ensureSkillIds } from '../../services/skills';
 const OnboardingModal = () => {
   const { currentUser, setCurrentUserRecord } = useAuth();
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     bio: '',
     teachSkills: new Set(),
-    learnSkills: new Set(),
-    languages: new Set()
+    learnSkills: new Set()
   });
   const [pickerConfig, setPickerConfig] = useState(null);
 
   const handleComplete = async () => {
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      alert('Completa nombre y apellido para continuar.');
+      return;
+    }
+
     if (!formData.teachSkills.size || !formData.learnSkills.size) {
-      alert('Por favor selecciona al menos una habilidad para ofrecer y una para aprender.');
+      alert('Selecciona al menos una habilidad para ofrecer y una para aprender.');
       return;
     }
 
@@ -31,15 +36,11 @@ const OnboardingModal = () => {
         return;
       }
 
-      const parts = formData.fullName.trim().split(/\s+/).filter(Boolean);
-      const nombre = parts[0] || '';
-      const apellido = parts.slice(1).join(' ');
-
       const result = await apiRequest(API_BASE, `/usuarios/${encodeURIComponent(currentUser)}/profile`, {
         method: 'PUT',
         body: JSON.stringify({
-          nombre,
-          apellido,
+          nombre: formData.firstName.trim(),
+          apellido: formData.lastName.trim(),
           biografia: formData.bio,
           habilidades_ofertadas: teachSkillIds,
           habilidades_buscadas: learnSkillIds,
@@ -67,16 +68,24 @@ const OnboardingModal = () => {
   return (
     <section id="onboardingModal" className="auth-modal">
       <div className="modal-card glass">
-        <h2>Set Up Your Profile</h2>
+        <h2>Completa tu perfil</h2>
         <p>Completa tu perfil inicial para entrar en el marketplace de intercambio.</p>
 
         <div className="field-grid">
           <div>
-            <label>Nombre visible</label>
+            <label>Nombre</label>
             <input 
-              placeholder="Pedro" 
-              value={formData.fullName}
-              onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+              placeholder="Pedro"
+              value={formData.firstName}
+              onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+            />
+          </div>
+          <div>
+            <label>Apellido</label>
+            <input
+              placeholder="González"
+              value={formData.lastName}
+              onChange={(e) => setFormData({...formData, lastName: e.target.value})}
             />
           </div>
           <div>
@@ -91,7 +100,7 @@ const OnboardingModal = () => {
 
         <div className="selector-row">
           <div className="select-card">
-            <h3>Skills you want to teach</h3>
+            <h3>Habilidades que quieres ofrecer</h3>
             <div className="summary-row">
               {Array.from(formData.teachSkills).map(s => <span key={s} className="chip">{s}</span>)}
             </div>
@@ -101,7 +110,7 @@ const OnboardingModal = () => {
           </div>
 
           <div className="select-card">
-            <h3>Skills you want to learn</h3>
+            <h3>Habilidades que quieres aprender</h3>
             <div className="summary-row">
               {Array.from(formData.learnSkills).map(s => <span key={s} className="chip">{s}</span>)}
             </div>
@@ -109,19 +118,9 @@ const OnboardingModal = () => {
               Elegir habilidades para aprender
             </button>
           </div>
-
-          <div className="select-card">
-            <h3>Languages you speak</h3>
-            <div className="summary-row">
-              {Array.from(formData.languages).map(s => <span key={s} className="chip">{s}</span>)}
-            </div>
-            <button className="ghost-btn" onClick={() => setPickerConfig({ mode: 'language', initial: formData.languages })}>
-              Elegir idiomas
-            </button>
-          </div>
         </div>
 
-        <button className="primary-btn" onClick={handleComplete}>Continue</button>
+        <button className="primary-btn" onClick={handleComplete}>Continuar</button>
       </div>
 
       {pickerConfig && (
@@ -129,7 +128,7 @@ const OnboardingModal = () => {
           mode={pickerConfig.mode}
           initialSelection={pickerConfig.initial}
           onSave={(selection) => {
-            const field = pickerConfig.mode === 'teach' ? 'teachSkills' : (pickerConfig.mode === 'learn' ? 'learnSkills' : 'languages');
+            const field = pickerConfig.mode === 'teach' ? 'teachSkills' : 'learnSkills';
             setFormData({ ...formData, [field]: selection });
             setPickerConfig(null);
           }}
