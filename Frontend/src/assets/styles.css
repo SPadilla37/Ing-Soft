@@ -374,6 +374,11 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
 
+    .rating-star {
+      color: #FFD700;
+      font-weight: 600;
+    }
+
     .stars-row {
       display: flex;
       gap: 0.4rem;

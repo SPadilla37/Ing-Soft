@@ -36,7 +36,7 @@ const Sidebar = ({ activeView, setActiveView, badges }) => {
       </div>
 
       <div className="sidebar-note">
-        Solo despues de que otro usuario acepte tu solicitud, ambos podran hablar por el chat WebSocket.
+        Solo despues de que otro usuario acepte tu solicitud, ambos podran hablar por el chat.
       </div>
     </aside>
   );
