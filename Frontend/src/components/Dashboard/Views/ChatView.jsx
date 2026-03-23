@@ -4,8 +4,8 @@ import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 import { wsUrl } from '../../../services/websocket';
 
-const ChatView = () => {
-  const { currentUser } = useAuth();
+const ChatView = ({ initialConversationId = null }) => {
+  const { currentUser, currentUserRecord } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -40,11 +40,18 @@ const ChatView = () => {
       const list = result.conversations || [];
       setConversations(list);
 
-      if (!selectedConv && list.length > 0) {
-        const first = list[0];
-        setSelectedConv(first);
-        await loadMessages(first.id);
-        connectWs(first.id);
+      let target = null;
+      if (initialConversationId) {
+        target = list.find((conv) => String(conv.id) === String(initialConversationId)) || null;
+      }
+      if (!target && !selectedConv && list.length > 0) {
+        target = list[0];
+      }
+
+      if (target) {
+        setSelectedConv(target);
+        await loadMessages(target.id);
+        connectWs(target.id);
       }
     } catch (error) {
       console.error('Error loading conversations:', error);
@@ -63,7 +70,7 @@ const ChatView = () => {
         socketRef.current.close();
       }
     };
-  }, [currentUser]);
+  }, [currentUser, initialConversationId]);
 
   useEffect(() => {
     if (chatBoxRef.current) {
@@ -161,6 +168,16 @@ const ChatView = () => {
     setInput('');
   };
 
+  const getSenderDisplayName = (fromUserId) => {
+    if (String(fromUserId) === String(currentUser)) {
+      return currentUserRecord?.name || 'Tú';
+    }
+    if (selectedConv?.other_user_name) {
+      return selectedConv.other_user_name;
+    }
+    return `Usuario ${fromUserId}`;
+  };
+
   return (
     <section id="chatView" className="view active">
       <div className="chat-layout">
@@ -174,7 +191,7 @@ const ChatView = () => {
                 onClick={() => handleSelectConv(conv)}
               >
                 <strong>{conv.other_user_name || `Usuario ${conv.other_user_id}`}</strong>
-                <div className="muted">Conversacion #{conv.id}</div>
+                <div className="muted">Conversación #{conv.id}</div>
               </div>
             ))}
           </div>
@@ -186,7 +203,7 @@ const ChatView = () => {
           <div className="chat-box" ref={chatBoxRef}>
             {messages.map((msg, i) => (
               <div key={i} className={`chat-msg ${String(msg.from_user_id) === String(currentUser) ? 'mine' : ''}`}>
-                <span className="chat-meta">{msg.from_user_id}</span>
+                <span className="chat-meta">{getSenderDisplayName(msg.from_user_id)}</span>
                 <div>{msg.content}</div>
               </div>
             ))}

@@ -6,8 +6,6 @@ import { API_BASE } from '../../config/constants';
 const SignupForm = ({ onLoginTab }) => {
   const { setSession, setCurrentUserRecord } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
-    apellido: '',
     username: '',
     email: '',
     password: ''
@@ -20,9 +18,9 @@ const SignupForm = ({ onLoginTab }) => {
   };
 
   const handleSignup = async () => {
-    const { name, email, password, username, apellido } = formData;
-    if (!name || !username || !email || !password || password.length < 4) {
-      alert('Completa nombre, usuario, correo y una contraseña de al menos 4 caracteres.');
+    const { email, password, username } = formData;
+    if (!username || !email || !password || password.length < 4) {
+      alert('Completa usuario, correo y una contraseña de al menos 4 caracteres.');
       return;
     }
     setLoading(true);
@@ -42,12 +40,8 @@ const SignupForm = ({ onLoginTab }) => {
 
   return (
     <div id="signupPane" className="form-shell">
-      <h2>Create your account</h2>
-      <p>Crea tu cuenta con nombre, correo y contraseña. Luego completas el perfil con tus habilidades.</p>
-      <label>Nombre</label>
-      <input id="name" placeholder="Pedro" value={formData.name} onChange={handleChange} />
-      <label>Apellido</label>
-      <input id="apellido" placeholder="González" value={formData.apellido} onChange={handleChange} />
+      <h2>Crea tu cuenta</h2>
+      <p>Ingresa usuario, correo y contraseña. En el siguiente paso completas tu perfil.</p>
       <label>Nombre de usuario</label>
       <input id="username" placeholder="pedro_g" value={formData.username} onChange={handleChange} />
       <label>Correo</label>

@@ -11,8 +11,7 @@ const ProfileView = () => {
     fullName: '',
     bio: '',
     teachSkills: new Set(),
-    learnSkills: new Set(),
-    languages: new Set()
+    learnSkills: new Set()
   });
   const [pickerConfig, setPickerConfig] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -24,8 +23,7 @@ const ProfileView = () => {
         fullName: p.fullName || '',
         bio: p.bio || '',
         teachSkills: new Set(p.teachSkills || []),
-        learnSkills: new Set(p.learnSkills || []),
-        languages: new Set(p.languages || [])
+        learnSkills: new Set(p.learnSkills || [])
       });
     }
   }, [currentUserRecord]);
@@ -70,18 +68,18 @@ const ProfileView = () => {
         <div className="profile-layout">
           <div className="profile-avatar-panel">
             <div className="profile-avatar-large">{getInitials(formData.fullName)}</div>
-            <button className="primary-btn" type="button">Change Avatar</button>
+            <button className="primary-btn" type="button">Cambiar avatar</button>
             <div className="profile-avatar-note">Tu avatar se genera con tu inicial.</div>
           </div>
 
           <div className="profile-form-shell">
-            <label>Your name</label>
+            <label>Nombre</label>
             <input 
               placeholder="Tu nombre" 
               value={formData.fullName}
               onChange={(e) => setFormData({...formData, fullName: e.target.value})}
             />
-            <label>Profile description</label>
+            <label>Descripción del perfil</label>
             <textarea 
               className="profile-textarea" 
               placeholder="Habla de tus intereses..." 
@@ -91,7 +89,7 @@ const ProfileView = () => {
 
             <div className="profile-meta-row">
               <div className="profile-summary-block">
-                <label>Skills you want to teach</label>
+                <label>Habilidades que quieres ofrecer</label>
                 <button className="picker-trigger" onClick={() => setPickerConfig({ mode: 'teach', initial: formData.teachSkills })}>
                   Seleccionar habilidades
                 </button>
@@ -100,7 +98,7 @@ const ProfileView = () => {
                 </div>
               </div>
               <div className="profile-summary-block">
-                <label>Skills you want to learn</label>
+                <label>Habilidades que quieres aprender</label>
                 <button className="picker-trigger" onClick={() => setPickerConfig({ mode: 'learn', initial: formData.learnSkills })}>
                   Seleccionar habilidades
                 </button>
@@ -108,20 +106,11 @@ const ProfileView = () => {
                   {Array.from(formData.learnSkills).map(s => <span key={s} className="chip">{s}</span>)}
                 </div>
               </div>
-              <div className="profile-summary-block">
-                <label>Languages you speak</label>
-                <button className="picker-trigger" onClick={() => setPickerConfig({ mode: 'language', initial: formData.languages })}>
-                  Seleccionar idiomas
-                </button>
-                <div className="summary-row">
-                  {Array.from(formData.languages).map(s => <span key={s} className="chip">{s}</span>)}
-                </div>
-              </div>
             </div>
 
             <div className="profile-actions">
               <button className="primary-btn" onClick={handleSave} disabled={saving}>
-                {saving ? 'Guardando...' : 'Save Profile'}
+                {saving ? 'Guardando...' : 'Guardar perfil'}
               </button>
             </div>
           </div>
@@ -133,7 +122,7 @@ const ProfileView = () => {
           mode={pickerConfig.mode}
           initialSelection={pickerConfig.initial}
           onSave={(selection) => {
-            const field = pickerConfig.mode === 'teach' ? 'teachSkills' : (pickerConfig.mode === 'learn' ? 'learnSkills' : 'languages');
+            const field = pickerConfig.mode === 'teach' ? 'teachSkills' : 'learnSkills';
             setFormData({ ...formData, [field]: selection });
             setPickerConfig(null);
           }}

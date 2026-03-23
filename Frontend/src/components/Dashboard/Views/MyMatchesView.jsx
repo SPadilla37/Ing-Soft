@@ -3,7 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 
-const MyMatchesView = () => {
+const MyMatchesView = ({ onOpenChat = () => {} }) => {
   const { currentUser } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +92,7 @@ const MyMatchesView = () => {
              </div>
              <div className="card-actions">
                {match.conversation_id && (
-                 <button className="secondary-btn">Abrir chat</button>
+                 <button className="secondary-btn" onClick={() => onOpenChat(match.conversation_id)}>Abrir chat</button>
                )}
                {(match.estado === 'aceptado' || match.can_finalize) && (
                  <button 

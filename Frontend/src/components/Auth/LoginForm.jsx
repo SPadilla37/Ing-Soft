@@ -31,7 +31,7 @@ const LoginForm = ({ onSignupTab }) => {
 
   return (
     <div id="loginPane" className="form-shell">
-      <h2>Welcome back</h2>
+      <h2>Bienvenido de nuevo</h2>
       <p>Ingresa con tu correo para continuar en tu dashboard de intercambios.</p>
       <label>Correo</label>
       <input 
