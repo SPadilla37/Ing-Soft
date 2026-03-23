@@ -91,7 +91,7 @@ const MyMatchesView = ({ onOpenChat = () => {} }) => {
                </div>
              </div>
              <div className="card-actions">
-               {match.conversation_id && (
+               {match.conversation_id && match.can_chat && (
                  <button className="secondary-btn" onClick={() => onOpenChat(match.conversation_id)}>Abrir chat</button>
                )}
                {(match.estado === 'aceptado' || match.can_finalize) && (

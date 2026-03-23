@@ -4,7 +4,7 @@ from sqlalchemy import or_, select
 from app.db.database import SessionLocal
 from app.db.models.entities import Conversacion, Mensaje
 from app.schemas import ChatMessageCreate, ConversationCreatePayload, MessageCreatePayload
-from app.services.core import get_user_display_name, serialize_message
+from app.services.core import can_users_chat, get_user_display_name, serialize_message
 
 
 router = APIRouter()
@@ -26,10 +26,12 @@ def get_user_conversations(user_id: int) -> dict:
         for conv in conversaciones:
             other_id = conv.usuario_2_id if conv.usuario_1_id == user_id else conv.usuario_1_id
             other_name = get_user_display_name(session, other_id)
+            can_chat = can_users_chat(session, conv.usuario_1_id, conv.usuario_2_id)
             result.append({
                 "id": conv.id,
                 "other_user_id": other_id,
                 "other_user_name": other_name,
+                "can_chat": can_chat,
             })
         return {"conversations": result}
 
@@ -104,6 +106,9 @@ def send_message(conversation_id: int, payload: ChatMessageCreate) -> dict:
 
         if payload.from_user_id not in {conv.usuario_1_id, conv.usuario_2_id}:
             raise HTTPException(status_code=403, detail="No perteneces a esta conversacion")
+
+        if not can_users_chat(session, conv.usuario_1_id, conv.usuario_2_id):
+            raise HTTPException(status_code=403, detail="No puedes enviar mensajes: el match ya fue finalizado")
 
         mensaje = Mensaje(
             conversacion_id=conversation_id,
