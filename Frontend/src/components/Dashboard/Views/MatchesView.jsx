@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
-import SDK from '../../../services/sdk';
 import MarketplaceCard from '../MarketplaceCard';
 import PublicProfileModal from '../PublicProfileModal';
 
@@ -23,11 +22,12 @@ const MatchesView = ({ searchQuery }) => {
       // Fetch both the marketplace requests and the current user's profile in parallel
       const [marketResult, profileResult] = await Promise.all([
         apiRequest(API_BASE, `/marketplace/habilidades?viewer_user_id=${currentUser}${searchQuery ? `&q=${searchQuery}` : ''}`),
-        SDK.getUserProfile(currentUser)
+        apiRequest(API_BASE, `/usuarios/${currentUser}`)
       ]);
       
-      setCurrentUserProfile(profileResult);
+      setCurrentUserProfile(profileResult.user || profileResult);
       setRequests(marketResult.users || []);
+
     } catch (error) {
       console.error('Error loading marketplace data:', error);
     } finally {
