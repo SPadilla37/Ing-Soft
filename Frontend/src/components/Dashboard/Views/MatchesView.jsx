@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
-import { API_BASE, skillsCatalog } from '../../../config/constants';
+import { API_BASE } from '../../../config/constants';
 import MarketplaceCard from '../MarketplaceCard';
 import PublicProfileModal from '../PublicProfileModal';
 
@@ -9,6 +9,7 @@ const MatchesView = ({ searchQuery }) => {
   const { currentUser } = useAuth();
   const [requests, setRequests] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [categories, setCategories] = useState(['All']);
   const [loading, setLoading] = useState(true);
   const [profileUserId, setProfileUserId] = useState(null);
   const [popup, setPopup] = useState('');
@@ -32,6 +33,34 @@ const MatchesView = ({ searchQuery }) => {
     loadMarketplace();
   }, [currentUser, searchQuery]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadCategories = async () => {
+      try {
+        const result = await apiRequest(API_BASE, '/habilidades');
+        const habilidades = Array.isArray(result?.habilidades) ? result.habilidades : [];
+        const uniqueCategories = new Set();
+
+        habilidades.forEach((hab) => {
+          const categoria = typeof hab?.categoria === 'string' ? hab.categoria.trim() : '';
+          if (categoria) uniqueCategories.add(categoria);
+        });
+
+        const ordered = ['All', ...Array.from(uniqueCategories).sort((a, b) => a.localeCompare(b))];
+        if (active) setCategories(ordered);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+        if (active) setCategories(['All']);
+      }
+    };
+
+    loadCategories();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleAccept = async (request) => {
     try {
       const result = await apiRequest(API_BASE, `/marketplace/requests/${request.id}/accept`, {
@@ -53,10 +82,10 @@ const MatchesView = ({ searchQuery }) => {
     const matchState = req.viewer_match_state || 'none';
     if (matchState === 'matched' && req.viewer_conversation_id) return false;
     if (selectedCategory === 'All') return true;
-      const offered = req.habilidad?.nombre || '';
-      const requested = req.habilidad_solicitada?.nombre || '';
-      return offered.toLowerCase().includes(selectedCategory.toLowerCase()) ||
-        requested.toLowerCase().includes(selectedCategory.toLowerCase());
+
+    const offeredCategory = req.habilidad?.categoria || '';
+    const requestedCategory = req.habilidad_solicitada?.categoria || '';
+    return offeredCategory === selectedCategory || requestedCategory === selectedCategory;
   });
 
   return (
@@ -65,7 +94,7 @@ const MatchesView = ({ searchQuery }) => {
         <h2>People matching your skill exchange</h2>
         <p>Estas son las solicitudes activas del marketplace. Usa el buscador y los filtros para encontrar un intercambio y aceptar si te interesa.</p>
         <div className="chip-row" style={{ marginTop: '0.9rem' }}>
-          {Object.keys(skillsCatalog).map(cat => (
+          {categories.map(cat => (
             <button 
               key={cat} 
               className={`chip ${selectedCategory === cat ? 'active' : ''}`}
