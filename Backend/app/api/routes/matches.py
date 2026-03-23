@@ -2,13 +2,14 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import or_, select
 from app.db.database import SessionLocal
-from app.db.models.entities import Intercambio, IntercambioFinalizacion, Reseña
+from app.db.models.entities import Intercambio, IntercambioFinalizacion, Reseña, Usuario
 from app.schemas import MatchFinalizePayload, MatchRatePayload
 from app.services.core import (
     ensure_user,
     get_match_for_users,
     serialize_intercambio_for_user,
     serialize_intercambio_for_viewer,
+    serialize_user,
 )
 
 
@@ -38,9 +39,20 @@ def get_incoming_match_intents(user_id: int) -> dict:
             if existing_match:
                 continue
 
-            items.append(
-                serialize_intercambio_for_viewer(session, intercambio, user_id)
-            )
+            serialized = serialize_intercambio_for_viewer(session, intercambio, user_id)
+
+            emisor = session.get(Usuario, intercambio.usuario_emisor_id)
+            if emisor:
+                user_data = serialize_user(emisor, session)
+                serialized["nombre"] = user_data["nombre"]
+                serialized["apellido"] = user_data["apellido"]
+                serialized["biografia"] = user_data["biografia"]
+                serialized["foto_url"] = user_data["foto_url"]
+                serialized["rating"] = user_data["rating"]
+                serialized["habilidades_ofertadas"] = user_data["habilidades_ofertadas"]
+                serialized["habilidades_buscadas"] = user_data["habilidades_buscadas"]
+
+            items.append(serialized)
 
         return {"incoming": items}
 
