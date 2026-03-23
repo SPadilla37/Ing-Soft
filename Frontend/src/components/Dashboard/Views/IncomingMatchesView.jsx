@@ -11,12 +11,17 @@ const IncomingMatchesView = () => {
   const [loading, setLoading] = useState(true);
   const [profileUserId, setProfileUserId] = useState(null);
   const [popup, setPopup] = useState('');
+  const [currentUserProfile, setCurrentUserProfile] = useState(null);
 
   const loadIncoming = async () => {
     if (!currentUser) return;
     setLoading(true);
     try {
-      const result = await apiRequest(API_BASE, `/matches/${encodeURIComponent(currentUser)}/incoming`);
+      const [result, profileResult] = await Promise.all([
+        apiRequest(API_BASE, `/matches/${encodeURIComponent(currentUser)}/incoming`),
+        apiRequest(API_BASE, `/usuarios/${currentUser}`)
+      ]);
+      setCurrentUserProfile(profileResult.user || profileResult);
       setItems(result.incoming || []);
     } catch (error) {
       console.error('Error loading incoming matches:', error);
@@ -55,6 +60,18 @@ const IncomingMatchesView = () => {
     }
   };
 
+  const getMatchDetails = (req) => {
+    if (!currentUserProfile) return { iOfferTheyWant: [], theyOfferIWant: [] };
+    
+    const myOfferedIds = new Set(currentUserProfile.habilidades_ofertadas?.map(h => h.id) || []);
+    const mySoughtIds = new Set(currentUserProfile.habilidades_buscadas?.map(h => h.id) || []);
+    
+    return {
+      iOfferTheyWant: (req.habilidades_buscadas || []).filter(h => myOfferedIds.has(h.id)),
+      theyOfferIWant: (req.habilidades_ofertadas || []).filter(h => mySoughtIds.has(h.id))
+    };
+  };
+
   return (
     <section id="incomingMatchesView" className="view active">
       <div className="incoming-shell">
@@ -65,15 +82,19 @@ const IncomingMatchesView = () => {
       <div className="cards-grid">
         {loading ? <p>Cargando...</p> : 
          items.length === 0 ? <p>Aún no recibes matches.</p> :
-         items.map(item => (
-            <MarketplaceCard 
-              key={item.id}
-              request={{ ...item, viewer_match_state: item.viewer_match_state || 'received' }}
-              onAccept={() => handleAccept(item.id)}
-              onReject={() => handleReject(item.id)}
-              onProfile={(userId) => setProfileUserId(userId)}
-            />
-          ))
+         items.map(item => {
+            const matchDetails = getMatchDetails(item);
+            return (
+              <MarketplaceCard 
+                key={item.id}
+                request={{ ...item, viewer_match_state: item.viewer_match_state || 'received' }}
+                matchDetails={matchDetails}
+                onAccept={() => handleAccept(item.id)}
+                onReject={() => handleReject(item.id)}
+                onProfile={(userId) => setProfileUserId(userId)}
+              />
+            );
+          })
         }
       </div>
 
