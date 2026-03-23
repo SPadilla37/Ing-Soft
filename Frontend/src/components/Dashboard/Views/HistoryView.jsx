@@ -18,8 +18,8 @@ const HistoryView = () => {
       ]);
       const myProfile = profileResult.user || profileResult;
       
-      // Filtrar solo los matches completados
-      const completedMatches = (result.matches || []).filter(m => m.estado === 'completado');
+      // Filtrar solo los matches completados Y calificados por el usuario
+      const completedMatches = (result.matches || []).filter(m => m.estado === 'completado' && m.my_reseña);
 
       // Fetch the profiles for all matched users to calculate skill overlap in the frontend
       const matchesWithDetails = await Promise.all(
@@ -86,6 +86,14 @@ const HistoryView = () => {
                  {match.intersectTheyOfferIWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'} ↔ {match.intersectIOfferTheyWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'}
                </div>
              </div>
+             {match.my_reseña && (
+               <div className="muted" style={{ marginTop: '0.5rem' }}>
+                 <strong>Tu calificación:</strong> {match.my_reseña.calificacion} estrella(s)
+                 {match.my_reseña.comentario && (
+                   <><br/><strong>Comentario:</strong> {match.my_reseña.comentario}</>
+                 )}
+               </div>
+             )}
            </article>
          ))
         }
