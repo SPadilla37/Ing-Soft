@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class RequestStatus(str, Enum):
@@ -55,7 +55,7 @@ class MatchRatePayload(BaseModel):
 
 
 class UserRegisterPayload(BaseModel):
-    email: str = Field(min_length=3, max_length=120)
+    email: EmailStr
     username: str = Field(min_length=3, max_length=25)
     password: str = Field(min_length=4, max_length=200)
     clerk_id: str = Field(default="")
