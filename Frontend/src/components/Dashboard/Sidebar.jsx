@@ -16,8 +16,8 @@ const Sidebar = ({ activeView, setActiveView, badges }) => {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <span className="brand-mark">S</span>
-        <span>SkillSwap</span>
+        <span className="brand-mark">H</span>
+        <span>Habilio</span>
       </div>
 
       <div className="nav-list">
