@@ -118,7 +118,10 @@ const MyMatchesView = ({ onOpenChat = () => {} }) => {
              <div className="match-head">
                <div className="match-avatar">M</div>
                <div>
-                 <h3>{match.other_user_name || match.other_user_id} {match.other_user_username && <span className="username">@{match.other_user_username}</span>}</h3>
+                <h3 style={{marginBottom: 0}}>{match.other_user_username ? `@${match.other_user_username}` : match.other_user_name || match.other_user_id}</h3>
+                {match.other_user_name && match.other_user_username && (
+                  <div style={{fontSize: '0.95em', color: '#888', marginBottom: 2}}>{match.other_user_name}</div>
+                )}
                  <div className="muted">Estado: {match.estado || 'pendiente'}</div>
                </div>
              </div>

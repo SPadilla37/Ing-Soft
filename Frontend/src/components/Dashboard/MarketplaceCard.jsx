@@ -27,7 +27,10 @@ const MarketplaceCard = ({ request, onAccept, onProfile, onReject }) => {
       <div className="match-head">
         <div className="match-avatar">{getInitials(author)}</div>
         <div>
-          <h3>{author} {username && <span className="username">{username}</span>} {rating != null && <span className="rating-star">★ {Number(rating).toFixed(1)}</span>}</h3>
+          <h3 style={{marginBottom: 0}}>{username || author} {rating != null && <span className="rating-star">★ {Number(rating).toFixed(1)}</span>}</h3>
+          {author && username && (
+            <div style={{fontSize: '0.95em', color: '#888', marginBottom: 2}}>{author}</div>
+          )}
           <div className="muted">Usuario compatible</div>
         </div>
       </div>
