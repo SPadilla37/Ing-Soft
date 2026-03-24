@@ -106,7 +106,7 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
                 matchDetails={matchDetails}
                 onAccept={() => handleAccept(item.id)}
                 onReject={() => handleReject(item.id)}
-                onProfile={(userId) => setProfileUserId(userId)}
+                onProfile={() => setProfileUserId(item.usuario_emisor_id)}
               />
             );
           })

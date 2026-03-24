@@ -13,7 +13,7 @@ const TopBar = ({ onSearch, showSearch }) => {
   };
 
   return (
-    <div className="top-shell">
+    <div className={`top-shell ${!showSearch ? 'user-only' : ''}`}>
       {showSearch && (
         <div className="search-shell">
           <input 

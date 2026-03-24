@@ -1,4 +1,4 @@
-﻿:root {
+:root {
       --bg-a: #09101d;
       --bg-b: #12243d;
       --panel: rgba(255, 255, 255, 0.08);
@@ -563,15 +563,17 @@
 
     .top-shell {
       border-radius: 24px;
-      padding: 0.85rem 1rem;
+      padding: 0.65rem 0.9rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
       background: linear-gradient(135deg, rgba(32, 54, 89, 0.78) 0%, rgba(21, 25, 35, 0.82) 100%);
+      transition: padding 0.2s ease;
     }
 
     .top-shell.user-only {
+      padding: 0.5rem 0.9rem;
       justify-content: flex-end;
     }
 
@@ -604,13 +606,13 @@
 
     .hero-strip {
       border-radius: 24px;
-      padding: 1rem 1.2rem;
+      padding: 0.75rem 1rem;
       background: linear-gradient(135deg, rgba(60, 125, 214, 0.35) 0%, rgba(22, 28, 39, 0.82) 100%);
       border: 1px solid rgba(92, 145, 230, 0.2);
     }
 
-    .hero-strip h2 { margin: 0; font-size: clamp(1.35rem, 3vw, 2.2rem); }
-    .hero-strip p { margin: 0.45rem 0 0; }
+    .hero-strip h2 { margin: 0; font-size: clamp(1.2rem, 2.5vw, 1.8rem); }
+    .hero-strip p { margin: 0.25rem 0 0; font-size: 0.92rem; }
 
     .stats-row {
       display: grid;
@@ -644,7 +646,7 @@
 
     .incoming-shell {
       border-radius: 24px;
-      padding: 1rem 1.1rem;
+      padding: 0.75rem 1rem;
       background: linear-gradient(135deg, rgba(23, 95, 163, 0.22) 0%, rgba(15, 22, 35, 0.92) 100%);
       border: 1px solid rgba(93, 147, 230, 0.18);
     }
@@ -652,12 +654,13 @@
       .incoming-shell h2,
     .incoming-shell h3 {
       margin: 0;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
     }
 
     .incoming-shell p {
-      margin: 0.35rem 0 0.9rem;
+      margin: 0.2rem 0 0;
       color: var(--muted);
+      font-size: 0.92rem;
     }
 
     .match-head { display: flex; align-items: center; gap: 0.8rem; }
@@ -863,6 +866,22 @@
       text-align: center;
       max-width: 18ch;
       font-size: 0.9rem;
+    }
+
+    .profile-username {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .profile-rating {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: #ffd700;
+      font-weight: 800;
+      font-size: 1.2rem;
+      margin-top: 0.2rem;
     }
 
     .profile-form-shell {
