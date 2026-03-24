@@ -118,7 +118,7 @@ const Dashboard = () => {
         badges={badges}
       />
       <main className="main-shell">
-        <TopBar onSearch={setSearchQuery} />
+        <TopBar onSearch={setSearchQuery} showSearch={activeView === 'matchesView'} />
         {renderView()}
       </main>
     </div>

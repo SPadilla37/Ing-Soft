@@ -8,8 +8,8 @@ import PublicProfileModal from '../PublicProfileModal';
 const MatchesView = ({ searchQuery }) => {
   const { currentUser } = useAuth();
   const [requests, setRequests] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [categories, setCategories] = useState(['All']);
+  const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [categories, setCategories] = useState(['Todas']);
   const [loading, setLoading] = useState(true);
   const [profileUserId, setProfileUserId] = useState(null);
   const [popup, setPopup] = useState('');
@@ -66,7 +66,7 @@ const MatchesView = ({ searchQuery }) => {
           if (categoria) uniqueCategories.add(categoria);
         });
 
-        const ordered = ['All', ...Array.from(uniqueCategories).sort((a, b) => a.localeCompare(b))];
+        const ordered = ['Todas', ...Array.from(uniqueCategories).sort((a, b) => a.localeCompare(b))];
         if (active) setCategories(ordered);
       } catch (error) {
         console.error('Error loading categories:', error);
@@ -143,7 +143,7 @@ const MatchesView = ({ searchQuery }) => {
   const filteredRequests = requests.filter(req => {
     const matchState = req.viewer_match_state || 'none';
     if (matchState === 'matched' && req.viewer_conversation_id) return false;
-    if (selectedCategory === 'All') return true;
+    if (selectedCategory === 'Todas') return true;
 
     const matchDetails = getMatchDetails(req);
     // Check if any of the matched skills belong to the selected category
@@ -163,7 +163,7 @@ const MatchesView = ({ searchQuery }) => {
   return (
     <section id="matchesView" className="view active">
       <div className="hero-strip">
-        <h2>People matching your skill exchange</h2>
+        <h2>Personas que coinciden con tu intercambio de habilidades</h2>
         <p>Estas son las solicitudes activas del marketplace. Usa el buscador y los filtros para encontrar un intercambio y aceptar si te interesa.</p>
         <div className="chip-row" style={{ marginTop: '0.9rem' }}>
           {categories.map(cat => (
@@ -172,7 +172,7 @@ const MatchesView = ({ searchQuery }) => {
               className={`chip ${selectedCategory === cat ? 'active' : ''}`}
               onClick={() => setSelectedCategory(cat)}
             >
-              {cat}
+              {cat === 'Todas' ? 'Todas' : cat}
             </button>
           ))}
         </div>

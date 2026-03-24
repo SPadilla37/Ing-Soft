@@ -4,9 +4,9 @@ import { api as apiRequest } from '../../services/api';
 
 const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Set() }) => {
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [selection, setSelection] = useState(new Set(initialSelection));
-  const [skillsCatalog, setSkillsCatalog] = useState({ All: [] });
+  const [skillsCatalog, setSkillsCatalog] = useState({ Todas: [] });
   const [catalogLoading, setCatalogLoading] = useState(mode !== 'language');
 
   useEffect(() => {
@@ -21,7 +21,7 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
       try {
         const result = await apiRequest(API_BASE, '/habilidades');
         const habilidades = Array.isArray(result?.habilidades) ? result.habilidades : [];
-        const grouped = { All: [] };
+        const grouped = { Todas: [] };
 
         habilidades.forEach((hab) => {
           const nombre = typeof hab?.nombre === 'string' ? hab.nombre.trim() : '';
@@ -30,7 +30,7 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
 
           if (!grouped[categoria]) grouped[categoria] = [];
           grouped[categoria].push(nombre);
-          grouped.All.push(nombre);
+          grouped.Todas.push(nombre);
         });
 
         Object.keys(grouped).forEach((categoria) => {
@@ -42,7 +42,7 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
         }
       } catch (error) {
         console.error('Error loading skills catalog:', error);
-        if (active) setSkillsCatalog({ All: [] });
+        if (active) setSkillsCatalog({ Todas: [] });
       } finally {
         if (active) setCatalogLoading(false);
       }
@@ -57,7 +57,7 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
   useEffect(() => {
     if (mode === 'language') return;
     if (!skillsCatalog[selectedCategory]) {
-      setSelectedCategory('All');
+      setSelectedCategory('Todas');
     }
   }, [mode, selectedCategory, skillsCatalog]);
 
@@ -83,7 +83,7 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
       <div className="picker-card">
         <h2>{mode === 'language' ? 'Seleccionar idiomas' : `Seleccionar habilidades para ${mode === 'teach' ? 'ofrecer' : 'aprender'}`}</h2>
         <input 
-          placeholder="Buscar..." 
+          placeholder="Buscar habilidades..." 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -95,7 +95,7 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
                 className={`chip ${selectedCategory === cat ? 'active' : ''}`}
                 onClick={() => setSelectedCategory(cat)}
               >
-                {cat}
+                {cat === 'Todas' ? 'Todas' : cat}
               </button>
             ))}
           </div>
@@ -113,8 +113,8 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
           ))}
         </div>
         <div className="picker-actions">
-          <button className="primary-btn" onClick={() => onSave(selection)}>Save</button>
-          <button className="picker-clear" onClick={() => setSelection(new Set())}>Clear all</button>
+          <button className="primary-btn" onClick={() => onSave(selection)}>Guardar</button>
+          <button className="picker-clear" onClick={() => setSelection(new Set())}>Limpiar todo</button>
           <button className="ghost-btn" onClick={onCancel}>Cancelar</button>
         </div>
       </div>
