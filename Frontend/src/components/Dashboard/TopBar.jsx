@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 
-const TopBar = ({ onSearch, showSearch }) => {
+const TopBar = ({ onSearch, showSearch, titleView }) => {
   const { currentUser, currentUserRecord, clearSession } = useAuth();
   
   const profile = currentUserRecord?.profile || {};
@@ -14,7 +14,7 @@ const TopBar = ({ onSearch, showSearch }) => {
 
   return (
     <div className="top-shell">
-      {showSearch && (
+      {showSearch ? (
         <div className="search-shell">
           <input 
             id="searchInput" 
@@ -22,6 +22,14 @@ const TopBar = ({ onSearch, showSearch }) => {
             onChange={(e) => onSearch(e.target.value)}
           />
           <button className="secondary-btn">Buscar</button>
+        </div>
+      ) : (
+        <div className="top-title">
+          {titleView === 'incomingMatchesView' ? 'Intereses recibidos' :
+           titleView === 'historyView' ? 'Historial' :
+           titleView === 'chatView' ? 'Mensajes' :
+           titleView === 'profileView' ? 'Mi Perfil' :
+           titleView === 'myMatchesView' ? 'Mis Matches' : 'Dashboard'}
         </div>
       )}
       <div className="top-user">

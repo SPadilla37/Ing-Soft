@@ -563,13 +563,25 @@
       line-height: 1.5;
     }
 
-    .main-shell { display: grid; gap: 1rem; min-width: 0; }
+    .main-shell { 
+      display: grid; 
+      gap: 0; 
+      min-width: 0; 
+      align-content: start;
+      
+    }
+
+    
+
+/* Asegura que el top-shell mantenga su espaciado */
+    
 
     .top-shell,
     .surface-card,
     .chat-shell,
     .conversation-list,
     .debug-shell {
+      margin-bottom: 0;
       border: 1px solid var(--panel-line);
       background: rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(10px);
@@ -578,12 +590,40 @@
 
     .top-shell {
       border-radius: 24px;
-      padding: 0.85rem 1rem;
+      padding: 0.6rem 1rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
       background: linear-gradient(135deg, rgba(32, 54, 89, 0.78) 0%, rgba(21, 25, 35, 0.82) 100%);
+      max-width: 1200px;
+      margin: 0 auto;
+      height: fit-content;
+    }
+
+    .top-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .top-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .top-shell.user-only {
+      justify-content: flex-end;
+    }
+
+    .top-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text);
+      flex: 1;
     }
 
     .top-shell.user-only {
@@ -606,14 +646,18 @@
     }
 
     .view { display: none; gap: 1rem; }
-    .view.active { display: grid; }
+    .view.active { 
+      display: grid;
+      gap: 1rem; 
+      margin-top: 1rem;
+    }
 
     .surface-card,
     .conversation-list,
     .chat-shell,
     .debug-shell {
       border-radius: 24px;
-      padding: 1rem;
+      padding: 0.75rem;
       background: linear-gradient(180deg, rgba(26, 38, 60, 0.92) 0%, rgba(20, 28, 44, 0.92) 100%);
     }
 
@@ -644,7 +688,7 @@
     .cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 1rem;
+      gap: 1rem;     
     }
 
     .match-card {
@@ -659,10 +703,10 @@
 
     .incoming-shell {
       border-radius: 24px;
-      padding: 1rem 1.1rem;
+      padding: 1rem 1.1rem 0.5rem 1.1rem; 
       background: linear-gradient(135deg, rgba(23, 95, 163, 0.22) 0%, rgba(15, 22, 35, 0.92) 100%);
       border: 1px solid rgba(93, 147, 230, 0.18);
-    }
+  }
 
       .incoming-shell h2,
     .incoming-shell h3 {
@@ -758,7 +802,7 @@
 
     .panel-grid,
     .profile-grid { grid-template-columns: 1.1fr 0.9fr; }
-    .chat-layout { grid-template-columns: 320px minmax(0, 1fr); }
+    .chat-layout { grid-template-columns: 320px minmax(0, 1fr); gap: 0.5rem; }
     .stack { display: grid; gap: 1rem; }
 
     .list { display: grid; gap: 0.65rem; margin-top: 0.8rem; max-height: 520px; overflow: auto; }

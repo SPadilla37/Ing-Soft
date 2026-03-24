@@ -62,42 +62,40 @@ const HistoryView = () => {
 
   return (
     <section id="historyView" className="view active">
-      <div className="incoming-shell">
-        <h2>Historial de matches</h2>
-        <p>Aquí aparecen los matches que ya han sido completados.</p>
-      </div>
-      <div className="cards-grid">
-        {loading ? <p>Cargando...</p> :
-         matches.length === 0 ? <p>No tienes matches completados aún.</p> :
-         matches.map(match => (
-           <article key={match.id} className="match-card">
-             <div className="match-head">
-               <div className="match-avatar">M</div>
+      <div style={{paddingTop: '1rem'}}>
+        <div className="cards-grid">
+          {loading ? <p>Cargando...</p> :
+           matches.length === 0 ? <p>No tienes matches completados aún.</p> :
+           matches.map(match => (
+             <article key={match.id} className="match-card">
+               <div className="match-head">
+                 <div className="match-avatar">M</div>
+                 <div>
+                  <h3 style={{marginBottom: 0}}>{match.other_user_username ? `@${match.other_user_username}` : match.other_user_name || match.other_user_id}</h3>
+                  {match.other_user_name && match.other_user_username && (
+                    <div style={{fontSize: '0.95em', color: '#888', marginBottom: 2}}>{match.other_user_name}</div>
+                  )}
+                   <div className="muted">Estado: {match.estado}</div>
+                 </div>
+               </div>
                <div>
-                <h3 style={{marginBottom: 0}}>{match.other_user_username ? `@${match.other_user_username}` : match.other_user_name || match.other_user_id}</h3>
-                {match.other_user_name && match.other_user_username && (
-                  <div style={{fontSize: '0.95em', color: '#888', marginBottom: 2}}>{match.other_user_name}</div>
-                )}
-                 <div className="muted">Estado: {match.estado}</div>
+                 <div className="muted">Intercambio</div>
+                 <div className="strong-list">
+                   {match.intersectTheyOfferIWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'} ↔ {match.intersectIOfferTheyWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'}
+                 </div>
                </div>
-             </div>
-             <div>
-               <div className="muted">Intercambio</div>
-               <div className="strong-list">
-                 {match.intersectTheyOfferIWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'} ↔ {match.intersectIOfferTheyWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'}
-               </div>
-             </div>
-             {match.my_reseña && (
-               <div className="muted" style={{ marginTop: '0.5rem' }}>
-                 <strong>Tu calificación:</strong> {match.my_reseña.calificacion} estrella(s)
-                 {match.my_reseña.comentario && (
-                   <><br/><strong>Comentario:</strong> {match.my_reseña.comentario}</>
-                 )}
-               </div>
-             )}
-           </article>
-         ))
-        }
+               {match.my_reseña && (
+                 <div className="muted" style={{ marginTop: '0.5rem' }}>
+                   <strong>Tu calificación:</strong> {match.my_reseña.calificacion} estrella(s)
+                   {match.my_reseña.comentario && (
+                     <><br/><strong>Comentario:</strong> {match.my_reseña.comentario}</>
+                   )}
+                 </div>
+               )}
+             </article>
+           ))
+          }
+        </div>
       </div>
     </section>
   );
