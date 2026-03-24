@@ -4,7 +4,7 @@ import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 import { wsUrl } from '../../../services/websocket';
 
-const ChatView = ({ initialConversationId = null }) => {
+const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
   const { currentUser, currentUserRecord } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
@@ -193,6 +193,7 @@ const ChatView = ({ initialConversationId = null }) => {
       connectWs(selectedConv.id);
     }
     setInput('');
+    if (onBadgeUpdate) onBadgeUpdate();
   };
 
   const getSenderDisplayName = (fromUserId) => {
