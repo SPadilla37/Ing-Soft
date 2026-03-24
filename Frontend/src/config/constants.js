@@ -1,5 +1,4 @@
-const rawApiBase = import.meta.env.VITE_API_BASE || "https://ing-soft-5shh.onrender.com";
-export const API_BASE = rawApiBase.replace(/\/$/, "");
+export const API_BASE = import.meta.env.VITE_API_URL || "http://192.168.1.117:8000";
 
 export const dbKeySession = "skillswap_session";
 export const dbKeyEmail = "skillswap_email";

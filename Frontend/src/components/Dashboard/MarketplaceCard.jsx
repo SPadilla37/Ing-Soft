@@ -5,13 +5,14 @@ const MarketplaceCard = ({ request, onAccept, onProfile, onReject }) => {
   const username = request.username ? `@${request.username}` : '';
   
   // Use intersected matches if available, otherwise just use the first skill defensively as fallback
-  const offeredSkills = matchDetails?.theyOfferIWant?.length > 0 
-    ? matchDetails.theyOfferIWant.map(s => s.nombre).join(', ')
-    : (request.habilidades_ofertadas?.[0]?.nombre || 'Sin habilidad ofertada');
+  // Extraemos las habilidades directamente de 'request'
+  const offeredSkills = request.habilidades_ofertadas?.length > 0 
+    ? request.habilidades_ofertadas.map(s => s.nombre).join(', ')
+    : 'Sin habilidad ofertada';
     
-  const requestedSkills = matchDetails?.iOfferTheyWant?.length > 0
-    ? matchDetails.iOfferTheyWant.map(s => s.nombre).join(', ')
-    : (request.habilidades_buscadas?.[0]?.nombre || 'Sin habilidad solicitada');
+  const requestedSkills = request.habilidades_buscadas?.length > 0
+    ? request.habilidades_buscadas.map(s => s.nombre).join(', ')
+    : 'Sin habilidad solicitada';
     
   const introMessage = request.biografia || 'Sin descripción';
   const matchState = request.viewer_match_state || 'none';

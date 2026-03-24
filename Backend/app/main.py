@@ -17,7 +17,17 @@ from app.db.database import SessionLocal
 app = FastAPI(title="Skill Exchange Messaging API", version="1.0.0")
 
 allowed_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "*")
-allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+# Lista base de orígenes para desarrollo local
+allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://192.168.1.117:3000", # Tu laptop
+]
+
+# Si existe la variable en el servidor (Producción), la añadimos
+origins_raw = os.getenv("CORS_ALLOW_ORIGINS")
+if origins_raw:
+    allowed_origins.extend([o.strip() for o in origins_raw.split(",")])
 
 app.add_middleware(
     CORSMiddleware,

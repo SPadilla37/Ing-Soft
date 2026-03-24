@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
+import logoHabilio from "../../assets/logo.png";
 
 const AuthScreen = () => {
   const [mode, setMode] = useState('login');
@@ -11,7 +12,7 @@ const AuthScreen = () => {
         <div className="welcome-panel glass">
           <div>
             <div className="brand-row">
-              <span className="brand-mark">H</span>
+              <img src={logoHabilio} alt="Habilio" className="brand-logo" />
               <span>Habilio</span>
             </div>
             <div className="welcome-copy">

@@ -1,11 +1,12 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
+import logoHabilio from '../../assets/logo.png';
 
 const Sidebar = ({ activeView, setActiveView, badges }) => {
   const { clearSession } = useAuth();
 
   const navItems = [
-    { id: 'matchesView', label: 'Matche' },
+    { id: 'matchesView', label: 'Matches' },
     { id: 'incomingMatchesView', label: 'Intereses recibidos', badgeKey: 'incoming' },
     { id: 'myMatchesView', label: 'Mis Matches', badgeKey: 'myMatches' },
     { id: 'historyView', label: 'Historial' },
@@ -13,10 +14,11 @@ const Sidebar = ({ activeView, setActiveView, badges }) => {
     { id: 'profileView', label: 'Perfil' },
   ];
 
-  return (
+return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <span className="brand-mark">H</span>
+        {/* CAMBIA EL SRC AQUÍ: Usa la variable entre llaves */}
+        <img src={logoHabilio} alt="Habilio" className="brand-logo" />
         <span>Habilio</span>
       </div>
 
