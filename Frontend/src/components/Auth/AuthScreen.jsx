@@ -11,8 +11,8 @@ const AuthScreen = () => {
         <div className="welcome-panel glass">
           <div>
             <div className="brand-row">
-              <span className="brand-mark">S</span>
-              <span>SkillSwap</span>
+              <span className="brand-mark">H</span>
+              <span>Habilio</span>
             </div>
             <div className="welcome-copy">
               <h1>Learn. Teach. <span>Connect.</span></h1>
