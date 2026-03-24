@@ -67,7 +67,7 @@ const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject 
         )}
         
         <button className="ghost-btn" onClick={() => onProfile(request.id)}>
-          Go to profile
+          Ver Perfil
         </button>
       </div>
     </article>
