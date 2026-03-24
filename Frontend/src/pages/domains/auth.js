@@ -1,4 +1,5 @@
 import { setAuthToken } from "../../services/api.js";
+import { validateEmail, validatePassword, validateUsername } from "../../utils/validation.js";
 
 export function setAuthModeDomain({ $, mode }) {
   const isLogin = mode === "login";
@@ -19,13 +20,24 @@ export async function signupDomain({
   ensureOnboardingOrDashboard,
   log,
 }) {
-  const email = $("signupEmail").value.trim().toLowerCase();
-  const username = $("signupUsername").value.trim();
-  const pass = $("signupPass").value.trim();
-  if (!username || !email || pass.length < 6) {
-    alert("Completa nombre de usuario, correo y una contrasena de al menos 6 caracteres.");
+  const emailCheck = validateEmail($("signupEmail").value);
+  if (!emailCheck.ok) {
+    alert(emailCheck.message);
     return;
   }
+  const userCheck = validateUsername($("signupUsername").value);
+  if (!userCheck.ok) {
+    alert(userCheck.message);
+    return;
+  }
+  const passCheck = validatePassword($("signupPass").value);
+  if (!passCheck.ok) {
+    alert(passCheck.message);
+    return;
+  }
+  const email = emailCheck.value;
+  const username = userCheck.value;
+  const pass = passCheck.value;
 
   try {
     const result = await api("/auth/register", {
@@ -56,20 +68,18 @@ export async function loginDomain({
   ensureOnboardingOrDashboard,
   log,
 }) {
-  const email = $("loginEmail").value.trim().toLowerCase();
-  const pass = $("loginPass").value.trim();
-  if (!email || !pass) {
-    alert("Completa tu correo y contrasena.");
+  const emailCheck = validateEmail($("loginEmail").value);
+  if (!emailCheck.ok) {
+    alert(emailCheck.message);
     return;
   }
-  if (!email.includes("@") || !email.includes(".")) {
-    alert("Correo invalido. Usa un formato tipo nombre@dominio.com.");
+  const passCheck = validatePassword($("loginPass").value);
+  if (!passCheck.ok) {
+    alert(passCheck.message);
     return;
   }
-  if (pass.length < 6) {
-    alert("La contrasena debe tener al menos 6 caracteres.");
-    return;
-  }
+  const email = emailCheck.value;
+  const pass = passCheck.value;
 
   try {
     const result = await api("/auth/login", {

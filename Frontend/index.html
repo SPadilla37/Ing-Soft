@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SkillSwap</title>
+  <title>Habilio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
@@ -16,7 +16,7 @@
         <div>
           <div class="brand-row">
             <span class="brand-mark">S</span>
-            <span>SkillSwap</span>
+            <span>Habilio</span>
           </div>
           <div class="welcome-copy">
             <h1>Aprende. Enseña. <span>Conecta.</span></h1>
@@ -49,9 +49,9 @@
           <h2>Bienvenido/a de nuevo</h2>
           <p>Ingresa con tu correo para continuar en tu dashboard de intercambios.</p>
           <label>Correo</label>
-          <input id="loginEmail" type="email" placeholder="correo@ejemplo.com" />
+          <input id="loginEmail" type="email" placeholder="correo@ejemplo.com" maxlength="120" autocomplete="username" />
           <label>Contrasena</label>
-          <input id="loginPass" type="password" placeholder="Tu contrasena" />
+          <input id="loginPass" type="password" placeholder="Tu contrasena" maxlength="200" autocomplete="current-password" />
           <button id="loginBtn" class="primary-btn" type="button">Entrar</button>
         </div>
 
@@ -59,11 +59,11 @@
           <h2>Crea tu cuenta</h2>
           <p>Crea tu cuenta con correo y contrasena. Luego completas el perfil con tus habilidades.</p>
           <label>Nombre de usuario</label>
-          <input id="signupUsername" placeholder="pedro123" />
+          <input id="signupUsername" placeholder="pedro123" maxlength="25" autocomplete="username" />
           <label>Correo</label>
-          <input id="signupEmail" type="email" placeholder="correo@ejemplo.com" />
+          <input id="signupEmail" type="email" placeholder="correo@ejemplo.com" maxlength="120" autocomplete="email" />
           <label>Contrasena</label>
-          <input id="signupPass" type="password" placeholder="Minimo 4 caracteres" />
+          <input id="signupPass" type="password" placeholder="Minimo 6 caracteres" maxlength="200" autocomplete="new-password" />
           <button id="signupBtn" class="primary-btn" type="button">Crear cuenta</button>
         </div>
       </div>
@@ -78,15 +78,15 @@
       <div class="field-grid">
         <div>
           <label>Nombre</label>
-          <input id="fullName" placeholder="Pedro" />
+          <input id="fullName" placeholder="Pedro" maxlength="35" autocomplete="given-name" />
         </div>
         <div>
           <label>Apellido</label>
-          <input id="lastName" placeholder="Garcia" />
+          <input id="lastName" placeholder="Garcia" maxlength="35" autocomplete="family-name" />
         </div>
         <div>
           <label>Bio corta</label>
-          <textarea id="bio" placeholder="Cuéntale a otros que puedes ensenar y que quieres aprender..."></textarea>
+          <textarea id="bio" maxlength="2000" placeholder="Cuéntale a otros que puedes ensenar y que quieres aprender..."></textarea>
         </div>
       </div>
 
@@ -113,7 +113,7 @@
   <section id="skillPickerOverlay" class="picker-overlay hidden">
     <div class="picker-card">
       <h2 id="pickerTitle">Seleccionar elementos</h2>
-      <input id="pickerSearchInput" placeholder="Buscar..." />
+      <input id="pickerSearchInput" type="search" placeholder="Buscar..." maxlength="200" />
       <div id="pickerCategoryChips" class="chip-row" style="margin-top: 0.8rem;"></div>
       <div id="pickerSkillsList" class="skills-list"></div>
       <div class="picker-actions">
@@ -146,7 +146,7 @@
     <aside class="sidebar">
       <div class="sidebar-brand">
         <span class="brand-mark">S</span>
-        <span>SkillSwap</span>
+        <span>Habilio</span>
       </div>
 
       <div class="nav-list">
@@ -166,7 +166,7 @@
     <main class="main-shell">
       <div class="top-shell">
         <div class="search-shell">
-          <input id="searchInput" placeholder="Buscar habilidades..." />
+          <input id="searchInput" type="search" placeholder="Buscar habilidades..." maxlength="200" />
           <button id="searchBtn" class="secondary-btn" type="button">Buscar</button>
         </div>
         <div class="top-user">
@@ -231,7 +231,7 @@
             </div>
             <div>
               <label>Mensaje para otros usuarios</label>
-              <textarea id="publishIntroMessage" placeholder="Explica brevemente que puedes ensenar y que esperas aprender..."></textarea>
+              <textarea id="publishIntroMessage" maxlength="500" placeholder="Explica brevemente que puedes ensenar y que esperas aprender..."></textarea>
             </div>
             <button id="publishRequestBtn" class="primary-btn" type="button">Publicar solicitud</button>
             <button id="deleteRequestBtn" class="ghost-btn" type="button">Actualizar mis publicaciones</button>
@@ -274,7 +274,7 @@
             <div class="chat-controls">
               <div>
                 <label>ID de conversacion</label>
-                <input id="conversationId" placeholder="Selecciona una conversacion" />
+                <input id="conversationId" inputmode="numeric" pattern="[0-9]*" placeholder="Selecciona una conversacion" maxlength="18" />
               </div>
               <button id="disconnectWsBtn" class="danger-btn" type="button">Cerrar</button>
               <button id="deleteConversationBtn" class="ghost-btn" type="button">Borrar este chat (solo para mi)</button>
@@ -282,7 +282,7 @@
             <div id="chatStatus" class="muted">Chat desconectado.</div>
             <div id="chatBox" class="chat-box"></div>
             <div class="composer">
-              <input id="chatInput" placeholder="Escribe mensaje..." />
+              <input id="chatInput" type="text" placeholder="Escribe mensaje..." maxlength="2000" autocomplete="off" />
               <button id="sendWsMessageBtn" class="primary-btn" type="button">Enviar</button>
             </div>
           </div>
@@ -301,7 +301,7 @@
             <div class="profile-form-shell">
               <div>
                 <label>Tu nombre</label>
-                <input id="profileFullName" placeholder="Tu nombre" />
+                <input id="profileFullName" placeholder="Tu nombre" maxlength="71" autocomplete="name" />
               </div>
 
               <div>
@@ -375,6 +375,6 @@
       </section>
     </main>
   </section>
-  <script type="module" src="./src/main.js"></script>
+  <script type="module" src="./src/main.js?v=2"></script>
 </body>
 </html>

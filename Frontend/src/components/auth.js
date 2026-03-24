@@ -7,7 +7,7 @@ export function renderAuthScreen() {
   
   authScreen.innerHTML = `
     <div class="auth-container">
-      <h2>Bienvenido a SkillSwap</h2>
+      <h2>Bienvenido a Habilio</h2>
       <div class="auth-tabs">
         <button class="tab-btn active" data-mode="login">Ingresar</button>
         <button class="tab-btn" data-mode="register">Registrarse</button>

@@ -134,6 +134,9 @@ def get_user_display_name(session, user_id: int) -> str | None:
 
 def serialize_intercambio_with_names(session, intercambio: Intercambio) -> dict:
     serialized = serialize_intercambio(intercambio)
+    # Alias para el frontend (cards / perfil publico)
+    serialized["from_user_id"] = intercambio.usuario_emisor_id
+    serialized["to_user_id"] = intercambio.usuario_receptor_id
     emisor = session.get(Usuario, intercambio.usuario_emisor_id)
     receptor = session.get(Usuario, intercambio.usuario_receptor_id)
 

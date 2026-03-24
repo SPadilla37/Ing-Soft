@@ -1,3 +1,10 @@
+import {
+  LIMITS,
+  validateOptionalTrimmed,
+  validatePublishMessage,
+  validateRequiredTrimmed,
+} from "../../utils/validation.js";
+
 export function getPickerSelectionDomain({
   mode,
   source,
@@ -170,13 +177,29 @@ export async function completeOnboardingDomain({
   ensureOnboardingOrDashboard,
   publishRequest,
 }) {
-  const fullName = $("fullName").value.trim();
-  const lastName = $("lastName").value.trim();
-  const bio = $("bio").value.trim();
-  if (!fullName || !bio || !onboardingTeach.size || !onboardingLearn.size) {
-    alert("Completa todos los datos y selecciona habilidades para ofrecer y aprender.");
+  const nameCheck = validateRequiredTrimmed($("fullName").value, "El nombre", LIMITS.nombreMax);
+  if (!nameCheck.ok) {
+    alert(nameCheck.message);
     return;
   }
+  const lastCheck = validateOptionalTrimmed($("lastName").value, LIMITS.nombreMax, "El apellido");
+  if (!lastCheck.ok) {
+    alert(lastCheck.message);
+    return;
+  }
+  const bioCheck = validateRequiredTrimmed($("bio").value, "La biografia", LIMITS.bioMax);
+  if (!bioCheck.ok) {
+    alert(bioCheck.message);
+    return;
+  }
+  if (!onboardingTeach.size || !onboardingLearn.size) {
+    alert("Selecciona habilidades para ofrecer y para aprender.");
+    return;
+  }
+
+  const fullName = nameCheck.value;
+  const lastName = lastCheck.value;
+  const bio = bioCheck.value;
 
   const profile = {
     fullName: fullName + (lastName ? " " + lastName : ""),
@@ -185,6 +208,14 @@ export async function completeOnboardingDomain({
     learnSkills: Array.from(onboardingLearn),
     marketplaceMessage: `Hola, puedo ensenar ${Array.from(onboardingTeach).join(", ")} y quiero aprender ${Array.from(onboardingLearn).join(", ")}.`,
   };
+
+  const autoMsgCheck = validatePublishMessage(profile.marketplaceMessage);
+  if (!autoMsgCheck.ok) {
+    alert(
+      `${autoMsgCheck.message} Reduce la cantidad de habilidades seleccionadas o acorta los nombres.`,
+    );
+    return;
+  }
 
   const persistData = {
     ...profile,

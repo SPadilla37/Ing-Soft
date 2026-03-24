@@ -24,6 +24,15 @@ import {
   updateProfileTriggerTextsDomain,
   hydrateProfileUIDomain,
 } from "./domains/profile.js";
+import {
+  LIMITS,
+  validateChatMessage,
+  validateConversationIdInput,
+  validateOptionalTrimmed,
+  validatePublishMessage,
+  validateRatingValue,
+  validateSearchQuery,
+} from "../utils/validation.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -83,13 +92,33 @@ let publicProfileUserId = "";
 let publicProfileReturnView = "matchesView";
 let deleteConfirmResolver = null;
 
+const HIDDEN_CONVERSATIONS_KEY = "skillswap_hidden_conversations";
+
+function getHiddenConversationIds() {
+  try {
+    const raw = localStorage.getItem(HIDDEN_CONVERSATIONS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set((Array.isArray(arr) ? arr : []).map(String));
+  } catch {
+    return new Set();
+  }
+}
+
+function hideConversationForMe(conversationId) {
+  const id = String(conversationId);
+  const hidden = getHiddenConversationIds();
+  hidden.add(id);
+  localStorage.setItem(HIDDEN_CONVERSATIONS_KEY, JSON.stringify([...hidden]));
+}
+
 function log(message) {
   console.debug(`[SkillSwap] ${message}`);
 }
 
 function loadSession() {
   const userId = localStorage.getItem(dbKeySession);
-  currentUser = userId ? Number(userId) : null;
+  const n = userId ? Number(userId) : NaN;
+  currentUser = Number.isFinite(n) && n > 0 ? n : null;
   currentUserRecord = null;
 }
 
@@ -461,8 +490,11 @@ function buildMarketplacePayload(fromProfile = false) {
   } else {
     const selectedTeach = getPickerSelection("teach", "publish");
     const selectedLearn = getPickerSelection("learn", "publish");
-    const teachNames = Array.from(selectedTeach);
-    const learnNames = Array.from(selectedLearn);
+    let teachNames = Array.from(selectedTeach);
+    let learnNames = Array.from(selectedLearn);
+    // La vista Publicar no abre picker con source "publish"; usar perfil como respaldo.
+    if (!teachNames.length) teachNames = profile.teachSkills || [];
+    if (!learnNames.length) learnNames = profile.learnSkills || [];
     if (teachNames.length > 0) {
       habilidadId = skillsMap[teachNames[0].toLowerCase()] || null;
     }
@@ -470,7 +502,7 @@ function buildMarketplacePayload(fromProfile = false) {
     if (learnNames.length > 0) {
       habilidadSolicitadaId = skillsMap[learnNames[0].toLowerCase()] || null;
     }
-    mensaje = $("publishIntroMessage").value.trim();
+    mensaje = $("publishIntroMessage").value.trim() || profile.marketplaceMessage || "";
   }
 
 
@@ -486,9 +518,35 @@ function buildMarketplacePayload(fromProfile = false) {
 async function publishRequest(fromOnboarding = false) {
   if (!currentUser) return;
   try {
+    if (!fromOnboarding) {
+      const intro = $("publishIntroMessage").value;
+      const introCheck = validatePublishMessage(intro);
+      if (!introCheck.ok) {
+        alert(introCheck.message);
+        return;
+      }
+      if (!introCheck.value) {
+        alert("Escribe un mensaje para tu publicacion.");
+        return;
+      }
+    } else {
+      const profile = getProfile() || {};
+      const autoMsg = profile.marketplaceMessage || "";
+      const autoCheck = validatePublishMessage(autoMsg);
+      if (!autoCheck.ok) {
+        alert(autoCheck.message);
+        return;
+      }
+    }
+
     const payload = buildMarketplacePayload(fromOnboarding);
     if (!payload.habilidad_id || !payload.habilidad_solicitada_id) {
       alert("Debes indicar las habilidades que ofreces y quieres aprender.");
+      return;
+    }
+    const msgCheck = validateOptionalTrimmed(payload.mensaje || "", LIMITS.messageRequestMax, "El mensaje");
+    if (!msgCheck.ok) {
+      alert(msgCheck.message);
       return;
     }
     const result = await api("/message-requests", {
@@ -652,15 +710,20 @@ async function openMatchedConversation(conversationId) {
     return;
   }
 
-  selectedConversationId = conversationId;
-  $("conversationId").value = conversationId;
+  selectedConversationId = String(conversationId);
+  $("conversationId").value = String(conversationId);
   activateView("chatView");
   await loadConversations();
   connectWs(true);
 }
 
 function showRequestDetails(request, returnView = "matchesView") {
-  openPublicProfile(request.from_user_id, returnView);
+  const uid = request?.from_user_id ?? request?.usuario_emisor_id ?? request?.other_user_id;
+  if (uid == null || uid === "") {
+    alert("No se pudo identificar al usuario.");
+    return;
+  }
+  openPublicProfile(uid, returnView);
 }
 
 async function loadMarketplace() {
@@ -668,7 +731,12 @@ async function loadMarketplace() {
   try {
     const params = new URLSearchParams({ viewer_user_id: String(currentUser) });
     const query = $("searchInput").value.trim();
-    if (query) params.append("q", query);
+    const qCheck = validateSearchQuery(query);
+    if (!qCheck.ok) {
+      alert(qCheck.message);
+      return;
+    }
+    if (qCheck.value) params.append("q", qCheck.value);
     const result = await api(`/marketplace/habilidades?${params.toString()}`);
     currentMarketplace = result.users;
     console.debug("[SkillSwap] loadMarketplace:", result.users.length, "users", result.users);
@@ -707,8 +775,13 @@ async function loadMyMatches() {
 }
 
 async function finalizeMatch(matchId) {
+  const mid = Number(matchId);
+  if (!Number.isInteger(mid) || mid < 1) {
+    alert("ID de match no valido.");
+    return;
+  }
   try {
-    await api(`/matches/${matchId}/finalize`, {
+    await api(`/matches/${mid}/finalize`, {
       method: "POST",
       body: JSON.stringify({ user_id: currentUser }),
     });
@@ -719,10 +792,20 @@ async function finalizeMatch(matchId) {
 }
 
 async function rateMatch(matchId, rating) {
+  const mid = Number(matchId);
+  if (!Number.isInteger(mid) || mid < 1) {
+    alert("ID de match no valido.");
+    return;
+  }
+  const rCheck = validateRatingValue(rating);
+  if (!rCheck.ok) {
+    alert(rCheck.message);
+    return;
+  }
   try {
-    await api(`/matches/${matchId}/rate`, {
+    await api(`/matches/${mid}/rate`, {
       method: "POST",
-      body: JSON.stringify({ user_id: currentUser, rating }),
+      body: JSON.stringify({ user_id: currentUser, rating: rCheck.value }),
     });
     await loadMyMatches();
   } catch (error) {
@@ -770,7 +853,7 @@ async function acceptRequest(userId, requestId = null) {
     await loadMyMatches();
 
     if (result.matched && result.conversation_id) {
-      selectedConversationId = result.conversation_id;
+      selectedConversationId = String(result.conversation_id);
       $("conversationId").value = selectedConversationId;
       activateView("chatView");
       await loadConversations();
@@ -796,8 +879,8 @@ function renderConversations() {
     currentConversations,
     selectedConversationId,
     onSelectConversation: (conversationId) => {
-      selectedConversationId = conversationId;
-      $("conversationId").value = conversationId;
+      selectedConversationId = String(conversationId);
+      $("conversationId").value = String(conversationId);
       renderConversations();
       connectWs(true);
     },
@@ -805,25 +888,24 @@ function renderConversations() {
 }
 
 async function deleteSelectedConversation() {
-  const conversationId = $("conversationId").value.trim();
-  if (!conversationId) {
-    setChatStatus("Selecciona una conversacion antes de borrarla.", "info");
+  const rawId = $("conversationId").value;
+  const idCheck = validateConversationIdInput(rawId);
+  if (!idCheck.ok) {
+    setChatStatus(idCheck.message, "error");
     return;
   }
+  const conversationId = idCheck.value;
 
   try {
-    await api(`/conversations/${conversationId}?user_id=${currentUser}`, {
-      method: "DELETE",
-    });
-
+    hideConversationForMe(conversationId);
     disconnectConversationSocket({ socketState, setChatStatus });
 
-    if (selectedConversationId === conversationId) {
+    if (String(selectedConversationId) === String(conversationId)) {
       selectedConversationId = "";
     }
     $("conversationId").value = "";
     chatBox.innerHTML = "";
-    setChatStatus("Chat borrado para ti. El otro usuario lo mantiene.", "ok");
+    setChatStatus("Chat oculto para ti en esta app. El otro usuario sigue viendo la conversacion.", "ok");
     await loadConversations();
   } catch (error) {
     setChatStatus(`No se pudo borrar el chat: ${error.message}`, "error");
@@ -834,10 +916,13 @@ async function loadConversations() {
   if (!currentUser) return;
   try {
     const result = await api(`/conversations/${currentUser}`);
-    currentConversations = result.conversations;
+    const hidden = getHiddenConversationIds();
+    currentConversations = (result.conversations || []).filter((c) => !hidden.has(String(c.id)));
     console.debug("[SkillSwap] loadConversations:", currentConversations.length, "conversations", currentConversations);
-    if (selectedConversationId) {
-      const exists = currentConversations.some((conversation) => conversation.id === selectedConversationId);
+    if (selectedConversationId !== "" && selectedConversationId != null) {
+      const exists = currentConversations.some(
+        (conversation) => String(conversation.id) === String(selectedConversationId),
+      );
       if (!exists) {
         selectedConversationId = "";
         $("conversationId").value = "";
@@ -846,7 +931,10 @@ async function loadConversations() {
     }
     renderConversations();
 
-    if (selectedConversationId) {
+    if (selectedConversationId !== "" && selectedConversationId != null) {
+      if (!$("conversationId").value.trim()) {
+        $("conversationId").value = String(selectedConversationId);
+      }
       connectWs(true);
     }
   } catch (error) {
@@ -855,7 +943,15 @@ async function loadConversations() {
 }
 
 function connectWs(autoConnect = false) {
-  const conversationId = $("conversationId").value.trim();
+  const raw = $("conversationId").value;
+  const idCheck = validateConversationIdInput(raw);
+  if (!idCheck.ok) {
+    if (!autoConnect) {
+      setChatStatus(idCheck.message, "error");
+    }
+    return;
+  }
+  const conversationId = idCheck.value;
   connectConversationSocket({
     autoConnect,
     conversationId,
@@ -873,13 +969,16 @@ function disconnectWs() {
 }
 
 function sendWsMessage() {
-  const content = $("chatInput").value.trim();
-  const sentOrNoop = sendConversationMessage({ socketState, content });
-  if (!sentOrNoop) {
-    alert("Conecta el chat primero.");
+  const v = validateChatMessage($("chatInput").value);
+  if (!v.ok) {
+    alert(v.message);
     return;
   }
-  if (!content) return;
+  const sentOrNoop = sendConversationMessage({ socketState, content: v.value });
+  if (!sentOrNoop) {
+    alert("Conecta el chat primero (selecciona una conversacion y espera a Conectado).");
+    return;
+  }
   $("chatInput").value = "";
 }
 
@@ -911,7 +1010,46 @@ async function refreshAll() {
 }
 
 document.querySelectorAll(".nav-btn").forEach((btn) => {
-  btn.addEventListener("click", () => activateView(btn.dataset.view));
+  btn.addEventListener("click", async () => {
+    const viewId = btn.dataset.view;
+    activateView(viewId);
+    if (!currentUser) return;
+    try {
+      switch (viewId) {
+        case "matchesView":
+          await loadMarketplace();
+          break;
+        case "incomingMatchesView":
+          await loadIncomingMatches();
+          break;
+        case "myMatchesView":
+          await loadMyMatches();
+          break;
+        case "publishView":
+          await loadLatestOwnRequest();
+          renderLatestRequest();
+          {
+            const p = getProfile() || {};
+            const pub = $("publishIntroMessage");
+            if (pub && !pub.value.trim()) {
+              pub.value = p.marketplaceMessage || "";
+            }
+          }
+          break;
+        case "chatView":
+          await loadConversations();
+          break;
+        case "profileView":
+          await loadCurrentUserFromApi();
+          hydrateProfileUI();
+          break;
+        default:
+          break;
+      }
+    } catch (e) {
+      log(`Error al cargar vista ${viewId}: ${e.message}`);
+    }
+  });
 });
 
 $("showLoginTab").onclick = () => setAuthMode("login");
@@ -953,7 +1091,18 @@ $("deleteRequestBtn").onclick = async () => {
 $("loadConversationsBtn").onclick = loadConversations;
 $("disconnectWsBtn").onclick = disconnectWs;
 $("deleteConversationBtn").onclick = deleteSelectedConversation;
-$("sendWsMessageBtn").onclick = sendWsMessage;
+$("sendWsMessageBtn").onclick = (event) => {
+  if (event) event.preventDefault();
+  sendWsMessage();
+};
+$("chatInput").onkeydown = (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    event.stopPropagation();
+    sendWsMessage();
+    return false;
+  }
+};
 $("saveProfileBtn").onclick = () => { saveProfileFromDashboard(); };
 $("viewPublicProfileBtn").onclick = () => {
   openPublicProfile(currentUser, "profileView");
@@ -963,6 +1112,31 @@ $("changeAvatarBtn").onclick = () => {
 };
 $("closePublicProfileBtn").onclick = closePublicProfile;
 $("logoutBtn").onclick = clearSession;
+
+// window.onbeforeunload = () => "Estas seguro de que quieres salir?";
+
+document.onkeydown = (e) => {
+  if (e.key === "Enter" && e.target.tagName === "INPUT") {
+    const isChatInput = e.target.id === "chatInput";
+    if (isChatInput) {
+      e.preventDefault();
+      e.stopPropagation();
+      sendWsMessage();
+      return false;
+    }
+    // Para otros inputs, prevenimos el envío accidental pero dejamos que funcionen (ej: buscar)
+    if (e.target.id === "searchInput") {
+      e.preventDefault();
+      loadMarketplace();
+      return false;
+    }
+  }
+};
+
+document.addEventListener("submit", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
 
 async function initializeApp() {
   loadSession();

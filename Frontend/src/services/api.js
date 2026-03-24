@@ -17,9 +17,23 @@ export async function api(apiBase, path, options = {}) {
   } catch (err) {
     throw new Error(`Fetch failed for ${url}: ${err?.message || String(err)}`);
   }
-  const data = await response.json();
+  const text = await response.text();
+  let data = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { detail: text };
+    }
+  }
   if (!response.ok) {
-    throw new Error(data.detail || JSON.stringify(data));
+    const detail = data?.detail;
+    const msg = typeof detail === "string"
+      ? detail
+      : Array.isArray(detail)
+        ? detail.map((d) => d?.msg || JSON.stringify(d)).join("; ")
+        : JSON.stringify(data);
+    throw new Error(msg || `HTTP ${response.status}`);
   }
   return data;
 }

@@ -1,3 +1,5 @@
+import { LIMITS, validateOptionalTrimmed, validateProfileFullName, validateRequiredTrimmed } from "../../utils/validation.js";
+
 export function normalizeProfileFromUserDomain(user) {
   if (!user) return null;
   const teachSkills = Array.isArray(user.habilidades_ofertadas)
@@ -223,14 +225,34 @@ export async function saveProfileFromDashboardDomain({
   hydrateProfileUI,
   log,
 }) {
+  const nameCheck = validateProfileFullName($("profileFullName").value);
+  if (!nameCheck.ok) {
+    alert(nameCheck.message);
+    return;
+  }
+  const bioCheck = validateRequiredTrimmed($("profileBio").value, "La biografia", LIMITS.bioMax);
+  if (!bioCheck.ok) {
+    alert(bioCheck.message);
+    return;
+  }
+  const introCheck = validateOptionalTrimmed(
+    $("publishIntroMessage").value,
+    LIMITS.messageRequestMax,
+    "El mensaje para el mercado",
+  );
+  if (!introCheck.ok) {
+    alert(introCheck.message);
+    return;
+  }
+
   const previous = getProfile() || {};
   const profile = {
     ...previous,
-    fullName: $("profileFullName").value.trim(),
-    bio: $("profileBio").value.trim(),
+    fullName: nameCheck.value,
+    bio: bioCheck.value,
     teachSkills: Array.from(profileTeachDraft),
     learnSkills: Array.from(profileLearnDraft),
-    marketplaceMessage: previous.marketplaceMessage || $("publishIntroMessage").value.trim(),
+    marketplaceMessage: introCheck.value || previous.marketplaceMessage || "",
   };
 
   saveProfile(profile);
