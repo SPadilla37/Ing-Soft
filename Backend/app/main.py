@@ -1,16 +1,17 @@
 import os
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import router
-from app.db.database import Base, SessionLocal, engine
-from app.services.core import (
-    PUBLIC_MARKETPLACE_USER,
-    ensure_matches_table_columns,
-    ensure_user,
-    ensure_users_table_columns,
-)
+from app.api.routes.auth import router as auth_router
+from app.api.routes.conversations import router as conversations_router
+from app.api.routes.habilidades import router as habilidades_router
+from app.api.routes.matches import router as matches_router
+from app.api.routes.requests import router as requests_router
+from app.api.routes.users import router as users_router
+from app.api.routes.websocket import router as websocket_router
+from app.core.skills_seed import seed_default_habilidades
+from app.db.database import Base, engine
+from app.db.database import SessionLocal
 
 
 app = FastAPI(title="Skill Exchange Messaging API", version="1.0.0")
@@ -30,11 +31,14 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
-    ensure_users_table_columns()
-    ensure_matches_table_columns()
     with SessionLocal() as session:
-        ensure_user(session, PUBLIC_MARKETPLACE_USER)
-        session.commit()
+        seed_default_habilidades(session)
 
 
-app.include_router(router)
+app.include_router(auth_router)
+app.include_router(habilidades_router)
+app.include_router(matches_router)
+app.include_router(requests_router)
+app.include_router(users_router)
+app.include_router(websocket_router)
+app.include_router(conversations_router)
