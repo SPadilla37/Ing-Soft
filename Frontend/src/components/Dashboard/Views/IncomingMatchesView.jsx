@@ -22,7 +22,19 @@ const IncomingMatchesView = () => {
         apiRequest(API_BASE, `/usuarios/${currentUser}`)
       ]);
       setCurrentUserProfile(profileResult.user || profileResult);
-      setItems(result.incoming || []);
+      let incoming = result.incoming || [];
+      incoming = await Promise.all(incoming.map(async (u) => {
+        if (!u.username && u.id) {
+          try {
+            const userRes = await apiRequest(API_BASE, `/usuarios/${u.id}`);
+            return { ...u, username: userRes.user?.username || userRes.username };
+          } catch {
+            return u;
+          }
+        }
+        return u;
+      }));
+      setItems(incoming);
     } catch (error) {
       console.error('Error loading incoming matches:', error);
     } finally {

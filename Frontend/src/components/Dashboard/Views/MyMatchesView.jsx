@@ -28,15 +28,13 @@ const MyMatchesView = ({ onOpenChat = () => {} }) => {
           try {
             const otherProfileRes = await apiRequest(API_BASE, `/usuarios/${match.other_user_id}`);
             const otherProfile = otherProfileRes.user || otherProfileRes;
-            
             const myOfferedIds = new Set(myProfile.habilidades_ofertadas?.map(h => h.id) || []);
             const mySoughtIds = new Set(myProfile.habilidades_buscadas?.map(h => h.id) || []);
-            
             const iOfferTheyWant = (otherProfile.habilidades_buscadas || []).filter(h => myOfferedIds.has(h.id));
             const theyOfferIWant = (otherProfile.habilidades_ofertadas || []).filter(h => mySoughtIds.has(h.id));
-            
             return {
               ...match,
+              other_user_username: otherProfile.username,
               intersectIOfferTheyWant: iOfferTheyWant.length > 0 ? iOfferTheyWant : [match.habilidad_solicitada].filter(Boolean),
               intersectTheyOfferIWant: theyOfferIWant.length > 0 ? theyOfferIWant : [match.habilidad].filter(Boolean)
             };
