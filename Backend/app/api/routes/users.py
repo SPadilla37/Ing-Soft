@@ -49,14 +49,14 @@ def update_user_profile(user_id: int, payload: UserProfileUpdatePayload) -> dict
                     categoria="ofertada",
                 ))
 
-        if payload.habilidades_busçadas is not None:
+        if payload.habilidades_buscadas is not None:
             session.execute(
                 delete(UsuarioHabilidad).where(
                     UsuarioHabilidad.usuario_id == user_id,
                     UsuarioHabilidad.categoria == "buscada",
                 )
             )
-            for hab_id in payload.habilidades_busçadas:
+            for hab_id in payload.habilidades_buscadas:
                 session.add(UsuarioHabilidad(
                     habilidad_id=hab_id,
                     usuario_id=user_id,

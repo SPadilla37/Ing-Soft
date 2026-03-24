@@ -1,4 +1,5 @@
 from app.schemas.contracts import (
+	AuthTokenResponse,
 	ChatMessageCreate,
 	ConversationCreatePayload,
 	HabilidadCreate,
@@ -18,6 +19,7 @@ from app.schemas.contracts import (
 
 __all__ = [
 	"RequestStatus",
+	"AuthTokenResponse",
 	"MessageRequestCreate",
 	"MessageRequestResponse",
 	"ChatMessageCreate",

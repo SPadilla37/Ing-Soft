@@ -8,6 +8,7 @@ from app.db.models.entities import (
     Conversacion,
     Habilidad,
     Intercambio,
+    IntercambioFinalizacion,
     Mensaje,
     Reseña,
     Usuario,
@@ -15,9 +16,6 @@ from app.db.models.entities import (
 )
 from app.services.matching import canonical_match_pair
 from app.services.reputation import average_rating
-
-
-PUBLIC_MARKETPLACE_USER_ID: int = 0
 
 
 def utc_now_iso() -> str:
@@ -66,12 +64,12 @@ def serialize_user(user: Usuario, session=None) -> dict:
         rating_info = calculate_received_rating(session, user.id)
 
     habilidades_ofertadas = []
-    habilidades_busçadas = []
+    habilidades_buscadas = []
     if session is not None:
         ofe = get_user_habilidades(session, user.id, "ofertada")
         bus = get_user_habilidades(session, user.id, "buscada")
         habilidades_ofertadas = [serialize_habilidad(h) for h in ofe]
-        habilidades_busçadas = [serialize_habilidad(h) for h in bus]
+        habilidades_buscadas = [serialize_habilidad(h) for h in bus]
 
     return {
         "id": user.id,
@@ -88,7 +86,7 @@ def serialize_user(user: Usuario, session=None) -> dict:
             "count": rating_info["count"],
         },
         "habilidades_ofertadas": habilidades_ofertadas,
-        "habilidades_busçadas": habilidades_busçadas,
+        "habilidades_buscadas": habilidades_buscadas,
     }
 
 
@@ -176,15 +174,47 @@ def get_match_for_users(
     user_two_id: int,
 ) -> Intercambio | None:
     user_a_id, user_b_id = canonical_match_pair(user_one_id, user_two_id)
-    return session.execute(
+
+    pair_clause = or_(
+        (Intercambio.usuario_emisor_id == user_a_id) & (Intercambio.usuario_receptor_id == user_b_id),
+        (Intercambio.usuario_emisor_id == user_b_id) & (Intercambio.usuario_receptor_id == user_a_id),
+    )
+
+    accepted = session.execute(
         select(Intercambio).where(
-            or_(
-                (Intercambio.usuario_emisor_id == user_a_id) & (Intercambio.usuario_receptor_id == user_b_id),
-                (Intercambio.usuario_emisor_id == user_b_id) & (Intercambio.usuario_receptor_id == user_a_id),
-            ),
-            Intercambio.estado.in_(["aceptado", "completado"]),
+            pair_clause,
+            Intercambio.estado == "aceptado",
         )
-    ).scalars().first()
+    ).scalars().all()
+
+    if not accepted:
+        return None
+
+    completed = session.execute(
+        select(Intercambio).where(
+            pair_clause,
+            Intercambio.estado == "completado",
+        )
+    ).scalars().all()
+
+    if completed:
+        latest_completed = max(item.fecha_creacion for item in completed if item.fecha_creacion is not None)
+        accepted = [
+            item
+            for item in accepted
+            if item.fecha_creacion is None or item.fecha_creacion > latest_completed
+        ]
+
+    if not accepted:
+        return None
+
+    accepted.sort(key=lambda item: item.fecha_creacion or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    return accepted[0]
+
+
+def can_users_chat(session, user_one_id: int, user_two_id: int) -> bool:
+    # Chat remains available only while there is an active accepted match for the pair.
+    return get_match_for_users(session, user_one_id, user_two_id) is not None
 
 
 def create_conversation_for_intercambio(session, intercambio: Intercambio) -> int:
@@ -234,6 +264,18 @@ def serialize_intercambio_for_viewer(
         if existing_conv:
             serialized["viewer_conversation_id"] = existing_conv.id
 
+        return serialized
+
+    outgoing = session.execute(
+        select(Intercambio).where(
+            Intercambio.usuario_emisor_id == viewer_user_id,
+            Intercambio.usuario_receptor_id == intercambio.usuario_emisor_id,
+            Intercambio.estado == "pendiente",
+        )
+    ).scalars().first()
+    if outgoing:
+        serialized["viewer_match_state"] = "sent"
+
     incoming = session.execute(
         select(Intercambio).where(
             Intercambio.usuario_receptor_id == viewer_user_id,
@@ -242,7 +284,7 @@ def serialize_intercambio_for_viewer(
         )
     ).scalars().first()
     if incoming:
-        serialized["viewer_match_state"] = "received"
+        serialized["viewer_match_state"] = "mutual-pending" if outgoing else "received"
 
     return serialized
 
@@ -283,6 +325,15 @@ def serialize_intercambio_for_user(session, intercambio: Intercambio, user_id: i
     habilidad_sol_obj = session.get(Habilidad, getattr(intercambio, "habilidad_solicitada_id", None))
     habilidad_solicitada = serialize_habilidad(habilidad_sol_obj) if habilidad_sol_obj else None
 
+    confirmations = session.execute(
+        select(IntercambioFinalizacion).where(IntercambioFinalizacion.intercambio_id == intercambio.id)
+    ).scalars().all()
+    finalized_user_ids = {item.usuario_id for item in confirmations}
+    finalized_by_me = user_id in finalized_user_ids
+    finalized_by_other = other_user_id in finalized_user_ids
+    can_finalize = intercambio.estado == "aceptado" and not finalized_by_me
+    can_chat = can_users_chat(session, user_id, other_user_id)
+
     return {
         "id": intercambio.id,
         "conversation_id": conversacion.id if conversacion else None,
@@ -292,7 +343,11 @@ def serialize_intercambio_for_user(session, intercambio: Intercambio, user_id: i
         "other_user_name": get_user_display_name(session, other_user_id) if other_user else str(other_user_id),
         "my_reseña": my_reseña,
         "other_reseña": other_reseña,
-        "can_finalize":intercambio.estado == "aceptado",
+        "can_finalize": can_finalize,
+        "finalized_by_me": finalized_by_me,
+        "finalized_by_other": finalized_by_other,
+        "awaiting_other_finalize": intercambio.estado == "aceptado" and finalized_by_me and not finalized_by_other,
+        "can_chat": can_chat,
         "can_rate":intercambio.estado == "completado" and my_reseña is None,
         "habilidad": habilidad,
         "habilidad_solicitada": habilidad_solicitada,

@@ -5,7 +5,7 @@ from app.db.database import SessionLocal
 from app.db.models.entities import Intercambio, Conversacion, Habilidad, Usuario, UsuarioHabilidad
 from app.schemas import MarketplaceAcceptRequest, MessageRequestCreate, MessageRequestResponse
 from app.services.core import (
-    PUBLIC_MARKETPLACE_USER_ID,
+    calculate_received_rating,
     create_conversation_for_intercambio,
     ensure_user,
     get_match_for_users,
@@ -19,6 +19,11 @@ from app.services.core import (
 router = APIRouter()
 
 
+def _is_public_marketplace_request(intercambio: Intercambio) -> bool:
+    # Public requests are represented as self-addressed rows to keep FK integrity.
+    return intercambio.usuario_receptor_id == intercambio.usuario_emisor_id
+
+
 @router.get("/marketplace/habilidades")
 def list_marketplace_habilidades(
     viewer_user_id: int = Query(...),
@@ -30,31 +35,31 @@ def list_marketplace_habilidades(
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
         viewer_ofertadas = get_user_habilidades(session, viewer_user_id, "ofertada")
-        viewer_busçadas = get_user_habilidades(session, viewer_user_id, "buscada")
+        viewer_buscadas = get_user_habilidades(session, viewer_user_id, "buscada")
 
         viewer_ofertadas_ids = {h.id for h in viewer_ofertadas}
-        viewer_busçadas_ids = {h.id for h in viewer_busçadas}
+        viewer_buscadas_ids = {h.id for h in viewer_buscadas}
 
         all_users = session.execute(select(Usuario).where(Usuario.id != viewer_user_id)).scalars().all()
 
         compatible_users = []
         for user in all_users:
             user_ofertadas = get_user_habilidades(session, user.id, "ofertada")
-            user_busçadas = get_user_habilidades(session, user.id, "buscada")
+            user_buscadas = get_user_habilidades(session, user.id, "buscada")
 
             user_ofertadas_ids = {h.id for h in user_ofertadas}
-            user_busçadas_ids = {h.id for h in user_busçadas}
+            user_buscadas_ids = {h.id for h in user_buscadas}
 
-            if viewer_busçadas_ids & user_ofertadas_ids and viewer_ofertadas_ids & user_busçadas_ids:
+            if viewer_buscadas_ids & user_ofertadas_ids and viewer_ofertadas_ids & user_buscadas_ids:
                 compatible_users.append(user)
 
         result = []
         for user in compatible_users:
             user_ofertadas = get_user_habilidades(session, user.id, "ofertada")
-            user_busçadas = get_user_habilidades(session, user.id, "buscada")
+            user_buscadas = get_user_habilidades(session, user.id, "buscada")
 
             habilidades_ofertadas = [serialize_habilidad(h) for h in user_ofertadas]
-            habilidades_busçadas = [serialize_habilidad(h) for h in user_busçadas]
+            habilidades_buscadas = [serialize_habilidad(h) for h in user_buscadas]
 
             existing_match = get_match_for_users(session, viewer_user_id, user.id)
 
@@ -105,9 +110,10 @@ def list_marketplace_habilidades(
                 "foto_url": user.foto_url or "",
                 "biografia": user.biografia or "",
                 "habilidades_ofertadas": habilidades_ofertadas,
-                "habilidades_busçadas": habilidades_busçadas,
+                "habilidades_buscadas": habilidades_buscadas,
                 "viewer_match_state": match_state,
                 "viewer_conversation_id": match_conv,
+                "rating": calculate_received_rating(session, user.id),
             }
 
             if q:
@@ -117,7 +123,7 @@ def list_marketplace_habilidades(
                     if q_lower in h.nombre.lower():
                         matches = True
                         break
-                for h in user_busçadas:
+                for h in user_buscadas:
                     if q_lower in h.nombre.lower():
                         matches = True
                         break
@@ -140,7 +146,21 @@ def create_message_request(payload: MessageRequestCreate) -> dict:
             ensure_user(session, payload.to_user_id)
             receptor_id = payload.to_user_id
         else:
-            receptor_id = PUBLIC_MARKETPLACE_USER_ID
+            receptor_id = payload.from_user_id
+
+            active_public_requests = session.execute(
+                select(Intercambio).where(
+                    Intercambio.usuario_emisor_id == payload.from_user_id,
+                    Intercambio.usuario_receptor_id == payload.from_user_id,
+                    Intercambio.estado == "pendiente",
+                )
+            ).scalars().all()
+
+            if len(active_public_requests) >= 3:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Ya alcanzaste el limite de 3 publicaciones activas. Borra una para publicar otra.",
+                )
 
         now = datetime.now(timezone.utc)
         intercambio = Intercambio(
@@ -187,9 +207,18 @@ def list_marketplace_requests(
     q: str | None = Query(default=None),
 ) -> dict:
     with SessionLocal() as session:
+        viewer_habilidades_ofertadas_ids: set[int] = set()
+        viewer_habilidades_buscadas_ids: set[int] = set()
+
+        if viewer_user_id:
+            viewer_habilidades = get_user_habilidades(session, viewer_user_id, "ofertada")
+            viewer_habilidades_ofertadas_ids = {h.id for h in viewer_habilidades}
+            viewer_habilidades = get_user_habilidades(session, viewer_user_id, "buscada")
+            viewer_habilidades_buscadas_ids = {h.id for h in viewer_habilidades}
+
         stmt = select(Intercambio).where(
             Intercambio.estado == "pendiente",
-            Intercambio.usuario_receptor_id == PUBLIC_MARKETPLACE_USER_ID,
+            Intercambio.usuario_receptor_id == Intercambio.usuario_emisor_id,
         )
 
         if viewer_user_id:
@@ -201,6 +230,28 @@ def list_marketplace_requests(
 
         serialized = []
         for item in intercambios_raw:
+            if viewer_user_id:
+                emisor_habilidades_ofertadas = get_user_habilidades(session, item.usuario_emisor_id, "ofertada")
+                emisor_habilidades_buscadas = get_user_habilidades(session, item.usuario_emisor_id, "buscada")
+                emisor_habilidades_ofertadas_ids = {h.id for h in emisor_habilidades_ofertadas}
+                emisor_habilidades_buscadas_ids = {h.id for h in emisor_habilidades_buscadas}
+
+                viewer_busca_algo = len(viewer_habilidades_buscadas_ids) > 0
+                viewer_ofrece_algo = len(viewer_habilidades_ofertadas_ids) > 0
+                emisor_busca_algo = len(emisor_habilidades_buscadas_ids) > 0
+                emisor_ofrece_algo = len(emisor_habilidades_ofertadas_ids) > 0
+
+                tiene_match = False
+                if viewer_busca_algo and emisor_ofrece_algo:
+                    if viewer_habilidades_buscadas_ids & emisor_habilidades_ofertadas_ids:
+                        tiene_match = True
+                if viewer_ofrece_algo and emisor_busca_algo:
+                    if viewer_habilidades_ofertadas_ids & emisor_habilidades_buscadas_ids:
+                        tiene_match = True
+
+                if not tiene_match:
+                    continue
+
             ser = serialize_intercambio_for_viewer(session, item, viewer_user_id)
             if viewer_user_id and ser.get("viewer_match_state") == "matched":
                 continue
@@ -238,7 +289,7 @@ def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptReques
         if intercambio.estado != "pendiente":
             raise HTTPException(status_code=400, detail="Esta solicitud ya no esta disponible")
 
-        if intercambio.usuario_receptor_id != PUBLIC_MARKETPLACE_USER_ID:
+        if not _is_public_marketplace_request(intercambio):
             raise HTTPException(status_code=400, detail="Esta solicitud no es publica")
 
         ensure_user(session, payload.viewer_user_id)
@@ -266,10 +317,31 @@ def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptReques
                 "match_state": "matched",
             }
 
-        matched = session.execute(
+        outgoing = session.execute(
             select(Intercambio).where(
                 Intercambio.usuario_emisor_id == viewer,
                 Intercambio.usuario_receptor_id == target,
+                Intercambio.estado == "pendiente",
+            )
+        ).scalars().first()
+
+        if not outgoing:
+            outgoing = Intercambio(
+                usuario_emisor_id=viewer,
+                usuario_receptor_id=target,
+                habilidad_id=intercambio.habilidad_solicitada_id,
+                habilidad_solicitada_id=intercambio.habilidad_id,
+                mensaje="Interesado en tu intercambio publico",
+                estado="pendiente",
+                fecha_creacion=datetime.now(timezone.utc),
+            )
+            session.add(outgoing)
+            session.flush()
+
+        matched = session.execute(
+            select(Intercambio).where(
+                Intercambio.usuario_emisor_id == target,
+                Intercambio.usuario_receptor_id == viewer,
                 Intercambio.estado == "pendiente",
             )
         ).scalars().first()
@@ -279,18 +351,19 @@ def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptReques
 
         if matched:
             matched.estado = "aceptado"
-            matched.usuario_receptor_id = target
+            outgoing.estado = "aceptado"
             session.flush()
-            conversation_id = create_conversation_for_intercambio(session, matched)
+            conversation_id = create_conversation_for_intercambio(session, outgoing)
             match_state = "matched"
 
         session.commit()
         session.refresh(intercambio)
+        session.refresh(outgoing)
         if matched:
             session.refresh(matched)
 
         return {
-            "request": serialize_intercambio_for_viewer(session, matched if matched else intercambio, viewer),
+            "request": serialize_intercambio_for_viewer(session, intercambio, viewer),
             "matched": matched is not None,
             "match_state": match_state,
             "conversation_id": conversation_id,
@@ -307,7 +380,7 @@ def delete_own_message_request(request_id: int, user_id: int = Query(...)) -> di
         if intercambio.usuario_emisor_id != user_id:
             raise HTTPException(status_code=403, detail="Solo puedes borrar tus propias solicitudes")
 
-        if intercambio.estado != "pendiente" or intercambio.usuario_receptor_id != PUBLIC_MARKETPLACE_USER_ID:
+        if intercambio.estado != "pendiente" or not _is_public_marketplace_request(intercambio):
             raise HTTPException(status_code=400, detail="Solo puedes borrar solicitudes publicas pendientes")
 
         session.delete(intercambio)
