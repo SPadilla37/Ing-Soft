@@ -1066,3 +1066,25 @@
       .chat-msg { max-width: 100%; }
     }
 
+    /* Compact user panel for matches, historial, intereses */
+    .compact-user-panel {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      padding: 0.7rem 1.2rem 0.7rem 1.2rem;
+      background: none;
+      box-shadow: none;
+      border-radius: 12px;
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+    }
+    .compact-user-panel .avatar {
+      width: 32px;
+      height: 32px;
+      font-size: 1rem;
+    }
+    .compact-user-panel .mini-btn {
+      padding: 0.2rem 0.8rem;
+      font-size: 0.95rem;
+    }
+
