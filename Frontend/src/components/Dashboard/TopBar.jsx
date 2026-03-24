@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 const TopBar = ({ onSearch, showSearch, titleView }) => {
   const { currentUser, currentUserRecord, clearSession } = useAuth();
+  const searchInputRef = useRef(null);
+  const searchBtnRef = useRef(null);
   
   const profile = currentUserRecord?.profile || {};
   const visibleName = profile.fullName || currentUserRecord?.name || currentUser;
@@ -12,16 +14,44 @@ const TopBar = ({ onSearch, showSearch, titleView }) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  // Efecto para que el botón enfoque el input
+  useEffect(() => {
+    const searchInput = searchInputRef.current;
+    const searchBtn = searchBtnRef.current;
+    
+    if (searchBtn && searchInput) {
+      const handleClick = (e) => {
+        e.preventDefault();
+        searchInput.focus();
+      };
+      
+      searchBtn.addEventListener('click', handleClick);
+      
+      return () => {
+        searchBtn.removeEventListener('click', handleClick);
+      };
+    }
+  }, []);
+
+  // Manejar la búsqueda con Enter
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && onSearch) {
+      onSearch(e.target.value);
+    }
+  };
+
   return (
     <div className="top-shell">
       {showSearch ? (
         <div className="search-shell">
           <input 
+            ref={searchInputRef}
             id="searchInput" 
             placeholder="Buscar habilidades..." 
             onChange={(e) => onSearch(e.target.value)}
+            onKeyPress={handleKeyPress}
           />
-          <button className="secondary-btn">Buscar</button>
+          <button ref={searchBtnRef} className="search-btn">🔍</button>
         </div>
       ) : (
         <div className="top-title">

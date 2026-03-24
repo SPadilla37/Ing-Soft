@@ -630,8 +630,96 @@
       justify-content: flex-end;
     }
 
-    .search-shell { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.8rem; }
-    .search-shell input { margin-top: 0; }
+/* Estilos para la barra de búsqueda animada */
+.search-shell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.search-shell input {
+  width: 95px;
+  padding: 0.7rem 2.2rem 0.7rem 1rem;
+  border-radius: 40px;
+  border: 1px solid rgba(179, 198, 238, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  margin-top: 0;
+  outline: none;
+  font-size: 0.85rem;
+}
+
+/* Expande al hacer hover en el contenedor */
+.search-shell:hover input {
+  width: 280px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Expande si está enfocado */
+.search-shell input:focus {
+  width: 280px;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(103, 168, 255, 0.6);
+  box-shadow: 0 0 0 2px rgba(75, 150, 255, 0.15);
+}
+
+/* Mantiene expandido si tiene texto */
+.search-shell input:not(:placeholder-shown) {
+  width: 280px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Estilo del placeholder */
+.search-shell input::placeholder {
+  color: #d4ddf4;
+  opacity: 0.8;
+  font-size: 0.85rem;
+}
+
+/* Elimina fondo blanco de autocompletado */
+.search-shell input:-webkit-autofill,
+.search-shell input:-webkit-autofill:hover,
+.search-shell input:-webkit-autofill:focus {
+  -webkit-text-fill-color: white;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.08) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Botón de búsqueda */
+.search-shell .search-btn {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: #d4ddf4;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.4rem;
+  width: auto;
+  margin-top: 0;
+  transition: all 0.3s ease;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-shell .search-btn:hover {
+  transform: scale(1.1);
+  color: #4ca5ff;
+}
+
+/* Cambia el color del botón cuando el input está expandido */
+.search-shell:hover .search-btn,
+.search-shell input:focus + .search-btn,
+.search-shell input:not(:placeholder-shown) + .search-btn {
+  color: #4ca5ff;
+}
 
     .top-user { display: flex; align-items: center; gap: 0.8rem; white-space: nowrap; }
     .avatar {
