@@ -84,6 +84,7 @@ const IncomingMatchesView = () => {
          items.length === 0 ? <p>Aún no recibes matches.</p> :
          items.map(item => {
             const matchDetails = getMatchDetails(item);
+            // MarketplaceCard ya muestra username como principal tras el cambio global
             return (
               <MarketplaceCard 
                 key={item.id}
