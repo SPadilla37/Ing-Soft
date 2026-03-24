@@ -24,10 +24,23 @@ const MatchesView = ({ searchQuery }) => {
         apiRequest(API_BASE, `/marketplace/habilidades?viewer_user_id=${currentUser}${searchQuery ? `&q=${searchQuery}` : ''}`),
         apiRequest(API_BASE, `/usuarios/${currentUser}`)
       ]);
-      
-      setCurrentUserProfile(profileResult.user || profileResult);
-      setRequests(marketResult.users || []);
 
+      setCurrentUserProfile(profileResult.user || profileResult);
+      let users = marketResult.users || [];
+
+      // Si falta username, hacer fetch adicional
+      users = await Promise.all(users.map(async (u) => {
+        if (!u.username && u.id) {
+          try {
+            const userRes = await apiRequest(API_BASE, `/usuarios/${u.id}`);
+            return { ...u, username: userRes.user?.username || userRes.username };
+          } catch {
+            return u;
+          }
+        }
+        return u;
+      }));
+      setRequests(users);
     } catch (error) {
       console.error('Error loading marketplace data:', error);
     } finally {
