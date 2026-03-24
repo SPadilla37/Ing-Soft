@@ -15,7 +15,7 @@ const AuthScreen = () => {
               <span>Habilio</span>
             </div>
             <div className="welcome-copy">
-              <h1>Learn. Teach. <span>Connect.</span></h1>
+              <h1>Aprende. Enseña. <span>Conecta.</span></h1>
               <p>Encuentra personas que quieran aprender lo que tu dominas y que puedan ensenarte algo que tu necesitas. Publica tu intercambio, aparece en el buscador y activa el chat solo cuando alguien acepte.</p>
             </div>
           </div>

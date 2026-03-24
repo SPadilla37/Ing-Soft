@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 
-const TopBar = ({ onSearch }) => {
+const TopBar = ({ onSearch, showSearch }) => {
   const { currentUser, currentUserRecord, clearSession } = useAuth();
   
   const profile = currentUserRecord?.profile || {};
@@ -14,14 +14,16 @@ const TopBar = ({ onSearch }) => {
 
   return (
     <div className="top-shell">
-      <div className="search-shell">
-        <input 
-          id="searchInput" 
-          placeholder="Search skills..." 
-          onChange={(e) => onSearch(e.target.value)}
-        />
-        <button className="secondary-btn">Buscar</button>
-      </div>
+      {showSearch && (
+        <div className="search-shell">
+          <input 
+            id="searchInput" 
+            placeholder="Buscar habilidades..." 
+            onChange={(e) => onSearch(e.target.value)}
+          />
+          <button className="secondary-btn">Buscar</button>
+        </div>
+      )}
       <div className="top-user">
         <div className="avatar">{getInitials(visibleName)}</div>
         <div>
