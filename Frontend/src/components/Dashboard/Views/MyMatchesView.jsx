@@ -3,7 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 
-const MyMatchesView = ({ onOpenChat = () => {} }) => {
+const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate }) => {
   const { currentUser } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +68,7 @@ const MyMatchesView = ({ onOpenChat = () => {} }) => {
         body: JSON.stringify({ user_id: Number(currentUser) })
       });
       loadMyMatches();
+      if (onBadgeUpdate) onBadgeUpdate();
     } catch (error) {
       alert(error.message);
     }

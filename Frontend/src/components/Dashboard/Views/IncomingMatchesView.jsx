@@ -5,7 +5,7 @@ import { API_BASE } from '../../../config/constants';
 import MarketplaceCard from '../MarketplaceCard';
 import PublicProfileModal from '../PublicProfileModal';
 
-const IncomingMatchesView = () => {
+const IncomingMatchesView = ({ onBadgeUpdate }) => {
   const { currentUser } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +54,7 @@ const IncomingMatchesView = () => {
       });
       setPopup('Interés aceptado. Si ambos se aceptaron, ya tienen chat disponible.');
       loadIncoming();
+      if (onBadgeUpdate) onBadgeUpdate();
     } catch (error) {
       alert(error.message);
     }
@@ -67,6 +68,7 @@ const IncomingMatchesView = () => {
       });
       setPopup('Solicitud rechazada.');
       loadIncoming();
+      if (onBadgeUpdate) onBadgeUpdate();
     } catch (error) {
       alert(error.message);
     }
