@@ -5,7 +5,7 @@ const Sidebar = ({ activeView, setActiveView, badges }) => {
   const { clearSession } = useAuth();
 
   const navItems = [
-    { id: 'matchesView', label: 'Matche' },
+    { id: 'matchesView', label: 'Match' },
     { id: 'incomingMatchesView', label: 'Intereses recibidos', badgeKey: 'incoming' },
     { id: 'myMatchesView', label: 'Mis Matches', badgeKey: 'myMatches' },
     { id: 'historyView', label: 'Historial' },

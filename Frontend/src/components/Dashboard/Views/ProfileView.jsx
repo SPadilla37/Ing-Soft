@@ -72,6 +72,13 @@ const ProfileView = () => {
             {currentUserRecord?.username && (
               <div className="profile-username">@{currentUserRecord.username}</div>
             )}
+            {currentUserRecord?.rating && (
+              <div className="profile-rating rating-star">
+                {currentUserRecord.rating.average != null 
+                  ? <>★ {Number(currentUserRecord.rating.average).toFixed(1)} / 5 ({currentUserRecord.rating.count})</>
+                  : 'Sin calificaciones'}
+              </div>
+            )}
           </div>
 
           <div className="profile-form-shell">
