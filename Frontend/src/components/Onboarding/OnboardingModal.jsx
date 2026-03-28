@@ -5,6 +5,12 @@ import { api as apiRequest } from '../../services/api';
 import { API_BASE } from '../../config/constants';
 import { ensureSkillIds } from '../../services/skills';
 
+const NAME_MAX_LENGTH = 25;
+const BIO_MAX_LENGTH = 500;
+
+const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/;
+const BIO_REGEX = /^[\w\sáéíóúÁÉÍÓÚñÑ+*=/%^.,!?:;()"'\\/-]*$/;
+
 const OnboardingModal = () => {
   const { currentUser, setCurrentUserRecord } = useAuth();
   const [formData, setFormData] = useState({
@@ -15,6 +21,57 @@ const OnboardingModal = () => {
     learnSkills: new Set()
   });
   const [pickerConfig, setPickerConfig] = useState(null);
+  const [errors, setErrors] = useState({
+    firstName: '',
+    lastName: '',
+    bio: ''
+  });
+
+  const validateField = (field, value) => {
+    if (field === 'firstName' || field === 'lastName') {
+      if (value.length > NAME_MAX_LENGTH) {
+        return `Máximo ${NAME_MAX_LENGTH} caracteres`;
+      }
+      if (!NAME_REGEX.test(value)) {
+        return 'Solo se permiten letras a-z';
+      }
+      return '';
+    }
+    if (field === 'bio') {
+      if (value.length > BIO_MAX_LENGTH) {
+        return `Máximo ${BIO_MAX_LENGTH} caracteres`;
+      }
+      if (!BIO_REGEX.test(value)) {
+        return 'Caracteres no permitidos';
+      }
+      return '';
+    }
+    return '';
+  };
+
+  const handleInputChange = (field, value) => {
+    let processedValue = value;
+    const maxLength = field === 'bio' ? BIO_MAX_LENGTH : NAME_MAX_LENGTH;
+    
+    if (field === 'firstName' || field === 'lastName') {
+      processedValue = value.slice(0, maxLength);
+      const filtered = processedValue.split('').filter(char => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]$/.test(char)).join('');
+      processedValue = filtered.slice(0, maxLength);
+    } else if (field === 'bio') {
+      processedValue = value.slice(0, maxLength);
+    }
+
+    const error = validateField(field, processedValue);
+    
+    setFormData({ ...formData, [field]: processedValue });
+    setErrors({ ...errors, [field]: error });
+  };
+
+  const hasErrors = () => {
+    return errors.firstName || errors.lastName || errors.bio || 
+           !formData.firstName.trim() || !formData.lastName.trim() ||
+           !formData.teachSkills.size || !formData.learnSkills.size;
+  };
 
   const handleComplete = async () => {
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
@@ -77,24 +134,28 @@ const OnboardingModal = () => {
             <input 
               placeholder="Pedro"
               value={formData.firstName}
-              onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+              onChange={(e) => handleInputChange('firstName', e.target.value)}
             />
+            {errors.firstName && <span className="error-text">{errors.firstName}</span>}
           </div>
           <div>
             <label>Apellido</label>
             <input
               placeholder="González"
               value={formData.lastName}
-              onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+              onChange={(e) => handleInputChange('lastName', e.target.value)}
             />
+            {errors.lastName && <span className="error-text">{errors.lastName}</span>}
           </div>
           <div>
             <label>Bio corta</label>
             <textarea 
               placeholder="Cuéntale a otros que puedes ensenar y que quieres aprender..."
               value={formData.bio}
-              onChange={(e) => setFormData({...formData, bio: e.target.value})}
+              onChange={(e) => handleInputChange('bio', e.target.value)}
             />
+            {errors.bio && <span className="error-text">{errors.bio}</span>}
+            <span className="char-counter">{formData.bio.length}/{BIO_MAX_LENGTH}</span>
           </div>
         </div>
 
@@ -120,7 +181,13 @@ const OnboardingModal = () => {
           </div>
         </div>
 
-        <button className="primary-btn" onClick={handleComplete}>Continuar</button>
+        <button 
+          className="primary-btn" 
+          onClick={handleComplete}
+          disabled={hasErrors()}
+        >
+          Continuar
+        </button>
       </div>
 
       {pickerConfig && (

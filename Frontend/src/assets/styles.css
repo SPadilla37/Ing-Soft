@@ -279,6 +279,26 @@
 
     .modal-card p { margin: 0.5rem 0 0; text-align: center; color: #dbe7f9; }
 
+    .error-text {
+      color: #ff6b6b;
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      display: block;
+    }
+
+    .char-counter {
+      color: #94a3b8;
+      font-size: 0.7rem;
+      display: block;
+      text-align: right;
+      margin-top: 0.25rem;
+    }
+
+    .primary-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     .profile-modal-header {
       display: flex;
       align-items: center;
