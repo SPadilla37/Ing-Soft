@@ -66,7 +66,7 @@ const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject 
           </button>
         )}
         
-        <button className="ghost-btn" onClick={() => onProfile(request.id)}>
+        <button className="ghost-btn" onClick={() => onProfile(request.usuario_emisor_id)}>
           Ver Perfil
         </button>
       </div>
