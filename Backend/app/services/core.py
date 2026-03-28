@@ -354,6 +354,45 @@ def serialize_intercambio_for_user(session, intercambio: Intercambio, user_id: i
     }
 
 
+def serialize_review_with_author(reseña: Reseña, session) -> dict:
+    """
+    Serialize a review with nested author information.
+    
+    Args:
+        reseña: The Reseña object to serialize
+        session: SQLAlchemy session for database queries
+        
+    Returns:
+        dict: Review data with nested author information
+    """
+    # Fetch author information
+    autor = session.get(Usuario, reseña.autor_id) if reseña.autor_id else None
+    
+    # Handle deleted authors with fallback
+    if autor:
+        autor_info = {
+            "id": autor.id,
+            "nombre": autor.nombre,
+            "apellido": autor.apellido,
+            "username": autor.username,
+        }
+    else:
+        autor_info = {
+            "id": None,
+            "nombre": "Usuario",
+            "apellido": "eliminado",
+            "username": "eliminado",
+        }
+    
+    return {
+        "id": reseña.id,
+        "calificacion": reseña.calificacion,
+        "comentario": reseña.comentario,
+        "created_at": reseña.created_at.isoformat() if reseña.created_at else utc_now_iso(),
+        "autor": autor_info,
+    }
+
+
 def serialize_message(message: Mensaje) -> dict:
     return {
         "id": message.id,
