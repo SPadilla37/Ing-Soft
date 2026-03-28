@@ -1,6 +1,6 @@
 import React from 'react';
 
-const MarketplaceCard = ({ request, onAccept, onProfile, onReject }) => {
+const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject }) => {
   const author = [request.nombre, request.apellido].filter(Boolean).join(' ').trim() || `Usuario ${request.id}`;
   const username = request.username ? `@${request.username}` : '';
   
