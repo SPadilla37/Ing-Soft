@@ -84,6 +84,12 @@ const OnboardingModal = () => {
       return;
     }
 
+    const overlap = [...formData.teachSkills].filter(s => formData.learnSkills.has(s));
+    if (overlap.length > 0) {
+      alert(`No puedes seleccionar la misma habilidad para ofrecer y aprender: ${overlap.join(', ')}`);
+      return;
+    }
+
     try {
       const teachSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.teachSkills));
       const learnSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.learnSkills));

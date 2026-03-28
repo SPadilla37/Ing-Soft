@@ -35,6 +35,14 @@ def update_user_profile(user_id: int, payload: UserProfileUpdatePayload) -> dict
         if payload.biografia is not None:
             user.biografia = payload.biografia.strip()
 
+        if payload.habilidades_ofertadas is not None and payload.habilidades_buscadas is not None:
+            overlap = set(payload.habilidades_ofertadas) & set(payload.habilidades_buscadas)
+            if overlap:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No puedes tener la misma habilidad ofertada y buscada"
+                )
+
         if payload.habilidades_ofertadas is not None:
             session.execute(
                 delete(UsuarioHabilidad).where(
