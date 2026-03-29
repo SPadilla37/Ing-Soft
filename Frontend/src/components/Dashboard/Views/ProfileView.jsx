@@ -70,66 +70,136 @@ const ProfileView = () => {
   };
 
   return (
-    <section id="profileView" className="view active">
-      <div className="profile-shell surface-card">
-        <div className="profile-layout">
-          <div className="profile-avatar-panel">
-            <div className="profile-avatar-large">{getInitials(formData.fullName)}</div>
-            <div className="profile-avatar-note">Tu avatar se genera con tu inicial.</div>
-            {currentUserRecord?.username && (
-              <div className="profile-username">@{currentUserRecord.username}</div>
-            )}
-            {currentUserRecord?.rating && (
-              <div className="profile-rating rating-star">
-                {currentUserRecord.rating.average != null 
-                  ? <>★ {Number(currentUserRecord.rating.average).toFixed(1)} / 5 ({currentUserRecord.rating.count})</>
-                  : 'Sin calificaciones'}
-              </div>
-            )}
+    <section className="space-y-8">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-primary/20 via-surface-container-high/60 to-surface-container/40 backdrop-blur-sm rounded-2xl p-8 border border-primary/10">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-primary text-3xl">person</span>
           </div>
+          <div>
+            <h2 className="font-headline font-bold text-3xl text-on-surface">Mi Perfil</h2>
+            <p className="text-on-surface-variant mt-1">
+              Actualiza tu información y habilidades
+            </p>
+          </div>
+        </div>
+      </div>
 
-          <div className="profile-form-shell">
-            <label>Nombre</label>
+      {/* Profile Content */}
+      <div className="grid lg:grid-cols-[300px_1fr] gap-8">
+        {/* Avatar Panel */}
+        <div className="bg-surface-container-highest rounded-2xl border border-outline-variant/10 p-8 flex flex-col items-center text-center space-y-4">
+          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary-dim to-primary flex items-center justify-center text-white font-bold text-5xl shadow-lg">
+            {getInitials(formData.fullName)}
+          </div>
+          <p className="text-on-surface-variant text-sm">
+            Tu avatar se genera con tus iniciales
+          </p>
+          {currentUserRecord?.username && (
+            <div className="px-4 py-2 bg-surface-container rounded-full">
+              <p className="text-on-surface font-semibold">@{currentUserRecord.username}</p>
+            </div>
+          )}
+          {currentUserRecord?.rating && (
+            <div className="bg-surface-container-low/50 rounded-xl p-4 w-full">
+              <p className="text-sm font-semibold text-on-surface mb-2">Calificación</p>
+              <div className="flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined text-secondary text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>
+                  star
+                </span>
+                <span className="text-2xl font-bold text-on-surface">
+                  {currentUserRecord.rating.average != null 
+                    ? Number(currentUserRecord.rating.average).toFixed(1)
+                    : 'N/A'}
+                </span>
+                <span className="text-on-surface-variant">/ 5</span>
+              </div>
+              <p className="text-xs text-on-surface-variant mt-1">
+                ({currentUserRecord.rating.count || 0} {currentUserRecord.rating.count === 1 ? 'reseña' : 'reseñas'})
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Form Panel */}
+        <div className="bg-surface-container-highest rounded-2xl border border-outline-variant/10 p-8 space-y-6">
+          <div>
+            <label className="block text-sm font-semibold text-on-surface mb-2">Nombre completo</label>
             <input 
-              placeholder="Tu nombre" 
+              placeholder="Tu nombre completo" 
               value={formData.fullName}
               onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
             />
-            <label>Descripción del perfil</label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-on-surface mb-2">Descripción del perfil</label>
             <textarea 
-              className="profile-textarea" 
               placeholder="Habla de tus intereses..." 
               value={formData.bio}
               onChange={(e) => setFormData({...formData, bio: e.target.value})}
+              rows={4}
+              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
             />
+          </div>
 
-            <div className="profile-meta-row">
-              <div className="profile-summary-block">
-                <label>Habilidades que quieres ofrecer</label>
-                <button className="picker-trigger" onClick={() => setPickerConfig({ mode: 'teach', initial: formData.teachSkills })}>
-                  Seleccionar habilidades
-                </button>
-                <div className="summary-row">
-                  {Array.from(formData.teachSkills).map(s => <span key={s} className="chip">{s}</span>)}
-                </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-surface-container-low/50 rounded-xl p-6 border border-outline-variant/10">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="material-symbols-outlined text-secondary">school</span>
+                <label className="text-sm font-semibold text-on-surface">Habilidades que ofreces</label>
               </div>
-              <div className="profile-summary-block">
-                <label>Habilidades que quieres aprender</label>
-                <button className="picker-trigger" onClick={() => setPickerConfig({ mode: 'learn', initial: formData.learnSkills })}>
-                  Seleccionar habilidades
-                </button>
-                <div className="summary-row">
-                  {Array.from(formData.learnSkills).map(s => <span key={s} className="chip">{s}</span>)}
-                </div>
+              <button 
+                className="w-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/20 text-on-surface font-semibold py-3 rounded-xl transition-all mb-4"
+                onClick={() => setPickerConfig({ mode: 'teach', initial: formData.teachSkills })}
+              >
+                Seleccionar habilidades
+              </button>
+              <div className="flex flex-wrap gap-2 min-h-[40px]">
+                {Array.from(formData.teachSkills).map(s => (
+                  <span key={s} className="px-3 py-1.5 rounded-full bg-secondary-container/30 text-secondary-fixed text-xs font-medium border border-secondary-container/20">
+                    {s}
+                  </span>
+                ))}
+                {formData.teachSkills.size === 0 && (
+                  <span className="text-on-surface-variant text-sm italic">No has seleccionado habilidades</span>
+                )}
               </div>
             </div>
 
-            <div className="profile-actions">
-              <button className="primary-btn" onClick={handleSave} disabled={saving}>
-                {saving ? 'Guardando...' : 'Guardar perfil'}
+            <div className="bg-surface-container-low/50 rounded-xl p-6 border border-outline-variant/10">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="material-symbols-outlined text-tertiary">auto_awesome</span>
+                <label className="text-sm font-semibold text-on-surface">Habilidades que buscas</label>
+              </div>
+              <button 
+                className="w-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/20 text-on-surface font-semibold py-3 rounded-xl transition-all mb-4"
+                onClick={() => setPickerConfig({ mode: 'learn', initial: formData.learnSkills })}
+              >
+                Seleccionar habilidades
               </button>
+              <div className="flex flex-wrap gap-2 min-h-[40px]">
+                {Array.from(formData.learnSkills).map(s => (
+                  <span key={s} className="px-3 py-1.5 rounded-full bg-tertiary-container/20 text-tertiary-fixed text-xs font-medium border border-tertiary-container/10">
+                    {s}
+                  </span>
+                ))}
+                {formData.learnSkills.size === 0 && (
+                  <span className="text-on-surface-variant text-sm italic">No has seleccionado habilidades</span>
+                )}
+              </div>
             </div>
           </div>
+
+          <button 
+            className="w-full bg-gradient-to-br from-primary-dim to-primary hover:from-primary hover:to-primary-dim text-white font-bold py-4 rounded-full shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+            onClick={handleSave} 
+            disabled={saving}
+          >
+            {saving ? 'Guardando...' : 'Guardar perfil'}
+          </button>
         </div>
       </div>
 

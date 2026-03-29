@@ -19,7 +19,6 @@ const MatchesView = ({ searchQuery }) => {
     if (!currentUser) return;
     setLoading(true);
     try {
-      // Fetch both the marketplace requests and the current user's profile in parallel
       const [marketResult, profileResult] = await Promise.all([
         apiRequest(API_BASE, `/marketplace/habilidades?viewer_user_id=${currentUser}${searchQuery ? `&q=${searchQuery}` : ''}`),
         apiRequest(API_BASE, `/usuarios/${currentUser}`)
@@ -28,7 +27,6 @@ const MatchesView = ({ searchQuery }) => {
       setCurrentUserProfile(profileResult.user || profileResult);
       let users = marketResult.users || [];
 
-      // Si falta username, hacer fetch adicional
       users = await Promise.all(users.map(async (u) => {
         if (!u.username && u.id) {
           try {
@@ -99,7 +97,6 @@ const MatchesView = ({ searchQuery }) => {
     }
     
     try {
-      // User the first matched skill for the official request creation
       const habilidadQueBusco = matchDetails.theyOfferIWant[0]?.id || user.habilidades_ofertadas?.[0]?.id;
       const habilidadQueOfrezco = matchDetails.iOfferTheyWant[0]?.id || user.habilidades_buscadas?.[0]?.id;
       
@@ -133,9 +130,7 @@ const MatchesView = ({ searchQuery }) => {
     const mySoughtIds = new Set(currentUserProfile.habilidades_buscadas?.map(h => h.id) || []);
     
     return {
-      // What I offer that they want (intersection of my offered and their sought)
       iOfferTheyWant: (req.habilidades_buscadas || []).filter(h => myOfferedIds.has(h.id)),
-      // What they offer that I want (intersection of their offered and my sought)
       theyOfferIWant: (req.habilidades_ofertadas || []).filter(h => mySoughtIds.has(h.id))
     };
   };
@@ -146,11 +141,9 @@ const MatchesView = ({ searchQuery }) => {
     if (selectedCategory === 'Todas') return true;
 
     const matchDetails = getMatchDetails(req);
-    // Check if any of the matched skills belong to the selected category
     const hasCategoryMatch = [...matchDetails.iOfferTheyWant, ...matchDetails.theyOfferIWant]
       .some(h => h.categoria === selectedCategory);
       
-    // Fallback exactly like old behavior if no profile (or no intersection due to some weird state)
     if (!hasCategoryMatch && matchDetails.iOfferTheyWant.length === 0 && matchDetails.theyOfferIWant.length === 0) {
       const offeredCategory = req.habilidades_ofertadas?.[0]?.categoria || '';
       const requestedCategory = req.habilidades_buscadas?.[0]?.categoria || '';
@@ -161,68 +154,118 @@ const MatchesView = ({ searchQuery }) => {
   });
 
   return (
-    <section id="matchesView" className="view active">
-      <div className="hero-strip">
-        <h2>Personas que coinciden con tu intercambio de habilidades</h2>
-        <p>Estas son las solicitudes activas del marketplace. Usa el buscador y los filtros para encontrar un intercambio y aceptar si te interesa.</p>
-        <div className="chip-row" style={{ marginTop: '0.9rem' }}>
-          {categories.map(cat => (
-            <button 
-              key={cat} 
-              className={`chip ${selectedCategory === cat ? 'active' : ''}`}
-              onClick={() => setSelectedCategory(cat)}
-            >
-              {cat === 'Todas' ? 'Todas' : cat}
-            </button>
-          ))}
+    <section className="space-y-8">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-surface-container-high p-8 rounded-lg flex items-center justify-between group hover:bg-surface-bright transition-all cursor-default">
+          <div>
+            <p className="text-on-surface-variant text-sm font-medium mb-1">Solicitudes activas</p>
+            <h3 className="text-4xl font-headline font-extrabold text-on-surface">{filteredRequests.length}</h3>
+          </div>
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+            <span className="material-symbols-outlined text-3xl">pending_actions</span>
+          </div>
+        </div>
+        <div className="bg-surface-container-high p-8 rounded-lg flex items-center justify-between group hover:bg-surface-bright transition-all cursor-default">
+          <div>
+            <p className="text-on-surface-variant text-sm font-medium mb-1">Tus conversaciones</p>
+            <h3 className="text-4xl font-headline font-extrabold text-on-surface">0</h3>
+          </div>
+          <div className="w-14 h-14 rounded-full bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
+            <span className="material-symbols-outlined text-3xl">chat_bubble</span>
+          </div>
+        </div>
+        <div className="bg-surface-container-high p-8 rounded-lg flex items-center justify-between group hover:bg-surface-bright transition-all cursor-default">
+          <div>
+            <p className="text-on-surface-variant text-sm font-medium mb-1">Habilidades ganadas</p>
+            <h3 className="text-4xl font-headline font-extrabold text-on-surface">0</h3>
+          </div>
+          <div className="w-14 h-14 rounded-full bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:scale-110 transition-transform">
+            <span className="material-symbols-outlined text-3xl">school</span>
+          </div>
         </div>
       </div>
 
-      <div className="stats-row">
-        <div className="stat-box">
-          <span className="muted">Solicitudes activas</span>
-          <strong>{filteredRequests.length}</strong>
+      {/* Title and Filters */}
+      <div className="flex justify-between items-end">
+        <div>
+          <h2 className="text-5xl font-headline font-extrabold text-on-surface tracking-tight leading-none mb-4">
+            Matches sugeridos
+          </h2>
+          <p className="text-on-surface-variant max-w-xl text-lg">
+            Explora talentos curados específicamente para tu crecimiento mutuo en el Digital Atelier.
+          </p>
         </div>
-        <div className="stat-box">
-          <span className="muted">Tus conversaciones</span>
-          <strong>0</strong> {/* Should come from dashboard state later */}
+        <div className="flex gap-2">
+          <button className="p-3 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface">
+            <span className="material-symbols-outlined">filter_list</span>
+          </button>
+          <button className="p-3 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface">
+            <span className="material-symbols-outlined">sort</span>
+          </button>
         </div>
       </div>
 
-      <div className="cards-grid">
-        {loading ? <p>Cargando matches...</p> : 
-         filteredRequests.length === 0 ? <p>No se encontraron resultados.</p> :
-         filteredRequests.map(req => {
-           const matchDetails = getMatchDetails(req);
-           return (
-             <MarketplaceCard 
-               key={req.id} 
-               request={req} 
-               matchDetails={matchDetails}
-               onAccept={(user) => handleAccept(user, matchDetails)}
-               onProfile={(userId) => setProfileUserId(userId)}
-             />
-           );
-         })
-        }
+      {/* Category Filters */}
+      <div className="flex flex-wrap gap-2">
+        {categories.map(cat => (
+          <button 
+            key={cat} 
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              selectedCategory === cat 
+                ? 'bg-primary text-white shadow-lg' 
+                : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-bright'
+            }`}
+            onClick={() => setSelectedCategory(cat)}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
 
-      {profileUserId ? (
+      {/* Match Cards Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+        {loading ? (
+          <p className="text-on-surface-variant">Cargando matches...</p>
+        ) : filteredRequests.length === 0 ? (
+          <p className="text-on-surface-variant">No se encontraron resultados.</p>
+        ) : (
+          filteredRequests.map(req => {
+            const matchDetails = getMatchDetails(req);
+            return (
+              <MarketplaceCard 
+                key={req.id} 
+                request={req} 
+                matchDetails={matchDetails}
+                onAccept={(user) => handleAccept(user, matchDetails)}
+                onProfile={(userId) => setProfileUserId(userId)}
+              />
+            );
+          })
+        )}
+      </div>
+
+      {profileUserId && (
         <PublicProfileModal
           userId={profileUserId}
           onClose={() => setProfileUserId(null)}
         />
-      ) : null}
+      )}
 
-      {popup ? (
-        <section className="auth-modal" onClick={() => setPopup('')}>
-          <div className="modal-card glass" onClick={(e) => e.stopPropagation()}>
-            <h2>Notificación</h2>
-            <p>{popup}</p>
-            <button className="primary-btn" onClick={() => setPopup('')}>Aceptar</button>
+      {popup && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setPopup('')}>
+          <div className="bg-surface-container-highest rounded-2xl p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-2xl font-headline font-bold text-on-surface mb-4">Notificación</h2>
+            <p className="text-on-surface-variant mb-6">{popup}</p>
+            <button 
+              className="w-full bg-primary-dim hover:bg-primary text-white py-3 rounded-full font-bold transition-all"
+              onClick={() => setPopup('')}
+            >
+              Aceptar
+            </button>
           </div>
-        </section>
-      ) : null}
+        </div>
+      )}
     </section>
   );
 };

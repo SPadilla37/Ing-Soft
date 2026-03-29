@@ -1,17 +1,14 @@
 const ReviewCard = ({ review }) => {
-  // Handle missing or invalid review data
   if (!review) {
     return null;
   }
 
-  // Extract review data with fallbacks
   const rating = review.calificacion ?? 0;
   const comment = review.comentario || "Sin comentario";
   const authorName = review.autor?.nombre || '';
   const authorLastName = review.autor?.apellido || '';
   const fullName = [authorName, authorLastName].filter(Boolean).join(' ').trim() || 'Usuario eliminado';
   
-  // Format date safely
   let formattedDate = '';
   try {
     if (review.created_at) {
@@ -22,32 +19,34 @@ const ReviewCard = ({ review }) => {
   }
 
   return (
-    <div className="review-card" style={{
-      border: '1px solid #e0e0e0',
-      borderRadius: '8px',
-      padding: '12px',
-      marginBottom: '12px'
-    }}>
-      <div className="review-header" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: '8px'
-      }}>
-        <span className="review-rating" style={{ color: '#f59e0b' }}>
-          ★ {rating}/5
-        </span>
-        <span className="review-author" style={{ fontWeight: 500 }}>
-          {fullName}
-        </span>
-        {formattedDate && (
-          <span className="review-date" style={{ color: '#888', fontSize: '0.9em' }}>
-            {formattedDate}
-          </span>
-        )}
+    <div className="bg-surface-container-low/50 rounded-xl p-5 border border-outline-variant/10">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-secondary-dim flex items-center justify-center text-white font-bold text-sm">
+            {fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
+          </div>
+          <div>
+            <p className="font-semibold text-on-surface">{fullName}</p>
+            {formattedDate && (
+              <p className="text-xs text-on-surface-variant">{formattedDate}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          {[...Array(5)].map((_, i) => (
+            <span 
+              key={i} 
+              className={`material-symbols-outlined text-lg ${
+                i < rating ? 'text-secondary' : 'text-on-surface-variant/30'
+              }`}
+              style={{fontVariationSettings: i < rating ? "'FILL' 1" : "'FILL' 0"}}
+            >
+              star
+            </span>
+          ))}
+        </div>
       </div>
-      <p className="review-comment" style={{ margin: 0, color: '#555' }}>
-        {comment}
-      </p>
+      <p className="text-on-surface-variant text-sm leading-relaxed">{comment}</p>
     </div>
   );
 };

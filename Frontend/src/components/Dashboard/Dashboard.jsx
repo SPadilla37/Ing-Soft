@@ -111,13 +111,13 @@ const Dashboard = () => {
   };
 
   return (
-    <div id="dashboard" className="dashboard">
+    <div className="bg-background min-h-screen">
       <Sidebar 
         activeView={activeView} 
         setActiveView={setActiveView} 
         badges={badges}
       />
-      <main className="main-shell">
+      <main className="ml-72 pt-32 px-10 pb-20">
         <TopBar onSearch={setSearchQuery} showSearch={activeView === 'matchesView'} />
         {renderView()}
       </main>

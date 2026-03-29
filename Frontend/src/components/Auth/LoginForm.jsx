@@ -43,38 +43,51 @@ const LoginForm = ({ onSignupTab }) => {
   };
 
   return (
-    <div id="loginPane" className="form-shell">
-      <h2>Bienvenido de nuevo</h2>
-      <p>Ingresa con tu correo para continuar en tu dashboard de intercambios.</p>
-      <label>Correo</label>
-      <input 
-        type="email" 
-        placeholder="correo@ejemplo.com" 
-        value={email}
-        onChange={(e) => {
-          const { value } = e.target;
-          setEmail(value);
-          setEmailError('');
-          if (value && !validateEmail(value)) {
-            setEmailError('Este correo no es válido');
-          }
-        }}
-        maxLength={25}
-      />
-      {emailError && <span className="error-message" style={{color: 'red'}}>{emailError}</span>}
-      <label>Contraseña</label>
-      <input 
-        type="password" 
-        placeholder="Tu contraseña" 
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        maxLength={50}
-      />
+    <div className="bg-surface-container/50 backdrop-blur-sm rounded-2xl p-6 border border-outline-variant/10 flex-1 flex flex-col">
+      <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">Bienvenido de nuevo</h2>
+      <p className="text-on-surface-variant mb-6">
+        Ingresa con tu correo para continuar en tu dashboard de intercambios.
+      </p>
+      
+      <div className="space-y-4 flex-1">
+        <div>
+          <label className="block text-sm font-semibold text-on-surface mb-2">Correo</label>
+          <input 
+            type="email" 
+            placeholder="correo@ejemplo.com" 
+            value={email}
+            onChange={(e) => {
+              const { value } = e.target;
+              setEmail(value);
+              setEmailError('');
+              if (value && !validateEmail(value)) {
+                setEmailError('Este correo no es válido');
+              }
+            }}
+            maxLength={25}
+            className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          />
+          {emailError && <span className="text-error text-xs mt-1 block">{emailError}</span>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-on-surface mb-2">Contraseña</label>
+          <input 
+            type="password" 
+            placeholder="Tu contraseña" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            maxLength={50}
+            className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          />
+        </div>
+      </div>
+
       <button 
-        className="primary-btn" 
         type="button" 
         onClick={handleLogin}
         disabled={!canSubmit}
+        className="w-full mt-6 bg-gradient-to-br from-primary-dim to-primary hover:from-primary hover:to-primary-dim text-white font-bold py-4 rounded-full shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
       >
         {loading ? 'Cargando...' : 'Entrar'}
       </button>

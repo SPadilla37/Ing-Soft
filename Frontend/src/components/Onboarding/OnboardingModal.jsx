@@ -111,7 +111,7 @@ const OnboardingModal = () => {
       });
       
       setCurrentUserRecord(result.user);
-      // Automatically publish first request
+      
       await apiRequest(API_BASE, `/message-requests`, {
         method: 'POST',
         body: JSON.stringify({
@@ -129,68 +129,108 @@ const OnboardingModal = () => {
   };
 
   return (
-    <section id="onboardingModal" className="auth-modal">
-      <div className="modal-card glass">
-        <h2>Completa tu perfil</h2>
-        <p>Completa tu perfil inicial para entrar en el marketplace de intercambio.</p>
-
-        <div className="field-grid">
-          <div>
-            <label>Nombre</label>
-            <input 
-              placeholder="Pedro"
-              value={formData.firstName}
-              onChange={(e) => handleInputChange('firstName', e.target.value)}
-            />
-            {errors.firstName && <span className="error-text">{errors.firstName}</span>}
-          </div>
-          <div>
-            <label>Apellido</label>
-            <input
-              placeholder="González"
-              value={formData.lastName}
-              onChange={(e) => handleInputChange('lastName', e.target.value)}
-            />
-            {errors.lastName && <span className="error-text">{errors.lastName}</span>}
-          </div>
-          <div>
-            <label>Bio corta</label>
-            <textarea 
-              placeholder="Cuéntale a otros que puedes ensenar y que quieres aprender..."
-              value={formData.bio}
-              onChange={(e) => handleInputChange('bio', e.target.value)}
-            />
-            {errors.bio && <span className="error-text">{errors.bio}</span>}
-            <span className="char-counter">{formData.bio.length}/{BIO_MAX_LENGTH}</span>
-          </div>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl bg-surface-container-highest rounded-3xl p-8 border border-outline-variant/20 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="mb-6">
+          <h2 className="font-headline font-bold text-3xl text-on-surface mb-2">Completa tu perfil</h2>
+          <p className="text-on-surface-variant">
+            Completa tu perfil inicial para entrar en el marketplace de intercambio.
+          </p>
         </div>
 
-        <div className="selector-row">
-          <div className="select-card">
-            <h3>Habilidades que quieres ofrecer</h3>
-            <div className="summary-row">
-              {Array.from(formData.teachSkills).map(s => <span key={s} className="chip">{s}</span>)}
+        <div className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-on-surface mb-2">Nombre</label>
+              <input 
+                placeholder="Pedro"
+                value={formData.firstName}
+                onChange={(e) => handleInputChange('firstName', e.target.value)}
+                className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              />
+              {errors.firstName && <span className="text-error text-xs mt-1 block">{errors.firstName}</span>}
             </div>
-            <button className="ghost-btn" onClick={() => setPickerConfig({ mode: 'teach', initial: formData.teachSkills })}>
-              Elegir habilidades para ofrecer
-            </button>
+            
+            <div>
+              <label className="block text-sm font-semibold text-on-surface mb-2">Apellido</label>
+              <input
+                placeholder="González"
+                value={formData.lastName}
+                onChange={(e) => handleInputChange('lastName', e.target.value)}
+                className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              />
+              {errors.lastName && <span className="text-error text-xs mt-1 block">{errors.lastName}</span>}
+            </div>
           </div>
 
-          <div className="select-card">
-            <h3>Habilidades que quieres aprender</h3>
-            <div className="summary-row">
-              {Array.from(formData.learnSkills).map(s => <span key={s} className="chip">{s}</span>)}
+          <div>
+            <label className="block text-sm font-semibold text-on-surface mb-2">Bio corta</label>
+            <textarea 
+              placeholder="Cuéntale a otros qué puedes enseñar y qué quieres aprender..."
+              value={formData.bio}
+              onChange={(e) => handleInputChange('bio', e.target.value)}
+              rows={4}
+              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
+            />
+            {errors.bio && <span className="text-error text-xs mt-1 block">{errors.bio}</span>}
+            <span className="text-on-surface-variant text-xs mt-1 block text-right">
+              {formData.bio.length}/{BIO_MAX_LENGTH}
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-surface-container-low/50 rounded-2xl p-6 border border-outline-variant/10">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-symbols-outlined text-secondary">school</span>
+                <h3 className="font-semibold text-on-surface">Habilidades que quieres ofrecer</h3>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-4 min-h-[40px]">
+                {Array.from(formData.teachSkills).map(s => (
+                  <span key={s} className="px-4 py-1.5 rounded-full bg-secondary-container/30 text-secondary-fixed text-xs font-medium border border-secondary-container/20">
+                    {s}
+                  </span>
+                ))}
+                {formData.teachSkills.size === 0 && (
+                  <span className="text-on-surface-variant text-sm italic">No has seleccionado habilidades</span>
+                )}
+              </div>
+              <button 
+                className="w-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/20 text-on-surface font-semibold py-3 rounded-xl transition-all"
+                onClick={() => setPickerConfig({ mode: 'teach', initial: formData.teachSkills })}
+              >
+                Elegir habilidades para ofrecer
+              </button>
             </div>
-            <button className="ghost-btn" onClick={() => setPickerConfig({ mode: 'learn', initial: formData.learnSkills })}>
-              Elegir habilidades para aprender
-            </button>
+
+            <div className="bg-surface-container-low/50 rounded-2xl p-6 border border-outline-variant/10">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-symbols-outlined text-tertiary">auto_awesome</span>
+                <h3 className="font-semibold text-on-surface">Habilidades que quieres aprender</h3>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-4 min-h-[40px]">
+                {Array.from(formData.learnSkills).map(s => (
+                  <span key={s} className="px-4 py-1.5 rounded-full bg-tertiary-container/20 text-tertiary-fixed text-xs font-medium border border-tertiary-container/10">
+                    {s}
+                  </span>
+                ))}
+                {formData.learnSkills.size === 0 && (
+                  <span className="text-on-surface-variant text-sm italic">No has seleccionado habilidades</span>
+                )}
+              </div>
+              <button 
+                className="w-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/20 text-on-surface font-semibold py-3 rounded-xl transition-all"
+                onClick={() => setPickerConfig({ mode: 'learn', initial: formData.learnSkills })}
+              >
+                Elegir habilidades para aprender
+              </button>
+            </div>
           </div>
         </div>
 
         <button 
-          className="primary-btn" 
           onClick={handleComplete}
           disabled={hasErrors()}
+          className="w-full mt-8 bg-gradient-to-br from-primary-dim to-primary hover:from-primary hover:to-primary-dim text-white font-bold py-4 rounded-full shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
         >
           Continuar
         </button>
@@ -208,7 +248,7 @@ const OnboardingModal = () => {
           onCancel={() => setPickerConfig(null)}
         />
       )}
-    </section>
+    </div>
   );
 };
 

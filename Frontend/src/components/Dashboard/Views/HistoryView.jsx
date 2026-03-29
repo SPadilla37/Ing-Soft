@@ -18,10 +18,8 @@ const HistoryView = () => {
       ]);
       const myProfile = profileResult.user || profileResult;
       
-      // Filtrar solo los matches completados Y calificados por el usuario
       const completedMatches = (result.matches || []).filter(m => m.estado === 'completado' && m.my_reseña);
 
-      // Fetch the profiles for all matched users to calculate skill overlap in the frontend
       const matchesWithDetails = await Promise.all(
         completedMatches.map(async (match) => {
           try {
@@ -60,44 +58,116 @@ const HistoryView = () => {
     loadCompletedMatches();
   }, [currentUser]);
 
+  const getInitials = (name) => {
+    if (!name) return 'M';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
-    <section id="historyView" className="view active">
-      <div className="incoming-shell">
-        <h2>Historial de matches</h2>
-        <p>Aquí aparecen los matches que ya han sido completados.</p>
+    <section className="space-y-8">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-tertiary/20 via-surface-container-high/60 to-surface-container/40 backdrop-blur-sm rounded-2xl p-8 border border-tertiary/10">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-14 h-14 rounded-xl bg-tertiary/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-tertiary text-3xl">history</span>
+          </div>
+          <div>
+            <h2 className="font-headline font-bold text-3xl text-on-surface">Historial de matches</h2>
+            <p className="text-on-surface-variant mt-1">
+              Aquí aparecen los matches que ya han sido completados.
+            </p>
+          </div>
+        </div>
+        
+        {matches.length > 0 && (
+          <div className="flex items-center gap-2 mt-4 text-on-surface-variant">
+            <span className="material-symbols-outlined text-xl">task_alt</span>
+            <span className="font-semibold">{matches.length} {matches.length === 1 ? 'match completado' : 'matches completados'}</span>
+          </div>
+        )}
       </div>
-      <div className="cards-grid">
-        {loading ? <p>Cargando...</p> :
-         matches.length === 0 ? <p>No tienes matches completados aún.</p> :
-         matches.map(match => (
-           <article key={match.id} className="match-card">
-             <div className="match-head">
-               <div className="match-avatar">M</div>
-               <div>
-                <h3 style={{marginBottom: 0}}>{match.other_user_username ? `@${match.other_user_username}` : match.other_user_name || match.other_user_id}</h3>
-                {match.other_user_name && match.other_user_username && (
-                  <div style={{fontSize: '0.95em', color: '#888', marginBottom: 2}}>{match.other_user_name}</div>
-                )}
-                 <div className="muted">Estado: {match.estado}</div>
-               </div>
-             </div>
-             <div>
-               <div className="muted">Intercambio</div>
-               <div className="strong-list">
-                 {match.intersectTheyOfferIWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'} ↔ {match.intersectIOfferTheyWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'}
-               </div>
-             </div>
-             {match.my_reseña && (
-               <div className="muted" style={{ marginTop: '0.5rem' }}>
-                 <strong>Tu calificación:</strong> {match.my_reseña.calificacion} estrella(s)
-                 {match.my_reseña.comentario && (
-                   <><br/><strong>Comentario:</strong> {match.my_reseña.comentario}</>
-                 )}
-               </div>
-             )}
-           </article>
-         ))
-        }
+
+      {/* History Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+        {loading ? (
+          <div className="col-span-full flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-tertiary/30 border-t-tertiary rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-on-surface-variant">Cargando historial...</p>
+            </div>
+          </div>
+        ) : matches.length === 0 ? (
+          <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
+            <span className="material-symbols-outlined text-8xl text-on-surface-variant/20 mb-4">history_toggle_off</span>
+            <p className="text-on-surface-variant text-lg">No tienes matches completados aún</p>
+            <p className="text-on-surface-variant/70 text-sm mt-2">Cuando completes un intercambio, aparecerá aquí</p>
+          </div>
+        ) : (
+          matches.map(match => (
+            <div key={match.id} className="bg-surface-container-highest p-6 rounded-2xl border border-outline-variant/10 space-y-4">
+              {/* Match Header */}
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-tertiary to-tertiary-dim flex items-center justify-center text-white font-bold text-xl">
+                  {getInitials(match.other_user_name)}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-headline font-bold text-lg text-on-surface">
+                    {match.other_user_username ? `@${match.other_user_username}` : match.other_user_name || `Usuario ${match.other_user_id}`}
+                  </h3>
+                  {match.other_user_name && match.other_user_username && (
+                    <p className="text-on-surface-variant text-sm">{match.other_user_name}</p>
+                  )}
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-tertiary/20 text-tertiary">
+                      {match.estado}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Skills Exchange */}
+              <div className="bg-surface-container-low/50 rounded-xl p-4">
+                <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Intercambio</p>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-secondary-fixed font-medium">
+                    {match.intersectTheyOfferIWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'}
+                  </span>
+                  <span className="material-symbols-outlined text-on-surface-variant">swap_horiz</span>
+                  <span className="text-tertiary-fixed font-medium">
+                    {match.intersectIOfferTheyWant?.map(s => s.nombre).join(', ') || 'Sin habilidad'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Rating Display */}
+              {match.my_reseña && (
+                <div className="bg-surface-container-low/50 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-on-surface">Tu calificación:</span>
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <span 
+                          key={i} 
+                          className={`material-symbols-outlined text-lg ${
+                            i < match.my_reseña.calificacion ? 'text-secondary' : 'text-on-surface-variant/30'
+                          }`}
+                          style={{fontVariationSettings: i < match.my_reseña.calificacion ? "'FILL' 1" : "'FILL' 0"}}
+                        >
+                          star
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {match.my_reseña.comentario && (
+                    <div className="text-on-surface-variant text-sm">
+                      <span className="font-semibold">Comentario:</span> {match.my_reseña.comentario}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </section>
   );

@@ -87,18 +87,47 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
   };
 
   return (
-    <section id="incomingMatchesView" className="view active">
-      <div className="incoming-shell">
-        <h2>Intereses recibidos</h2>
-        <p>Aqui aparecen las personas que ya mostraron interes en ti. Si respondes, se crea el chat.</p>
+    <section className="space-y-8">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-secondary/20 via-surface-container-high/60 to-surface-container/40 backdrop-blur-sm rounded-2xl p-8 border border-secondary/10">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-14 h-14 rounded-xl bg-secondary/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-secondary text-3xl">favorite</span>
+          </div>
+          <div>
+            <h2 className="font-headline font-bold text-3xl text-on-surface">Intereses recibidos</h2>
+            <p className="text-on-surface-variant mt-1">
+              Aquí aparecen las personas que ya mostraron interés en ti. Si respondes, se crea el chat.
+            </p>
+          </div>
+        </div>
+        
+        {items.length > 0 && (
+          <div className="flex items-center gap-2 mt-4 text-on-surface-variant">
+            <span className="material-symbols-outlined text-xl">notifications_active</span>
+            <span className="font-semibold">{items.length} {items.length === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'}</span>
+          </div>
+        )}
       </div>
 
-      <div className="cards-grid">
-        {loading ? <p>Cargando...</p> : 
-         items.length === 0 ? <p>Aún no recibes matches.</p> :
-         items.map(item => {
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+        {loading ? (
+          <div className="col-span-full flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-secondary/30 border-t-secondary rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-on-surface-variant">Cargando solicitudes...</p>
+            </div>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
+            <span className="material-symbols-outlined text-8xl text-on-surface-variant/20 mb-4">inbox</span>
+            <p className="text-on-surface-variant text-lg">Aún no recibes matches</p>
+            <p className="text-on-surface-variant/70 text-sm mt-2">Cuando alguien muestre interés en ti, aparecerá aquí</p>
+          </div>
+        ) : (
+          items.map(item => {
             const matchDetails = getMatchDetails(item);
-            // MarketplaceCard ya muestra username como principal tras el cambio global
             return (
               <MarketplaceCard 
                 key={item.id}
@@ -110,25 +139,35 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
               />
             );
           })
-        }
+        )}
       </div>
 
-      {profileUserId ? (
+      {profileUserId && (
         <PublicProfileModal
           userId={profileUserId}
           onClose={() => setProfileUserId(null)}
         />
-      ) : null}
+      )}
 
-      {popup ? (
-        <section className="auth-modal" onClick={() => setPopup('')}>
-          <div className="modal-card glass" onClick={(e) => e.stopPropagation()}>
-            <h2>Notificación</h2>
-            <p>{popup}</p>
-            <button className="primary-btn" onClick={() => setPopup('')}>Aceptar</button>
+      {popup && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setPopup('')}>
+          <div className="bg-surface-container-highest rounded-2xl p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-secondary text-2xl">check_circle</span>
+              </div>
+              <h2 className="text-2xl font-headline font-bold text-on-surface">Notificación</h2>
+            </div>
+            <p className="text-on-surface-variant mb-6">{popup}</p>
+            <button 
+              className="w-full bg-primary-dim hover:bg-primary text-white py-3 rounded-full font-bold transition-all"
+              onClick={() => setPopup('')}
+            >
+              Aceptar
+            </button>
           </div>
-        </section>
-      ) : null}
+        </div>
+      )}
     </section>
   );
 };

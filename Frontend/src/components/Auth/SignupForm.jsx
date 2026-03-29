@@ -90,22 +90,59 @@ const SignupForm = ({ onLoginTab }) => {
   };
 
   return (
-    <div id="signupPane" className="form-shell">
-      <h2>Crea tu cuenta</h2>
-      <p>Ingresa usuario, correo y contraseña. En el siguiente paso completas tu perfil.</p>
-      <label>Nombre de usuario</label>
-      <input id="username" placeholder="pedro_g" value={formData.username} onChange={handleChange} maxLength={12} />
-      {usernameError && <span className="error-message" style={{color: 'red'}}>{usernameError}</span>}
-      <label>Correo</label>
-      <input id="email" type="email" placeholder="correo@ejemplo.com" value={formData.email} onChange={handleChange} maxLength={25} />
-      {emailError && <span className="error-message" style={{color: 'red'}}>{emailError}</span>}
-      <label>Contraseña</label>
-      <input id="password" type="password" placeholder="Minimo 4 caracteres" value={formData.password} onChange={handleChange} maxLength={50} />
+    <div className="bg-surface-container/50 backdrop-blur-sm rounded-2xl p-6 border border-outline-variant/10 flex-1 flex flex-col">
+      <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">Crea tu cuenta</h2>
+      <p className="text-on-surface-variant mb-6">
+        Ingresa usuario, correo y contraseña. En el siguiente paso completas tu perfil.
+      </p>
+      
+      <div className="space-y-4 flex-1">
+        <div>
+          <label className="block text-sm font-semibold text-on-surface mb-2">Nombre de usuario</label>
+          <input 
+            id="username" 
+            placeholder="pedro_g" 
+            value={formData.username} 
+            onChange={handleChange} 
+            maxLength={12}
+            className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          />
+          {usernameError && <span className="text-error text-xs mt-1 block">{usernameError}</span>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-on-surface mb-2">Correo</label>
+          <input 
+            id="email" 
+            type="email" 
+            placeholder="correo@ejemplo.com" 
+            value={formData.email} 
+            onChange={handleChange} 
+            maxLength={25}
+            className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          />
+          {emailError && <span className="text-error text-xs mt-1 block">{emailError}</span>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-on-surface mb-2">Contraseña</label>
+          <input 
+            id="password" 
+            type="password" 
+            placeholder="Mínimo 4 caracteres" 
+            value={formData.password} 
+            onChange={handleChange} 
+            maxLength={50}
+            className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          />
+        </div>
+      </div>
+
       <button 
-        className="primary-btn" 
         type="button" 
         onClick={handleSignup}
         disabled={!canSubmit}
+        className="w-full mt-6 bg-gradient-to-br from-primary-dim to-primary hover:from-primary hover:to-primary-dim text-white font-bold py-4 rounded-full shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
       >
         {loading ? 'Cargando...' : 'Crear cuenta'}
       </button>
