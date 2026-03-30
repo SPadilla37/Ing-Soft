@@ -44,6 +44,20 @@ def update_user_profile(user_id: int, payload: UserProfileUpdatePayload) -> dict
                 )
 
         if payload.habilidades_ofertadas is not None:
+            if len(payload.habilidades_ofertadas) < 1 or len(payload.habilidades_ofertadas) > 5:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Debes seleccionar entre 1 y 5 habilidades ofertadas"
+                )
+
+        if payload.habilidades_buscadas is not None:
+            if len(payload.habilidades_buscadas) < 1 or len(payload.habilidades_buscadas) > 5:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Debes seleccionar entre 1 y 5 habilidades buscadas"
+                )
+
+        if payload.habilidades_ofertadas is not None:
             session.execute(
                 delete(UsuarioHabilidad).where(
                     UsuarioHabilidad.usuario_id == user_id,

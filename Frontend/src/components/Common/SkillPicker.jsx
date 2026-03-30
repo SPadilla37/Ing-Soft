@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { API_BASE, languagesCatalog } from '../../config/constants';
+import { API_BASE, languagesCatalog, MAX_SKILLS } from '../../config/constants';
 import { api as apiRequest } from '../../services/api';
 
 const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Set() }) => {
@@ -65,7 +65,7 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
     const newSelection = new Set(selection);
     if (newSelection.has(skill)) {
       newSelection.delete(skill);
-    } else {
+    } else if (newSelection.size < MAX_SKILLS) {
       newSelection.add(skill);
     }
     setSelection(newSelection);
@@ -108,7 +108,7 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
               <div>
                 <h2 className="font-headline font-bold text-2xl text-on-surface">{getTitle()}</h2>
                 <p className="text-on-surface-variant text-sm">
-                  {selection.size} {selection.size === 1 ? 'seleccionada' : 'seleccionadas'}
+                  {selection.size}/{MAX_SKILLS} {selection.size === 1 ? 'seleccionada' : 'seleccionadas'}
                 </p>
               </div>
             </div>

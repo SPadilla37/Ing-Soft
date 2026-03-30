@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import SkillPicker from '../Common/SkillPicker';
 import { api as apiRequest } from '../../services/api';
-import { API_BASE } from '../../config/constants';
+import { API_BASE, MIN_SKILLS, MAX_SKILLS } from '../../config/constants';
 import { ensureSkillIds } from '../../services/skills';
 
 const NAME_MAX_LENGTH = 25;
@@ -70,7 +70,8 @@ const OnboardingModal = () => {
   const hasErrors = () => {
     return errors.firstName || errors.lastName || errors.bio || 
            !formData.firstName.trim() || !formData.lastName.trim() ||
-           !formData.teachSkills.size || !formData.learnSkills.size;
+           formData.teachSkills.size < MIN_SKILLS || formData.teachSkills.size > MAX_SKILLS ||
+           formData.learnSkills.size < MIN_SKILLS || formData.learnSkills.size > MAX_SKILLS;
   };
 
   const handleComplete = async () => {
@@ -79,8 +80,13 @@ const OnboardingModal = () => {
       return;
     }
 
-    if (!formData.teachSkills.size || !formData.learnSkills.size) {
-      alert('Selecciona al menos una habilidad para ofrecer y una para aprender.');
+    if (formData.teachSkills.size < MIN_SKILLS || formData.teachSkills.size > MAX_SKILLS) {
+      alert(`Selecciona entre ${MIN_SKILLS} y ${MAX_SKILLS} habilidades para ofrecer.`);
+      return;
+    }
+
+    if (formData.learnSkills.size < MIN_SKILLS || formData.learnSkills.size > MAX_SKILLS) {
+      alert(`Selecciona entre ${MIN_SKILLS} y ${MAX_SKILLS} habilidades para aprender.`);
       return;
     }
 

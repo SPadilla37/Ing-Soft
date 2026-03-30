@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
-import { API_BASE } from '../../../config/constants';
+import { API_BASE, MIN_SKILLS, MAX_SKILLS } from '../../../config/constants';
 import SkillPicker from '../../Common/SkillPicker';
 import { ensureSkillIds } from '../../../services/skills';
 
@@ -33,6 +33,18 @@ const ProfileView = () => {
     try {
       const teachSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.teachSkills));
       const learnSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.learnSkills));
+
+      if (formData.teachSkills.size < MIN_SKILLS || formData.teachSkills.size > MAX_SKILLS) {
+        alert(`Selecciona entre ${MIN_SKILLS} y ${MAX_SKILLS} habilidades para ofrecer.`);
+        setSaving(false);
+        return;
+      }
+
+      if (formData.learnSkills.size < MIN_SKILLS || formData.learnSkills.size > MAX_SKILLS) {
+        alert(`Selecciona entre ${MIN_SKILLS} y ${MAX_SKILLS} habilidades para aprender.`);
+        setSaving(false);
+        return;
+      }
 
       const overlap = [...formData.teachSkills].filter(s => formData.learnSkills.has(s));
       if (overlap.length > 0) {
