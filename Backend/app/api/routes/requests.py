@@ -107,6 +107,7 @@ def list_marketplace_habilidades(
                 "id": user.id,
                 "nombre": user.nombre,
                 "apellido": user.apellido,
+                "username": user.username,
                 "foto_url": user.foto_url or "",
                 "biografia": user.biografia or "",
                 "habilidades_ofertadas": habilidades_ofertadas,

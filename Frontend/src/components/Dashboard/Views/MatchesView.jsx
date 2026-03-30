@@ -14,6 +14,7 @@ const MatchesView = ({ searchQuery }) => {
   const [profileUserId, setProfileUserId] = useState(null);
   const [popup, setPopup] = useState('');
   const [currentUserProfile, setCurrentUserProfile] = useState(null);
+  const [localSearch, setLocalSearch] = useState('');
 
   const loadMarketplace = async () => {
     if (!currentUser) return;
@@ -28,7 +29,8 @@ const MatchesView = ({ searchQuery }) => {
       let users = marketResult.users || [];
 
       users = await Promise.all(users.map(async (u) => {
-        if (!u.username && u.id) {
+        const hasUsername = u.username && u.username.length > 0;
+        if (!hasUsername && u.id) {
           try {
             const userRes = await apiRequest(API_BASE, `/usuarios/${u.id}`);
             return { ...u, username: userRes.user?.username || userRes.username };
@@ -135,9 +137,28 @@ const MatchesView = ({ searchQuery }) => {
     };
   };
 
+  const matchesLocalSearch = (req) => {
+    if (!localSearch) return true;
+    const query = localSearch.toLowerCase();
+    
+    const fullName = `${req.nombre || ''} ${req.apellido || ''}`.toLowerCase();
+    if (fullName.includes(query)) return true;
+    
+    if (req.username?.toLowerCase().includes(query)) return true;
+    
+    const offeredSkills = req.habilidades_ofertadas?.map(h => h.nombre.toLowerCase()) || [];
+    if (offeredSkills.some(skill => skill.includes(query))) return true;
+    
+    const searchedSkills = req.habilidades_buscadas?.map(h => h.nombre.toLowerCase()) || [];
+    if (searchedSkills.some(skill => skill.includes(query))) return true;
+    
+    return false;
+  };
+
   const filteredRequests = requests.filter(req => {
     const matchState = req.viewer_match_state || 'none';
     if (matchState === 'matched' && req.viewer_conversation_id) return false;
+    if (!matchesLocalSearch(req)) return false;
     if (selectedCategory === 'Todas') return true;
 
     const matchDetails = getMatchDetails(req);
@@ -221,6 +242,20 @@ const MatchesView = ({ searchQuery }) => {
             {cat}
           </button>
         ))}
+      </div>
+
+      {/* Local Search Filter */}
+      <div className="relative">
+        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary-dim">
+          search
+        </span>
+        <input 
+          className="w-full sm:w-80 bg-surface-container-low border border-outline-variant/20 rounded-full py-2.5 pl-11 pr-4 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-on-surface placeholder:text-on-surface-variant/50 text-sm"
+          placeholder="Filtrar por nombre o habilidad..." 
+          type="text"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+        />
       </div>
 
       {/* Match Cards Grid */}

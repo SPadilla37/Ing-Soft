@@ -24,6 +24,7 @@ const TopBar = ({ onSearch, showSearch }) => {
               className="w-full bg-surface-container-low border border-outline-variant/20 rounded-full py-3 pl-12 pr-6 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-on-surface placeholder:text-on-surface-variant/50"
               placeholder="Buscar habilidades, mentores o intereses..." 
               type="text"
+              maxLength={30}
               onChange={(e) => onSearch(e.target.value)}
             />
           </div>
