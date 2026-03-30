@@ -48,7 +48,11 @@ def register_user(payload: UserRegisterPayload) -> AuthTokenResponse:
         session.commit()
         session.refresh(existing)
 
-        access_token = create_access_token({"sub": str(existing.id), "email": existing.email})
+        access_token = create_access_token({
+            "sub": str(existing.id),
+            "email": existing.email,
+            "role": getattr(existing, 'role', 'user')
+        })
         return {
             "access_token": access_token,
             "token_type": "bearer",
@@ -76,7 +80,11 @@ def login_user(payload: UserLoginPayload) -> AuthTokenResponse:
         session.commit()
         session.refresh(user)
 
-        access_token = create_access_token({"sub": str(user.id), "email": user.email})
+        access_token = create_access_token({
+            "sub": str(user.id),
+            "email": user.email,
+            "role": getattr(user, 'role', 'user')
+        })
         return {
             "access_token": access_token,
             "token_type": "bearer",

@@ -81,6 +81,7 @@ def serialize_user(user: Usuario, session=None) -> dict:
         "biografia": user.biografia or "",
         "fecha_registro": user.fecha_registro.isoformat() if user.fecha_registro else utc_now_iso(),
         "ultimo_login": user.ultimo_login.isoformat() if user.ultimo_login else None,
+        "role": getattr(user, 'role', 'user'),
         "rating": {
             "average": rating_info["average"],
             "count": rating_info["count"],

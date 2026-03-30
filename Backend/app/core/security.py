@@ -43,7 +43,25 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
 
 
 def verify_token(token: str) -> dict[str, Any] | None:
+    """
+    Verify and decode a JWT token.
+    
+    Returns the decoded payload with role field guaranteed to be present.
+    If the token doesn't contain a role field (legacy tokens), defaults to "user".
+    
+    Args:
+        token: JWT token string to verify
+        
+    Returns:
+        Decoded payload dict with role field, or None if token is invalid
+    """
     try:
-        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        
+        # Ensure role field exists for backward compatibility with legacy tokens
+        if "role" not in payload:
+            payload["role"] = "user"
+        
+        return payload
     except JWTError:
         return None

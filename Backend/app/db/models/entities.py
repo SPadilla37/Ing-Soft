@@ -18,6 +18,11 @@ class Usuario(Base):
     biografia = Column(Text, nullable=True)
     ultimo_login = Column(TIMESTAMP, nullable=True)
     fecha_registro = Column(TIMESTAMP, nullable=True)
+    role = Column(String(10), nullable=False, default='user', server_default='user', index=True)
+
+    __table_args__ = (
+        CheckConstraint("role IN ('user', 'admin', 'superadmin')", name="usuarios_role_check"),
+    )
 
     habilidades_ofertadas = relationship("UsuarioHabilidad", foreign_keys="UsuarioHabilidad.usuario_id", back_populates="usuario")
     intercambios_enviados = relationship("Intercambio", foreign_keys="Intercambio.usuario_emisor_id", back_populates="emisor")

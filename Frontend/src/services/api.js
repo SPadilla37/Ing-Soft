@@ -30,6 +30,32 @@ function toErrorMessage(payload) {
   return JSON.stringify(payload);
 }
 
+function handleHttpError(status, data, path) {
+  switch (status) {
+    case 401:
+      // Solo limpiar sesión y redirigir si NO es login/register
+      if (!path.includes('/auth/login') && !path.includes('/auth/register')) {
+        localStorage.removeItem(dbKeyToken);
+        localStorage.removeItem('currentUser');
+        window.location.href = '/';
+        throw new Error("Sesión expirada");
+      }
+      // Para login/register, solo lanzar el error sin redirigir
+      throw new Error(toErrorMessage(data));
+    case 403:
+      throw new Error("No tienes permisos para esta acción");
+    case 404:
+      throw new Error("Recurso no encontrado");
+    case 409:
+      // Conflicto - usar mensaje del servidor
+      throw new Error(toErrorMessage(data));
+    case 500:
+      throw new Error("Error del servidor, intenta nuevamente");
+    default:
+      throw new Error(toErrorMessage(data));
+  }
+}
+
 
 export async function api(apiBase, path, options = {}) {
   const token = localStorage.getItem(dbKeyToken);
@@ -69,7 +95,7 @@ export async function api(apiBase, path, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(toErrorMessage(data));
+    handleHttpError(response.status, data, path);
   }
 
   return data;
