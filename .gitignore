@@ -114,4 +114,5 @@ out/
 .eslintcache
 .stylelintcache
 .dbml
+*.db
 !README.md
