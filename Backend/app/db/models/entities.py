@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, CheckConstraint
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
@@ -60,6 +60,19 @@ class Intercambio(Base):
     habilidad = relationship("Habilidad", foreign_keys=[habilidad_id])
     habilidad_solicitada = relationship("Habilidad", foreign_keys=[habilidad_solicitada_id])
     reseñas = relationship("Reseña", back_populates="intercambio")
+
+
+class IntercambioFinalizacion(Base):
+    __tablename__ = "intercambios_finalizaciones"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    intercambio_id = Column(Integer, ForeignKey("intercambios.id"), nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    created_at = Column(TIMESTAMP, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("intercambio_id", "usuario_id", name="uq_intercambio_finalizacion_usuario"),
+    )
 
 
 class Mensaje(Base):

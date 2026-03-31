@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class RequestStatus(str, Enum):
@@ -55,7 +55,7 @@ class MatchRatePayload(BaseModel):
 
 
 class UserRegisterPayload(BaseModel):
-    email: str = Field(min_length=3, max_length=120)
+    email: EmailStr
     username: str = Field(min_length=3, max_length=25)
     password: str = Field(min_length=4, max_length=200)
     clerk_id: str = Field(default="")
@@ -66,13 +66,19 @@ class UserLoginPayload(BaseModel):
     password: str = Field(min_length=4, max_length=200)
 
 
+class AuthTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: dict[str, Any]
+
+
 class UserProfileUpdatePayload(BaseModel):
     nombre: Optional[str] = Field(default=None, min_length=0, max_length=35)
     apellido: Optional[str] = Field(default=None, min_length=0, max_length=35)
     foto_url: Optional[str] = Field(default=None, max_length=50)
     biografia: Optional[str] = Field(default=None, max_length=2000)
     habilidades_ofertadas: Optional[List[int]] = Field(default=None)
-    habilidades_busçadas: Optional[List[int]] = Field(default=None)
+    habilidades_buscadas: Optional[List[int]] = Field(default=None)
 
 
 class HabilidadCreate(BaseModel):
@@ -92,4 +98,3 @@ class ResenaCreate(BaseModel):
     receptor_id: int
     calificacion: int = Field(ge=0, le=5)
     comentario: Optional[str] = Field(default=None, max_length=500)
-

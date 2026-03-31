@@ -1,4 +1,4 @@
-﻿:root {
+:root {
       --bg-a: #09101d;
       --bg-b: #12243d;
       --panel: rgba(255, 255, 255, 0.08);
@@ -249,6 +249,13 @@
       margin-top: 0;
     }
 
+    .error-message {
+      color: #dc3545;
+      font-size: 12px;
+      margin-top: 4px;
+      display: block;
+    }
+
     .auth-modal {
       position: fixed;
       inset: 0;
@@ -271,6 +278,32 @@
     }
 
     .modal-card p { margin: 0.5rem 0 0; text-align: center; color: #dbe7f9; }
+
+    .profile-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .profile-modal-header h2 {
+      margin: 0;
+    }
+
+    .profile-modal-content h3 {
+      margin: 0;
+    }
+
+    .profile-modal-content p {
+      margin: 0.5rem 0 0.8rem;
+      text-align: left;
+    }
+
+    .profile-modal-rating {
+      margin-bottom: 0.8rem;
+      color: #dbe7f9;
+    }
 
     .field-grid { display: grid; gap: 0.9rem; margin-top: 1rem; }
 
@@ -338,6 +371,44 @@
       background: linear-gradient(180deg, rgba(24, 31, 40, 0.96) 0%, rgba(31, 46, 66, 0.96) 100%);
       border: 1px solid rgba(157, 180, 222, 0.18);
       box-shadow: 0 24px 50px rgba(0, 0, 0, 0.28);
+    }
+
+    .rating-box {
+      margin-top: 0.8rem;
+      padding: 0.75rem;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .rating-star {
+      color: #FFD700;
+      font-weight: 600;
+    }
+
+    .stars-row {
+      display: flex;
+      gap: 0.4rem;
+      margin: 0.45rem 0 0.55rem;
+    }
+
+    .star-btn {
+      width: auto;
+      margin-top: 0;
+      padding: 0.3rem 0.55rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.06);
+      color: #d7deee;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .star-btn.active {
+      color: #1e2332;
+      background: linear-gradient(135deg, #ffbe2e 0%, #f39a05 100%);
+      border-color: transparent;
     }
 
     .picker-card input { margin-top: 0; }
@@ -477,7 +548,14 @@
       line-height: 1.5;
     }
 
-    .main-shell { display: grid; gap: 1rem; min-width: 0; }
+    .main-shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      align-items: start;
+      gap: 1rem;
+      min-width: 0;
+      height: 100%;
+    }
 
     .top-shell,
     .surface-card,
@@ -492,15 +570,17 @@
 
     .top-shell {
       border-radius: 24px;
-      padding: 0.85rem 1rem;
+      padding: 0.65rem 0.9rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
       background: linear-gradient(135deg, rgba(32, 54, 89, 0.78) 0%, rgba(21, 25, 35, 0.82) 100%);
+      transition: padding 0.2s ease;
     }
 
     .top-shell.user-only {
+      padding: 0.5rem 0.9rem;
       justify-content: flex-end;
     }
 
@@ -533,13 +613,13 @@
 
     .hero-strip {
       border-radius: 24px;
-      padding: 1rem 1.2rem;
+      padding: 0.75rem 1rem;
       background: linear-gradient(135deg, rgba(60, 125, 214, 0.35) 0%, rgba(22, 28, 39, 0.82) 100%);
       border: 1px solid rgba(92, 145, 230, 0.2);
     }
 
-    .hero-strip h2 { margin: 0; font-size: clamp(1.35rem, 3vw, 2.2rem); }
-    .hero-strip p { margin: 0.45rem 0 0; }
+    .hero-strip h2 { margin: 0; font-size: clamp(1.2rem, 2.5vw, 1.8rem); }
+    .hero-strip p { margin: 0.25rem 0 0; font-size: 0.92rem; }
 
     .stats-row {
       display: grid;
@@ -573,7 +653,7 @@
 
     .incoming-shell {
       border-radius: 24px;
-      padding: 1rem 1.1rem;
+      padding: 0.75rem 1rem;
       background: linear-gradient(135deg, rgba(23, 95, 163, 0.22) 0%, rgba(15, 22, 35, 0.92) 100%);
       border: 1px solid rgba(93, 147, 230, 0.18);
     }
@@ -581,12 +661,13 @@
       .incoming-shell h2,
     .incoming-shell h3 {
       margin: 0;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
     }
 
     .incoming-shell p {
-      margin: 0.35rem 0 0.9rem;
+      margin: 0.2rem 0 0;
       color: var(--muted);
+      font-size: 0.92rem;
     }
 
     .match-head { display: flex; align-items: center; gap: 0.8rem; }
@@ -794,6 +875,22 @@
       font-size: 0.9rem;
     }
 
+    .profile-username {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .profile-rating {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: #ffd700;
+      font-weight: 800;
+      font-size: 1.2rem;
+      margin-top: 0.2rem;
+    }
+
     .profile-form-shell {
       display: grid;
       gap: 1rem;
@@ -993,5 +1090,27 @@
       .picker-actions button,
       .mini-btn { width: 100%; }
       .chat-msg { max-width: 100%; }
+    }
+
+    /* Compact user panel for matches, historial, intereses */
+    .compact-user-panel {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      padding: 0.7rem 1.2rem 0.7rem 1.2rem;
+      background: none;
+      box-shadow: none;
+      border-radius: 12px;
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+    }
+    .compact-user-panel .avatar {
+      width: 32px;
+      height: 32px;
+      font-size: 1rem;
+    }
+    .compact-user-panel .mini-btn {
+      padding: 0.2rem 0.8rem;
+      font-size: 0.95rem;
     }
 
