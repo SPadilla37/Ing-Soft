@@ -7,3 +7,6 @@ export const dbKeyToken = "skillswap_token";
 export const dbKeyProfilePrefix = "skillswap_profile_";
 
 export const languagesCatalog = ["English", "Spanish", "French", "German", "Portuguese", "Italian", "Russian", "Japanese"];
+
+export const MIN_SKILLS = 1;
+export const MAX_SKILLS = 5;
