@@ -43,7 +43,7 @@ async def get_stats(
         # Calculate average rating from reviews
         average_rating_result = db.query(func.avg(Reseña.calificacion)).scalar()
         average_rating = float(average_rating_result) if average_rating_result else 0.0
-        
+        average_rating = round(average_rating,2)
         # Query total skills count
         total_skills = db.query(func.count(Habilidad.id)).scalar() or 0
         
