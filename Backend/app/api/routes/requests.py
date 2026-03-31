@@ -40,7 +40,12 @@ def list_marketplace_habilidades(
         viewer_ofertadas_ids = {h.id for h in viewer_ofertadas}
         viewer_buscadas_ids = {h.id for h in viewer_buscadas}
 
-        all_users = session.execute(select(Usuario).where(Usuario.id != viewer_user_id)).scalars().all()
+        all_users = session.execute(
+            select(Usuario).where(
+                Usuario.id != viewer_user_id,
+                Usuario.role == "user",
+            )
+        ).scalars().all()
 
         compatible_users = []
         for user in all_users:
