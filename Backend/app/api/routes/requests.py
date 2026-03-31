@@ -5,6 +5,7 @@ from app.db.database import SessionLocal
 from app.db.models.entities import Intercambio, Conversacion, Habilidad, Usuario, UsuarioHabilidad
 from app.schemas import MarketplaceAcceptRequest, MessageRequestCreate, MessageRequestResponse
 from app.services.email import send_notification_email
+from app.services.notifications import push_notification
 from app.services.core import (
     calculate_received_rating,
     create_conversation_for_intercambio,
@@ -228,6 +229,7 @@ def create_message_request(payload: MessageRequestCreate, background_tasks: Back
         
         # Email Notification (only if it's not a self-request/public request)
         if payload.to_user_id and intercambio.estado == "pendiente":
+            background_tasks.add_task(push_notification, payload.to_user_id, {"type": "badge_update", "target": "incoming"})
             emisor = session.get(Usuario, payload.from_user_id)
             receptor = session.get(Usuario, payload.to_user_id)
             hab_ofertada = session.get(Habilidad, payload.habilidad_solicitada_id)
@@ -335,7 +337,7 @@ def list_marketplace_requests(
 
 
 @router.post("/marketplace/requests/{request_id}/accept")
-def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptRequest) -> dict:
+def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptRequest, background_tasks: BackgroundTasks) -> dict:
     with SessionLocal() as session:
         intercambio = session.get(Intercambio, request_id)
         if not intercambio:
@@ -416,6 +418,11 @@ def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptReques
         session.refresh(outgoing)
         if matched:
             session.refresh(matched)
+            # Both sides agreed, maybe update 'myMatches' for both? Let's just update 'incoming' since it consumes one.
+            background_tasks.add_task(push_notification, viewer, {"type": "badge_update"})
+            background_tasks.add_task(push_notification, target, {"type": "badge_update"})
+        else:
+            background_tasks.add_task(push_notification, target, {"type": "badge_update", "target": "incoming"})
 
         return {
             "request": serialize_intercambio_for_viewer(session, intercambio, viewer),
@@ -514,6 +521,10 @@ def respond_message_request(request_id: int, payload: MessageRequestResponse, ba
 
         session.commit()
         session.refresh(intercambio)
+
+        background_tasks.add_task(push_notification, intercambio.usuario_emisor_id, {"type": "badge_update"})
+        background_tasks.add_task(push_notification, intercambio.usuario_receptor_id, {"type": "badge_update"})
+
         return {
             "request": serialize_intercambio_with_names(session, intercambio),
             "conversation_id": conversation_id,

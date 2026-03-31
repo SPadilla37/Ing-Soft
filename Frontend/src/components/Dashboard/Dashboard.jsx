@@ -80,6 +80,35 @@ const Dashboard = () => {
     loadBadges();
   }, [loadBadges]);
 
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const userId = Number(currentUser);
+    const eventSource = new EventSource(`${API_BASE}/notifications/stream/${userId}`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'badge_update') {
+          // You can also increment specifically if data.target is provided,
+          // but calling loadBadges() ensures exact sync with the server state.
+          loadBadges();
+        }
+      } catch (e) {
+        console.error('Error parsing SSE message:', e);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('SSE Error:', error);
+      // EventSource will automatically try to reconnect.
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [currentUser, loadBadges]);
+
   const handleBadgeUpdate = useCallback(() => {
     loadBadges();
   }, [loadBadges]);

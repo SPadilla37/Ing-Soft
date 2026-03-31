@@ -5,6 +5,7 @@ from app.db.database import SessionLocal
 from app.db.models.entities import Intercambio, IntercambioFinalizacion, Reseña, Usuario, Habilidad
 from app.schemas import MatchFinalizePayload, MatchRatePayload
 from app.services.email import send_notification_email
+from app.services.notifications import push_notification
 from app.services.core import (
     ensure_user,
     get_match_for_users,
@@ -134,12 +135,16 @@ def finalize_match(match_id: int, payload: MatchFinalizePayload, background_task
 
                 for row in pair_rows:
                     row.estado = "completado"
+                
+                background_tasks.add_task(push_notification, intercambio.usuario_emisor_id, {"type": "badge_update"})
+                background_tasks.add_task(push_notification, intercambio.usuario_receptor_id, {"type": "badge_update"})
             else:
                 # One user has confirmed, the other hasn't. Send email notification.
                 other_user_id = intercambio.usuario_receptor_id if payload.user_id == intercambio.usuario_emisor_id else intercambio.usuario_emisor_id
                 
                 # Check if the other user has already confirmed
                 if other_user_id not in confirmed_users:
+                    background_tasks.add_task(push_notification, other_user_id, {"type": "badge_update"})
                     sender = session.get(Usuario, payload.user_id)
                     receiver = session.get(Usuario, other_user_id)
                     hab_ofrecida = session.get(Habilidad, intercambio.habilidad_id)
