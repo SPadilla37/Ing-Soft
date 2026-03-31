@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from sqlalchemy import or_, select
 from app.db.database import SessionLocal
 from app.db.models.entities import Intercambio, Conversacion, Habilidad, Usuario, UsuarioHabilidad
 from app.schemas import MarketplaceAcceptRequest, MessageRequestCreate, MessageRequestResponse
+from app.services.email import send_notification_email
 from app.services.core import (
     calculate_received_rating,
     create_conversation_for_intercambio,
@@ -142,7 +143,7 @@ def list_marketplace_habilidades(
 
 
 @router.post("/message-requests")
-def create_message_request(payload: MessageRequestCreate) -> dict:
+def create_message_request(payload: MessageRequestCreate, background_tasks: BackgroundTasks) -> dict:
     if payload.to_user_id and payload.from_user_id == payload.to_user_id:
         raise HTTPException(status_code=400, detail="No puedes enviarte solicitud a ti mismo")
 
@@ -200,6 +201,30 @@ def create_message_request(payload: MessageRequestCreate) -> dict:
 
         session.commit()
         session.refresh(intercambio)
+        
+        # Email Notification (only if it's not a self-request/public request)
+        if payload.to_user_id and intercambio.estado == "pendiente":
+            emisor = session.get(Usuario, payload.from_user_id)
+            receptor = session.get(Usuario, payload.to_user_id)
+            hab_ofertada = session.get(Habilidad, payload.habilidad_solicitada_id)
+            hab_buscada = session.get(Habilidad, payload.habilidad_id)
+            
+            if emisor and receptor and hab_ofertada and hab_buscada and receptor.email:
+                context = {
+                    "user_name": receptor.nombre,
+                    "sender_name": f"{emisor.nombre} {emisor.apellido}",
+                    "skill_offered": hab_ofertada.nombre,
+                    "skill_requested": hab_buscada.nombre,
+                    "frontend_url": "http://localhost:3000/Ing-Soft/Frontend/"  # Replace with env var if needed
+                }
+                background_tasks.add_task(
+                    send_notification_email,
+                    subject="Nueva propuesta de intercambio en Habilio",
+                    email_to=receptor.email,
+                    template_name="nueva_propuesta.html",
+                    context=context
+                )
+
         return {
             "request": serialize_intercambio_with_names(session, intercambio),
             "matched": intercambio.estado == "aceptado",

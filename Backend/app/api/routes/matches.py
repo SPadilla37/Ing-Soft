@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from sqlalchemy import or_, select
 from app.db.database import SessionLocal
-from app.db.models.entities import Intercambio, IntercambioFinalizacion, Reseña, Usuario
+from app.db.models.entities import Intercambio, IntercambioFinalizacion, Reseña, Usuario, Habilidad
 from app.schemas import MatchFinalizePayload, MatchRatePayload
+from app.services.email import send_notification_email
 from app.services.core import (
     ensure_user,
     get_match_for_users,
@@ -76,7 +77,7 @@ def list_user_matches(user_id: int) -> dict:
 
 
 @router.post("/matches/{match_id}/finalize")
-def finalize_match(match_id: int, payload: MatchFinalizePayload) -> dict:
+def finalize_match(match_id: int, payload: MatchFinalizePayload, background_tasks: BackgroundTasks) -> dict:
     with SessionLocal() as session:
         intercambio = session.get(Intercambio, match_id)
         if not intercambio:
@@ -133,6 +134,36 @@ def finalize_match(match_id: int, payload: MatchFinalizePayload) -> dict:
 
                 for row in pair_rows:
                     row.estado = "completado"
+            else:
+                # One user has confirmed, the other hasn't. Send email notification.
+                other_user_id = intercambio.usuario_receptor_id if payload.user_id == intercambio.usuario_emisor_id else intercambio.usuario_emisor_id
+                
+                # Check if the other user has already confirmed
+                if other_user_id not in confirmed_users:
+                    sender = session.get(Usuario, payload.user_id)
+                    receiver = session.get(Usuario, other_user_id)
+                    hab_ofrecida = session.get(Habilidad, intercambio.habilidad_id)
+                    hab_solicitada = session.get(Habilidad, intercambio.habilidad_solicitada_id)
+                    
+                    # Ensure we send the correct perspective
+                    # If I am finalizer (payload.user_id), and I offered X for Y.
+                    # The receiver is receiving my finalization request.
+                    
+                    if sender and receiver and hab_ofrecida and hab_solicitada and receiver.email:
+                        context = {
+                            "user_name": receiver.nombre,
+                            "sender_name": f"{sender.nombre} {sender.apellido}",
+                            "skill_offered": hab_ofrecida.nombre,
+                            "skill_requested": hab_solicitada.nombre,
+                            "frontend_url": "http://localhost:3000/Ing-Soft/Frontend/"
+                        }
+                        background_tasks.add_task(
+                            send_notification_email,
+                            subject="Confirmación de finalización requerida",
+                            email_to=receiver.email,
+                            template_name="esperando_respuesta.html",
+                            context=context
+                        )
 
         session.commit()
         session.refresh(intercambio)
