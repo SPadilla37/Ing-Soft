@@ -155,7 +155,7 @@ def finalize_match(match_id: int, payload: MatchFinalizePayload, background_task
                             "sender_name": f"{sender.nombre} {sender.apellido}",
                             "skill_offered": hab_ofrecida.nombre,
                             "skill_requested": hab_solicitada.nombre,
-                            "frontend_url": "http://localhost:3000/Ing-Soft/Frontend/"
+                            "frontend_url": "http://localhost:3000/Ing-Soft/Frontend"
                         }
                         background_tasks.add_task(
                             send_notification_email,

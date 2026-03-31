@@ -194,6 +194,30 @@ def create_message_request(payload: MessageRequestCreate, background_tasks: Back
                 intercambio.estado = "aceptado"
                 session.flush()
                 conv_id = create_conversation_for_intercambio(session, intercambio)
+                
+                # Scenario C: Reciprocal match notification
+                # You sent a request to B. B had already sent a request to you.
+                # B is the original emitter of the reciprocal request. We notify B.
+                emisor_reciprocal = session.get(Usuario, payload.to_user_id)
+                receptor_reciprocal = session.get(Usuario, payload.from_user_id)
+                hab_ofertada_reciprocal = session.get(Habilidad, reciprocal.habilidad_id)
+                hab_buscada_reciprocal = session.get(Habilidad, reciprocal.habilidad_solicitada_id)
+                
+                if emisor_reciprocal and receptor_reciprocal and hab_ofertada_reciprocal and hab_buscada_reciprocal and emisor_reciprocal.email:
+                    context = {
+                        "user_name": emisor_reciprocal.nombre,
+                        "accepter_name": f"{receptor_reciprocal.nombre} {receptor_reciprocal.apellido}",
+                        "skill_offered": hab_ofertada_reciprocal.nombre,
+                        "skill_requested": hab_buscada_reciprocal.nombre,
+                        "frontend_url": "http://localhost:3000/Ing-Soft/Frontend"
+                    }
+                    background_tasks.add_task(
+                        send_notification_email,
+                        subject="¡Tu propuesta de intercambio hizo match! 🎉",
+                        email_to=emisor_reciprocal.email,
+                        template_name="propuesta_aceptada.html",
+                        context=context
+                    )
             else:
                 conv_id = None
         else:
@@ -215,7 +239,7 @@ def create_message_request(payload: MessageRequestCreate, background_tasks: Back
                     "sender_name": f"{emisor.nombre} {emisor.apellido}",
                     "skill_offered": hab_ofertada.nombre,
                     "skill_requested": hab_buscada.nombre,
-                    "frontend_url": "http://localhost:3000/Ing-Soft/Frontend/"  # Replace with env var if needed
+                    "frontend_url": "http://localhost:3000/Ing-Soft/Frontend"  # Replace with env var if needed
                 }
                 background_tasks.add_task(
                     send_notification_email,
@@ -444,7 +468,7 @@ def get_outgoing_requests(user_id: int) -> dict:
 
 
 @router.patch("/message-requests/{request_id}/respond")
-def respond_message_request(request_id: int, payload: MessageRequestResponse) -> dict:
+def respond_message_request(request_id: int, payload: MessageRequestResponse, background_tasks: BackgroundTasks) -> dict:
     if payload.action not in {"accept", "reject"}:
         raise HTTPException(status_code=400, detail="La accion debe ser accept o reject")
 
@@ -462,6 +486,28 @@ def respond_message_request(request_id: int, payload: MessageRequestResponse) ->
         if payload.action == "accept":
             intercambio.estado = "aceptado"
             conversation_id = create_conversation_for_intercambio(session, intercambio)
+            
+            # Scenario A: Notification
+            emisor = session.get(Usuario, intercambio.usuario_emisor_id)
+            receptor = session.get(Usuario, intercambio.usuario_receptor_id)
+            hab_ofertada = session.get(Habilidad, intercambio.habilidad_id)
+            hab_buscada = session.get(Habilidad, intercambio.habilidad_solicitada_id)
+            
+            if emisor and receptor and hab_ofertada and hab_buscada and emisor.email:
+                context = {
+                    "user_name": emisor.nombre,
+                    "accepter_name": f"{receptor.nombre} {receptor.apellido}",
+                    "skill_offered": hab_ofertada.nombre,
+                    "skill_requested": hab_buscada.nombre,
+                    "frontend_url": "http://localhost:3000/Ing-Soft/Frontend"
+                }
+                background_tasks.add_task(
+                    send_notification_email,
+                    subject="¡Tu propuesta de intercambio fue aceptada! 🎉",
+                    email_to=emisor.email,
+                    template_name="propuesta_aceptada.html",
+                    context=context
+                )
         else:
             intercambio.estado = "cancelado"
             conversation_id = None
