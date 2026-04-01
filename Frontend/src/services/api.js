@@ -43,6 +43,10 @@ function handleHttpError(status, data, path) {
       // Para login/register, solo lanzar el error sin redirigir
       throw new Error(toErrorMessage(data));
     case 403:
+      // Verificar si es error de cuenta suspendida
+      if (toErrorMessage(data) === 'ACCOUNT_SUSPENDED') {
+        throw new Error("ACCOUNT_SUSPENDED");
+      }
       throw new Error("No tienes permisos para esta acción");
     case 404:
       throw new Error("Recurso no encontrado");

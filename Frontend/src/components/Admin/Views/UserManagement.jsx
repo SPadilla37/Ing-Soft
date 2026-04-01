@@ -44,6 +44,12 @@ const UserManagement = () => {
     }
   };
 
+  const getStatusBadgeClass = (isSuspended) => {
+    return isSuspended 
+      ? 'bg-red-500/20 text-red-400' 
+      : 'bg-green-500/20 text-green-400';
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('es-ES', {
@@ -86,6 +92,7 @@ const UserManagement = () => {
               <th className="text-left text-[#a3aac4] text-xs font-medium px-6 py-3">Usuario</th>
               <th className="text-left text-[#a3aac4] text-xs font-medium px-6 py-3">Email</th>
               <th className="text-left text-[#a3aac4] text-xs font-medium px-6 py-3">Rol</th>
+              <th className="text-left text-[#a3aac4] text-xs font-medium px-6 py-3">Estado</th>
               <th className="text-left text-[#a3aac4] text-xs font-medium px-6 py-3">Registro</th>
               <th className="text-left text-[#a3aac4] text-xs font-medium px-6 py-3">Último Login</th>
               <th className="text-left text-[#a3aac4] text-xs font-medium px-6 py-3">Acciones</th>
@@ -103,6 +110,15 @@ const UserManagement = () => {
                     )}`}
                   >
                     {user.role}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(
+                      user.is_suspended
+                    )}`}
+                  >
+                    {user.is_suspended ? 'Suspendido' : 'Activo'}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-[#a3aac4] text-sm">

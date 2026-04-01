@@ -72,6 +72,9 @@ def login_user(payload: UserLoginPayload) -> AuthTokenResponse:
             raise HTTPException(status_code=401, detail="Correo o contrasena incorrectos")
         if not verify_password(payload.password, user.password_hash):
             raise HTTPException(status_code=401, detail="Correo o contrasena incorrectos")
+        
+        if getattr(user, 'is_suspended', False):
+            raise HTTPException(status_code=403, detail="ACCOUNT_SUSPENDED")
 
         if needs_rehash(user.password_hash):
             user.password_hash = hash_password(payload.password)

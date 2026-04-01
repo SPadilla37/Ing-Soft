@@ -15,6 +15,7 @@ class UserListItem(BaseModel):
     username: str
     email: str
     role: str
+    is_suspended: bool = False
     fecha_registro: Optional[str]
     ultimo_login: Optional[str]
 

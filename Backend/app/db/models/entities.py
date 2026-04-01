@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, CheckConstraint, UniqueConstraint, Boolean
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
@@ -19,6 +19,7 @@ class Usuario(Base):
     ultimo_login = Column(TIMESTAMP, nullable=True)
     fecha_registro = Column(TIMESTAMP, nullable=True)
     role = Column(String(10), nullable=False, default='user', server_default='user', index=True)
+    is_suspended = Column(Boolean, nullable=False, default=False, server_default='0', index=True)
 
     __table_args__ = (
         CheckConstraint("role IN ('user', 'admin', 'superadmin')", name="usuarios_role_check"),

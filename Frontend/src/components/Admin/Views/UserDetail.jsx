@@ -12,6 +12,9 @@ const UserDetail = () => {
   const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState('');
   const [alert, setAlert] = useState(null);
+  const [showSuspendDialog, setShowSuspendDialog] = useState(false);
+  const [showUnsuspendDialog, setShowUnsuspendDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const fetchUserDetail = async () => {
     setLoading(true);
@@ -43,6 +46,49 @@ const UserDetail = () => {
       }, 1500);
     } catch (error) {
       setAlert({ type: 'error', message: error.message });
+    }
+  };
+
+  const handleSuspend = async () => {
+    try {
+      await api(API_BASE, `/admin/users/${userId}/suspend`, {
+        method: 'PATCH',
+      });
+      setAlert({ type: 'success', message: 'Cuenta suspendida exitosamente' });
+      setShowSuspendDialog(false);
+      fetchUserDetail();
+    } catch (error) {
+      setAlert({ type: 'error', message: error.message });
+      setShowSuspendDialog(false);
+    }
+  };
+
+  const handleUnsuspend = async () => {
+    try {
+      await api(API_BASE, `/admin/users/${userId}/unsuspend`, {
+        method: 'PATCH',
+      });
+      setAlert({ type: 'success', message: 'Cuenta reactivada exitosamente' });
+      setShowUnsuspendDialog(false);
+      fetchUserDetail();
+    } catch (error) {
+      setAlert({ type: 'error', message: error.message });
+      setShowUnsuspendDialog(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await api(API_BASE, `/admin/users/${userId}`, {
+        method: 'DELETE',
+      });
+      setAlert({ type: 'success', message: 'Cuenta eliminada exitosamente' });
+      setTimeout(() => {
+        navigate('/admin/users');
+      }, 1500);
+    } catch (error) {
+      setAlert({ type: 'error', message: error.message });
+      setShowDeleteDialog(false);
     }
   };
 
@@ -162,6 +208,131 @@ const UserDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Suspension Status Indicator */}
+      {userDetail?.user?.is_suspended && (
+        <div className="bg-red-500/20 text-red-400 px-4 py-2 rounded-lg flex items-center gap-2">
+          <span className="material-symbols-outlined">block</span>
+          <span>Cuenta Suspendida</span>
+        </div>
+      )}
+
+      {/* Admin Actions */}
+      {(currentUserRecord?.role === 'admin' || currentUserRecord?.role === 'superadmin') && (
+        <div className="bg-[#141f38] rounded-2xl p-6 space-y-4">
+          <h2 className="text-[#dee5ff] text-base font-semibold">Acciones Administrativas</h2>
+          <div className="flex items-center gap-4">
+            {!userDetail?.user?.is_suspended ? (
+              <button
+                onClick={() => setShowSuspendDialog(true)}
+                className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+              >
+                Suspender Cuenta
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowUnsuspendDialog(true)}
+                className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+              >
+                Reactivar Cuenta
+              </button>
+            )}
+            
+            {currentUserRecord?.role === 'superadmin' && (
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                Eliminar Cuenta
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Suspend Confirmation Dialog */}
+      {showSuspendDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[#141f38] rounded-2xl p-6 max-w-md">
+            <h3 className="text-[#dee5ff] text-lg font-semibold mb-4">
+              ¿Suspender cuenta?
+            </h3>
+            <p className="text-[#a3aac4] mb-6">
+              El usuario no podrá iniciar sesión hasta que se reactive su cuenta.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowSuspendDialog(false)}
+                className="flex-1 px-4 py-2 bg-[#1f2b49] text-[#dee5ff] rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSuspend}
+                className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg"
+              >
+                Suspender
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unsuspend Confirmation Dialog */}
+      {showUnsuspendDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[#141f38] rounded-2xl p-6 max-w-md">
+            <h3 className="text-[#dee5ff] text-lg font-semibold mb-4">
+              ¿Reactivar cuenta?
+            </h3>
+            <p className="text-[#a3aac4] mb-6">
+              El usuario podrá iniciar sesión nuevamente.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowUnsuspendDialog(false)}
+                className="flex-1 px-4 py-2 bg-[#1f2b49] text-[#dee5ff] rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleUnsuspend}
+                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg"
+              >
+                Reactivar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[#141f38] rounded-2xl p-6 max-w-md">
+            <h3 className="text-[#dee5ff] text-lg font-semibold mb-4">
+              ⚠️ ¿Eliminar cuenta permanentemente?
+            </h3>
+            <p className="text-[#a3aac4] mb-6">
+              Esta acción no se puede deshacer. Todos los datos del usuario serán eliminados.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowDeleteDialog(false)}
+                className="flex-1 px-4 py-2 bg-[#1f2b49] text-[#dee5ff] rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Role Change (SuperAdmin Only) */}
       {currentUserRecord?.role === 'superadmin' && (

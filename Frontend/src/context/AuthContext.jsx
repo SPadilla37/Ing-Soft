@@ -44,6 +44,7 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(localStorage.getItem(dbKeySession) || null);
   const [currentUserRecord, setCurrentUserRecordState] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showSuspendedPopup, setShowSuspendedPopup] = useState(false);
 
   const setCurrentUserRecord = (userRecord) => {
     setCurrentUserRecordState(normalizeUserRecord(userRecord));
@@ -62,6 +63,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(dbKeyToken);
     setCurrentUser(null);
     setCurrentUserRecordState(null);
+    setShowSuspendedPopup(false);
   };
 
   const loadUserRecord = async (userId) => {
@@ -75,9 +77,15 @@ export const AuthProvider = ({ children }) => {
         clearSession();
         return;
       }
+      
+      if (result.user.is_suspended) {
+        clearSession();
+        setShowSuspendedPopup(true);
+        return;
+      }
+      
       setCurrentUserRecordState(normalizeUserRecord(result.user));
     } catch (error) {
-      // Si falla la carga del usuario, limpiar sesión y forzar login
       console.error('Failed to load user record:', error);
       clearSession();
     } finally {
@@ -94,7 +102,16 @@ export const AuthProvider = ({ children }) => {
   }, [currentUser]);
 
   return (
-    <AuthContext.Provider value={{ currentUser, currentUserRecord, setSession, clearSession, loading, setCurrentUserRecord }}>
+    <AuthContext.Provider value={{ 
+      currentUser, 
+      currentUserRecord, 
+      setSession, 
+      clearSession, 
+      loading, 
+      setCurrentUserRecord,
+      showSuspendedPopup,
+      setShowSuspendedPopup
+    }}>
       {children}
     </AuthContext.Provider>
   );

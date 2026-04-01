@@ -2,6 +2,8 @@ from fastapi import APIRouter, Header, Query, HTTPException
 from typing import Annotated, Optional
 from sqlalchemy import func, and_, or_
 from datetime import datetime, timedelta, timezone
+import logging
+
 from app.core.auth_middleware import require_admin, require_superadmin
 from app.db.database import SessionLocal
 from app.db.models.entities import Usuario, Intercambio, Reseña, Habilidad, UsuarioHabilidad
@@ -94,6 +96,7 @@ async def get_users(
                 username=user.username,
                 email=user.email,
                 role=user.role,
+                is_suspended=user.is_suspended,
                 fecha_registro=user.fecha_registro.isoformat() if user.fecha_registro else None,
                 ultimo_login=user.ultimo_login.isoformat() if user.ultimo_login else None
             )
@@ -167,6 +170,7 @@ async def get_user_detail(
             Reseña.receptor_id == user_id
         ).scalar()
         average_rating = float(average_rating_result) if average_rating_result else 0.0
+        average_rating = round(average_rating,2)
         
         # Query offered skills via usuarios_habilidades join
         offered_skills = db.query(Habilidad).join(
@@ -197,6 +201,7 @@ async def get_user_detail(
                 "username": user.username,
                 "email": user.email,
                 "role": user.role,
+                "is_suspended": user.is_suspended,
                 "nombre": user.nombre,
                 "apellido": user.apellido,
                 "foto_url": user.foto_url,
@@ -578,6 +583,147 @@ async def create_skill(
                 "nombre": new_skill.nombre,
                 "categoria": new_skill.categoria
             }
+        }
+    finally:
+        db.close()
+
+
+@router.patch("/users/{user_id}/suspend")
+@require_admin
+async def suspend_user(
+    user_id: int,
+    authorization: Annotated[str, Header()],
+    current_user_id: int = None,
+    current_user_role: str = None
+):
+    """
+    Suspend a user account.
+    
+    Requires admin or superadmin role.
+    Prevents self-suspension.
+    Updates is_suspended field to True.
+    """
+    if user_id == current_user_id:
+        raise HTTPException(status_code=400, detail="No puedes suspender tu propia cuenta")
+    
+    db = SessionLocal()
+    try:
+        user = db.query(Usuario).filter(Usuario.id == user_id).first()
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        user.is_suspended = True
+        db.commit()
+        
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"Account suspended: user_id={user_id}, suspended_by={current_user_id}, "
+            f"timestamp={datetime.utcnow().isoformat()}"
+        )
+        
+        return {
+            "message": "Cuenta suspendida exitosamente",
+            "user_id": user_id,
+            "is_suspended": True
+        }
+    finally:
+        db.close()
+
+
+@router.patch("/users/{user_id}/unsuspend")
+@require_admin
+async def unsuspend_user(
+    user_id: int,
+    authorization: Annotated[str, Header()],
+    current_user_id: int = None,
+    current_user_role: str = None
+):
+    """
+    Reactivate a suspended user account.
+    
+    Requires admin or superadmin role.
+    Updates is_suspended field to False.
+    """
+    db = SessionLocal()
+    try:
+        user = db.query(Usuario).filter(Usuario.id == user_id).first()
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        user.is_suspended = False
+        db.commit()
+        
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"Account unsuspended: user_id={user_id}, unsuspended_by={current_user_id}, "
+            f"timestamp={datetime.utcnow().isoformat()}"
+        )
+        
+        return {
+            "message": "Cuenta reactivada exitosamente",
+            "user_id": user_id,
+            "is_suspended": False
+        }
+    finally:
+        db.close()
+
+
+@router.delete("/users/{user_id}")
+@require_superadmin
+async def delete_user(
+    user_id: int,
+    authorization: Annotated[str, Header()],
+    current_user_id: int = None,
+    current_user_role: str = None
+):
+    """
+    Permanently delete a user account.
+    
+    Requires superadmin role.
+    Prevents self-deletion.
+    Handles related data deletion or validates referential integrity.
+    """
+    if user_id == current_user_id:
+        raise HTTPException(status_code=400, detail="No puedes eliminar tu propia cuenta")
+    
+    db = SessionLocal()
+    try:
+        user = db.query(Usuario).filter(Usuario.id == user_id).first()
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        active_exchanges = db.query(func.count(Intercambio.id)).filter(
+            or_(
+                Intercambio.usuario_emisor_id == user_id,
+                Intercambio.usuario_receptor_id == user_id
+            ),
+            Intercambio.estado.in_(['pendiente', 'aceptado'])
+        ).scalar() or 0
+        
+        if active_exchanges > 0:
+            raise HTTPException(
+                status_code=409,
+                detail=f"No se puede eliminar: el usuario tiene {active_exchanges} intercambios activos"
+            )
+        
+        db.query(UsuarioHabilidad).filter(UsuarioHabilidad.usuario_id == user_id).delete()
+        db.query(Reseña).filter(or_(Reseña.autor_id == user_id, Reseña.receptor_id == user_id)).delete()
+        db.query(Intercambio).filter(or_(Intercambio.usuario_emisor_id == user_id, Intercambio.usuario_receptor_id == user_id)).delete()
+        db.delete(user)
+        db.commit()
+        
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"Account deleted: user_id={user_id}, deleted_by={current_user_id}, "
+            f"timestamp={datetime.utcnow().isoformat()}"
+        )
+        
+        return {
+            "message": "Cuenta eliminada exitosamente",
+            "user_id": user_id
         }
     finally:
         db.close()
