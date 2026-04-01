@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, Query, HTTPException
+from fastapi import APIRouter, Header, Query, HTTPException, BackgroundTasks
 from typing import Annotated, Optional
 from sqlalchemy import func, and_, or_
 from datetime import datetime, timedelta, timezone
@@ -7,6 +7,7 @@ import logging
 from app.core.auth_middleware import require_admin, require_superadmin
 from app.db.database import SessionLocal
 from app.db.models.entities import Usuario, Intercambio, Reseña, Habilidad, UsuarioHabilidad
+from app.services.notifications import push_notification
 from app.schemas.admin import (
     StatsResponse, UserListResponse, UserListItem, PaginationMeta,
     UserDetailResponse, UserStats, UserSkills, SkillItem, RoleUpdateRequest,
@@ -593,6 +594,7 @@ async def create_skill(
 async def suspend_user(
     user_id: int,
     authorization: Annotated[str, Header()],
+    background_tasks: BackgroundTasks,
     current_user_id: int = None,
     current_user_role: str = None
 ):
@@ -620,6 +622,12 @@ async def suspend_user(
         logger.info(
             f"Account suspended: user_id={user_id}, suspended_by={current_user_id}, "
             f"timestamp={datetime.utcnow().isoformat()}"
+        )
+        
+        background_tasks.add_task(
+            push_notification,
+            user_id,
+            {"type": "account_suspended", "message": "Tu cuenta ha sido suspendida"}
         )
         
         return {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { dbKeySession, dbKeyToken } from '../config/constants';
 import { api as apiRequest } from '../services/api';
 import { API_BASE } from '../config/constants';
@@ -45,6 +45,7 @@ export const AuthProvider = ({ children }) => {
   const [currentUserRecord, setCurrentUserRecordState] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSuspendedPopup, setShowSuspendedPopup] = useState(false);
+  const eventSourceRef = useRef(null);
 
   const setCurrentUserRecord = (userRecord) => {
     setCurrentUserRecordState(normalizeUserRecord(userRecord));
@@ -65,6 +66,11 @@ export const AuthProvider = ({ children }) => {
     setCurrentUserRecordState(null);
     setShowSuspendedPopup(false);
   };
+
+  const handleAccountSuspended = useCallback(() => {
+    clearSession();
+    setShowSuspendedPopup(true);
+  }, []);
 
   const loadUserRecord = async (userId) => {
     if (!userId) {
@@ -93,13 +99,45 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const setupSSE = useCallback((userId) => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    const eventSource = new EventSource(`${API_BASE}/notifications/stream/${userId}`);
+    eventSourceRef.current = eventSource;
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'account_suspended') {
+          handleAccountSuspended();
+        }
+      } catch (e) {
+        console.error('Error parsing SSE message:', e);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('SSE Error:', error);
+    };
+  }, [handleAccountSuspended]);
+
   useEffect(() => {
     if (currentUser) {
       loadUserRecord(currentUser);
+      setupSSE(currentUser);
     } else {
       setLoading(false);
     }
-  }, [currentUser]);
+
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, [currentUser, setupSSE]);
 
   return (
     <AuthContext.Provider value={{ 
