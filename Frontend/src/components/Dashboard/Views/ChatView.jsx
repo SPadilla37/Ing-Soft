@@ -18,6 +18,8 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
   const selectedConvRef = useRef(null);
   const shouldReconnectRef = useRef(false);
   const outgoingQueueRef = useRef([]);
+  const isConnectingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     selectedConvRef.current = selectedConv;
@@ -34,10 +36,12 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
   };
 
   const loadConversations = async () => {
-    if (!currentUser) return;
+    if (!currentUser || !mountedRef.current) return;
     try {
       const result = await apiRequest(API_BASE, `/conversations/${encodeURIComponent(currentUser)}`);
       const list = result.conversations || [];
+      
+      if (!mountedRef.current) return;
       setConversations(list);
 
       let target = null;
@@ -52,7 +56,7 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
         setSelectedConv(target);
         selectedConvRef.current = target;
         await loadMessages(target.id);
-        if (target.can_chat) {
+        if (target.can_chat && mountedRef.current) {
           connectWs(target.id);
         } else {
           setStatus('Chat cerrado: el match fue finalizado.');
@@ -64,15 +68,21 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
   };
 
   useEffect(() => {
+    mountedRef.current = true;
     loadConversations();
+    
     return () => {
+      mountedRef.current = false;
       shouldReconnectRef.current = false;
+      isConnectingRef.current = false;
+      
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
       }
       if (socketRef.current) {
         socketRef.current.close();
+        socketRef.current = null;
       }
     };
   }, [currentUser, initialConversationId]);
@@ -94,36 +104,58 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
   };
 
   const scheduleReconnect = (convId) => {
-    if (!shouldReconnectRef.current) return;
+    if (!shouldReconnectRef.current || !mountedRef.current) return;
     if (!selectedConvRef.current || selectedConvRef.current.id !== convId) return;
 
     const attempt = reconnectAttemptsRef.current + 1;
     reconnectAttemptsRef.current = attempt;
     const delayMs = Math.min(5000, 500 * attempt);
-    setStatus(`Reconectando chat (${attempt})...`);
+    
+    if (mountedRef.current) {
+      setStatus(`Reconectando chat (${attempt})...`);
+    }
 
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
     }
     reconnectTimerRef.current = setTimeout(() => {
-      connectWs(convId);
+      if (mountedRef.current) {
+        connectWs(convId);
+      }
     }, delayMs);
   };
 
   const connectWs = (convId) => {
+    if (!mountedRef.current) return;
+    
     const selected = selectedConvRef.current;
     if (selected && !selected.can_chat) {
       setStatus('Chat cerrado: el match fue finalizado.');
       return;
     }
 
+    // Evitar múltiples conexiones simultáneas
+    if (isConnectingRef.current) {
+      return;
+    }
+
     shouldReconnectRef.current = true;
+    isConnectingRef.current = true;
+    
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
     }
+    
+    // Cerrar conexión anterior si existe
     if (socketRef.current) {
-      socketRef.current.close();
+      const oldWs = socketRef.current;
+      socketRef.current = null;
+      try {
+        oldWs.close();
+      } catch (e) {
+        // Ignorar errores al cerrar
+      }
     }
 
     setStatus('Conectando chat...');
@@ -132,12 +164,18 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
     socketRef.current = ws;
 
     ws.onopen = () => {
+      if (!mountedRef.current) {
+        ws.close();
+        return;
+      }
+      isConnectingRef.current = false;
       reconnectAttemptsRef.current = 0;
       setStatus('Conectado.');
       flushQueue();
     };
 
     ws.onmessage = (event) => {
+      if (!mountedRef.current) return;
       const data = JSON.parse(event.data);
       if (data.type === 'history') {
         setMessages(data.messages);
@@ -149,13 +187,22 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
     };
 
     ws.onclose = () => {
+      isConnectingRef.current = false;
       if (socketRef.current === ws) {
         socketRef.current = null;
       }
-      setStatus('Chat desconectado.');
-      scheduleReconnect(convId);
+      if (mountedRef.current) {
+        setStatus('Chat desconectado.');
+        scheduleReconnect(convId);
+      }
     };
-    ws.onerror = () => setStatus('Error en la conexión.');
+    
+    ws.onerror = () => {
+      isConnectingRef.current = false;
+      if (mountedRef.current) {
+        setStatus('Error en la conexión.');
+      }
+    };
   };
 
   const handleSelectConv = (conv) => {
@@ -163,15 +210,36 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
     selectedConvRef.current = conv;
     setMessages([]);
     outgoingQueueRef.current = [];
-    loadMessages(conv.id);
-    if (conv.can_chat) {
-      connectWs(conv.id);
-    } else {
-      shouldReconnectRef.current = false;
-      if (socketRef.current) {
-        socketRef.current.close();
-        socketRef.current = null;
+    
+    // Detener reconexión automática antes de cambiar de conversación
+    shouldReconnectRef.current = false;
+    isConnectingRef.current = false;
+    
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    
+    if (socketRef.current) {
+      const oldWs = socketRef.current;
+      socketRef.current = null;
+      try {
+        oldWs.close();
+      } catch (e) {
+        // Ignorar errores
       }
+    }
+    
+    loadMessages(conv.id);
+    
+    if (conv.can_chat) {
+      // Pequeño delay para asegurar que la conexión anterior se cerró
+      setTimeout(() => {
+        if (mountedRef.current && selectedConvRef.current?.id === conv.id) {
+          connectWs(conv.id);
+        }
+      }, 100);
+    } else {
       setStatus('Chat cerrado: el match fue finalizado.');
     }
   };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api as apiRequest } from '../../services/api';
 import { API_BASE } from '../../config/constants';
@@ -21,6 +21,9 @@ const Dashboard = () => {
     myMatches: 0,
     chat: 0
   });
+  
+  // Usar ref para evitar recrear la función en cada render
+  const loadBadgesRef = useRef(null);
 
   const loadBadges = useCallback(async () => {
     if (!currentUser) return;
@@ -75,6 +78,9 @@ const Dashboard = () => {
       console.error('Error loading badges:', error);
     }
   }, [currentUser]);
+  
+  // Guardar la función en la ref
+  loadBadgesRef.current = loadBadges;
 
   useEffect(() => {
     loadBadges();
@@ -90,9 +96,10 @@ const Dashboard = () => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'badge_update') {
-          // You can also increment specifically if data.target is provided,
-          // but calling loadBadges() ensures exact sync with the server state.
-          loadBadges();
+          // Usar la ref para evitar dependencias
+          if (loadBadgesRef.current) {
+            loadBadgesRef.current();
+          }
         }
       } catch (e) {
         console.error('Error parsing SSE message:', e);
@@ -107,11 +114,17 @@ const Dashboard = () => {
     return () => {
       eventSource.close();
     };
-  }, [currentUser, loadBadges]);
+  }, [currentUser]); // Solo depende de currentUser
 
+  // Guardar la función en la ref
+  loadBadgesRef.current = loadBadges;
+
+  // Crear una función estable que siempre llame a la versión más reciente
   const handleBadgeUpdate = useCallback(() => {
-    loadBadges();
-  }, [loadBadges]);
+    if (loadBadgesRef.current) {
+      loadBadgesRef.current();
+    }
+  }, []); // Sin dependencias - la función nunca cambia
 
   const renderView = () => {
     switch (activeView) {
@@ -131,7 +144,7 @@ const Dashboard = () => {
       case 'historyView':
         return <HistoryView />;
       case 'chatView':
-        return <ChatView initialConversationId={chatConversationId} />;
+        return <ChatView initialConversationId={chatConversationId} onBadgeUpdate={handleBadgeUpdate} />;
       case 'profileView':
         return <ProfileView />;
       default:
