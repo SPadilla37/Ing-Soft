@@ -7,23 +7,41 @@ import OnboardingModal from './components/Onboarding/OnboardingModal';
 import AdminDashboard from './components/Admin/AdminDashboard';
 
 function AppRoutes() {
-  const { currentUserRecord } = useAuth();
+  const { currentUserRecord, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const hasRedirected = useRef(false);
 
+  // Solución 1: Resetear el ref cuando cambia el usuario
   useEffect(() => {
-    // Only redirect once when user first loads and is on root path
-    if (currentUserRecord?.role && location.pathname === '/' && !hasRedirected.current) {
+    hasRedirected.current = false;
+  }, [currentUser]);
+
+  // Solución 2: Forzar redirección basada en rol sin importar la ruta actual
+  useEffect(() => {
+    if (currentUserRecord?.role && !hasRedirected.current) {
       hasRedirected.current = true;
       const userRole = currentUserRecord.role;
-      if (['admin', 'superadmin'].includes(userRole)) {
+      const currentPath = location.pathname;
+      
+      // Si es admin/superadmin y NO está en rutas de admin, redirigir
+      if (['admin', 'superadmin'].includes(userRole) && !currentPath.startsWith('/admin')) {
         navigate('/admin/dashboard', { replace: true });
-      } else {
+      }
+      // Si es user y está en rutas de admin, redirigir a dashboard
+      else if (userRole === 'user' && currentPath.startsWith('/admin')) {
         navigate('/dashboard', { replace: true });
       }
+      // Si está en la ruta raíz, redirigir según el rol
+      else if (currentPath === '/') {
+        if (['admin', 'superadmin'].includes(userRole)) {
+          navigate('/admin/dashboard', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      }
     }
-  }, [currentUserRecord?.role, location.pathname, navigate]);
+  }, [currentUserRecord?.role, location.pathname, navigate, currentUser]);
 
   // Determine default route based on role
   const userRole = currentUserRecord?.role || 'user';
