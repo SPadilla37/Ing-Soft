@@ -76,26 +76,38 @@ const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject 
         </div>
       </div>
 
-      <div className="mt-10 pt-6 border-t border-outline-variant/10 flex items-center justify-between gap-2">
-        <button 
-          className="text-secondary text-sm font-bold hover:underline transition-all"
-          onClick={() => onProfile(request.usuario_emisor_id || request.id)}
-        >
-          Ver perfil completo
-        </button>
-        <button 
-          className={`${
-            matchState === 'matched' 
-              ? 'bg-secondary hover:bg-secondary-dim' 
-              : 'bg-primary-dim hover:bg-primary'
-          } text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
-          onClick={() => onAccept(request)}
-          disabled={matchState === 'sent'}
-        >
-          {matchState === 'matched' ? 'Abrir chat' : 
-           matchState === 'sent' ? 'Interes enviado' : 
-           (matchState === 'received' || matchState === 'mutual-pending') ? 'Responder match' : 'Conectar'}
-        </button>
+      <div className="mt-10 pt-6 border-t border-outline-variant/10">
+        <div className="flex items-center justify-between gap-2">
+          <button 
+            className="text-secondary text-sm font-bold hover:underline transition-all"
+            onClick={() => onProfile(request.usuario_emisor_id || request.id)}
+          >
+            Ver perfil completo
+          </button>
+          <button 
+            className={`${
+              matchState === 'matched' 
+                ? 'bg-secondary hover:bg-secondary-dim' 
+                : 'bg-primary-dim hover:bg-primary'
+            } text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+            onClick={() => onAccept(request)}
+            disabled={matchState === 'sent'}
+          >
+            {matchState === 'matched' ? 'Abrir chat' : 
+             matchState === 'sent' ? 'Interes enviado' : 
+             (matchState === 'received' || matchState === 'mutual-pending') ? 'Responder match' : 'Conectar'}
+          </button>
+        </div>
+        {onReject && (
+          <div className="flex justify-start ml-2 mt-2">
+            <button 
+              className="text-error text-sm font-bold hover:underline transition-all"
+              onClick={() => onReject(request)}
+            >
+              Rechazar
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

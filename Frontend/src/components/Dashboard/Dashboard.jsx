@@ -118,7 +118,7 @@ const Dashboard = () => {
       case 'matchesView':
         return <MatchesView searchQuery={searchQuery} />;
       case 'incomingMatchesView':
-        return <IncomingMatchesView />;
+        return <IncomingMatchesView onBadgeUpdate={handleBadgeUpdate} />;
       case 'myMatchesView':
         return (
           <MyMatchesView
