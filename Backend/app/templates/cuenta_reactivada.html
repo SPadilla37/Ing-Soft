@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Cuenta Reactivada - Habilio</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+        h2 { color: #16a34a; }
+        p { color: #555555; font-size: 16px; line-height: 1.5; }
+        .success { background-color: #f0fdf4; padding: 15px; border-left: 4px solid #16a34a; margin: 20px 0; }
+        .btn { display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: #ffffff; text-decoration: none; border-radius: 5px; margin-top: 20px; font-weight: bold; }
+        .footer { margin-top: 30px; font-size: 12px; color: #999999; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>✅ Tu cuenta ha sido reactivada</h2>
+        <p>Hola <strong>{{ user_name }}</strong>,</p>
+        
+        <div class="success">
+            <p style="margin: 0;">¡Buenas noticias! Tu cuenta en Habilio ha sido reactivada.</p>
+            <p style="margin: 10px 0 0 0;">Ahora puedes iniciar sesión nuevamente.</p>
+        </div>
+
+        <p>¡Gracias por usar Habilio! Estamos felices de tenerte de vuelta.</p>
+        
+        <a href="{{ frontend_url }}" class="btn">Iniciar Sesión</a>
+        
+        <div class="footer">
+            <p>Este es un correo automático de Habilio. Por favor, no respondas a este mensaje.</p>
+        </div>
+    </div>
+</body>
+</html>

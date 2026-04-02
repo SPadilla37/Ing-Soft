@@ -8,6 +8,8 @@ from app.core.auth_middleware import require_admin, require_superadmin
 from app.db.database import SessionLocal
 from app.db.models.entities import Usuario, Intercambio, Reseña, Habilidad, UsuarioHabilidad
 from app.services.notifications import push_notification
+from app.services.email import send_notification_email
+from app.core.config import settings
 from app.schemas.admin import (
     StatsResponse, UserListResponse, UserListItem, PaginationMeta,
     UserDetailResponse, UserStats, UserSkills, SkillItem, RoleUpdateRequest,
@@ -630,6 +632,16 @@ async def suspend_user(
             {"type": "account_suspended", "message": "Tu cuenta ha sido suspendida"}
         )
         
+        if user.email:
+            user_name = f"{user.nombre} {user.apellido}".strip() or user.username
+            background_tasks.add_task(
+                send_notification_email,
+                subject="Tu cuenta ha sido suspendida - Habilio",
+                email_to=user.email,
+                template_name="cuenta_suspendida.html",
+                context={"user_name": user_name, "frontend_url": settings.FRONTEND_URL}
+            )
+        
         return {
             "message": "Cuenta suspendida exitosamente",
             "user_id": user_id,
@@ -644,6 +656,7 @@ async def suspend_user(
 async def unsuspend_user(
     user_id: int,
     authorization: Annotated[str, Header()],
+    background_tasks: BackgroundTasks,
     current_user_id: int = None,
     current_user_role: str = None
 ):
@@ -668,6 +681,16 @@ async def unsuspend_user(
             f"Account unsuspended: user_id={user_id}, unsuspended_by={current_user_id}, "
             f"timestamp={datetime.utcnow().isoformat()}"
         )
+        
+        if user.email:
+            user_name = f"{user.nombre} {user.apellido}".strip() or user.username
+            background_tasks.add_task(
+                send_notification_email,
+                subject="Tu cuenta ha sido reactivada - Habilio",
+                email_to=user.email,
+                template_name="cuenta_reactivada.html",
+                context={"user_name": user_name, "frontend_url": settings.FRONTEND_URL}
+            )
         
         return {
             "message": "Cuenta reactivada exitosamente",

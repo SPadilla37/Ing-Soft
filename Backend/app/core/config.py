@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Habilio API"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
+    FRONTEND_URL: str = "http://localhost:3000"
 
     # Email Settings (for fastapi-mail)
     # Defaulting to a dummy valid email so the app starts without errors if env vars are missing.
