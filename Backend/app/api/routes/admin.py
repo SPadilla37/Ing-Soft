@@ -6,7 +6,7 @@ import logging
 
 from app.core.auth_middleware import require_admin, require_superadmin
 from app.db.database import SessionLocal
-from app.db.models.entities import Usuario, Intercambio, Reseña, Habilidad, UsuarioHabilidad
+from app.db.models.entities import Usuario, Intercambio, Reseña, Habilidad, UsuarioHabilidad, Conversacion, Mensaje, IntercambioFinalizacion
 from app.services.notifications import push_notification
 from app.services.email import send_notification_email
 from app.core.config import settings
@@ -606,6 +606,7 @@ async def suspend_user(
     Requires admin or superadmin role.
     Prevents self-suspension.
     Updates is_suspended field to True.
+    Cancels all active exchanges (pendiente, aceptado) automatically.
     """
     if user_id == current_user_id:
         raise HTTPException(status_code=400, detail="No puedes suspender tu propia cuenta")
@@ -617,20 +618,51 @@ async def suspend_user(
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         
+        # Cancelar todos los intercambios activos del usuario
+        active_exchanges = db.query(Intercambio).filter(
+            or_(
+                Intercambio.usuario_emisor_id == user_id,
+                Intercambio.usuario_receptor_id == user_id
+            ),
+            Intercambio.estado.in_(['pendiente', 'aceptado'])
+        ).all()
+        
+        cancelled_count = len(active_exchanges)
+        affected_users = set()
+        
+        for exchange in active_exchanges:
+            exchange.estado = 'cancelado'
+            
+            # Identificar al otro usuario afectado
+            other_user_id = exchange.usuario_receptor_id if exchange.usuario_emisor_id == user_id else exchange.usuario_emisor_id
+            affected_users.add(other_user_id)
+        
         user.is_suspended = True
         db.commit()
         
         logger = logging.getLogger(__name__)
         logger.info(
             f"Account suspended: user_id={user_id}, suspended_by={current_user_id}, "
-            f"timestamp={datetime.utcnow().isoformat()}"
+            f"cancelled_exchanges={cancelled_count}, timestamp={datetime.utcnow().isoformat()}"
         )
         
+        # Notificar al usuario suspendido
         background_tasks.add_task(
             push_notification,
             user_id,
             {"type": "account_suspended", "message": "Tu cuenta ha sido suspendida"}
         )
+        
+        # Notificar a los usuarios afectados por la cancelación de intercambios
+        for affected_user_id in affected_users:
+            background_tasks.add_task(
+                push_notification,
+                affected_user_id,
+                {
+                    "type": "exchange_cancelled",
+                    "message": "Un intercambio ha sido cancelado debido a la suspensión de una cuenta"
+                }
+            )
         
         if user.email:
             user_name = f"{user.nombre} {user.apellido}".strip() or user.username
@@ -645,7 +677,8 @@ async def suspend_user(
         return {
             "message": "Cuenta suspendida exitosamente",
             "user_id": user_id,
-            "is_suspended": True
+            "is_suspended": True,
+            "cancelled_exchanges": cancelled_count
         }
     finally:
         db.close()
@@ -714,7 +747,8 @@ async def delete_user(
     
     Requires superadmin role.
     Prevents self-deletion.
-    Handles related data deletion or validates referential integrity.
+    Requires the account to be suspended first.
+    Handles related data deletion (conversations, messages, reviews, exchanges).
     """
     if user_id == current_user_id:
         raise HTTPException(status_code=400, detail="No puedes eliminar tu propia cuenta")
@@ -726,6 +760,14 @@ async def delete_user(
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         
+        # Verificar que la cuenta esté suspendida
+        if not user.is_suspended:
+            raise HTTPException(
+                status_code=400,
+                detail="Debes suspender la cuenta antes de eliminarla"
+            )
+        
+        # Verificar que no haya intercambios activos (por seguridad adicional)
         active_exchanges = db.query(func.count(Intercambio.id)).filter(
             or_(
                 Intercambio.usuario_emisor_id == user_id,
@@ -737,12 +779,38 @@ async def delete_user(
         if active_exchanges > 0:
             raise HTTPException(
                 status_code=409,
-                detail=f"No se puede eliminar: el usuario tiene {active_exchanges} intercambios activos"
+                detail=f"Error: el usuario aún tiene {active_exchanges} intercambios activos. Esto no debería ocurrir."
             )
         
+        # Eliminar mensajes del usuario
+        db.query(Mensaje).filter(Mensaje.remitente_id == user_id).delete()
+        
+        # Eliminar conversaciones donde el usuario participa
+        db.query(Conversacion).filter(
+            or_(
+                Conversacion.usuario_1_id == user_id,
+                Conversacion.usuario_2_id == user_id
+            )
+        ).delete()
+        
+        # Eliminar habilidades del usuario
         db.query(UsuarioHabilidad).filter(UsuarioHabilidad.usuario_id == user_id).delete()
+        
+        # Eliminar reseñas (como autor o receptor)
         db.query(Reseña).filter(or_(Reseña.autor_id == user_id, Reseña.receptor_id == user_id)).delete()
-        db.query(Intercambio).filter(or_(Intercambio.usuario_emisor_id == user_id, Intercambio.usuario_receptor_id == user_id)).delete()
+        
+        # Eliminar finalizaciones de intercambios
+        db.query(IntercambioFinalizacion).filter(IntercambioFinalizacion.usuario_id == user_id).delete()
+        
+        # Eliminar todos los intercambios (ya deberían estar cancelados)
+        db.query(Intercambio).filter(
+            or_(
+                Intercambio.usuario_emisor_id == user_id,
+                Intercambio.usuario_receptor_id == user_id
+            )
+        ).delete()
+        
+        # Finalmente, eliminar el usuario
         db.delete(user)
         db.commit()
         

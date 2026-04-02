@@ -221,6 +221,17 @@ const UserDetail = () => {
       {(currentUserRecord?.role === 'admin' || currentUserRecord?.role === 'superadmin') && (
         <div className="bg-[#141f38] rounded-2xl p-6 space-y-4">
           <h2 className="text-[#dee5ff] text-base font-semibold">Acciones Administrativas</h2>
+          
+          {/* Info box about deletion process */}
+          {currentUserRecord?.role === 'superadmin' && !userDetail?.user?.is_suspended && (
+            <div className="bg-blue-500/20 text-blue-400 px-4 py-3 rounded-lg text-sm">
+              <p className="font-medium mb-1">ℹ️ Proceso de eliminación</p>
+              <p className="text-xs">
+                Para eliminar una cuenta, primero debes suspenderla. Al suspender, todos los intercambios activos se cancelarán automáticamente.
+              </p>
+            </div>
+          )}
+          
           <div className="flex items-center gap-4">
             {!userDetail?.user?.is_suspended ? (
               <button
@@ -241,7 +252,11 @@ const UserDetail = () => {
             {currentUserRecord?.role === 'superadmin' && (
               <button
                 onClick={() => setShowDeleteDialog(true)}
-                className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                className={`px-6 py-2 rounded-lg ${
+                  userDetail?.user?.is_suspended
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-50'
+                }`}
               >
                 Eliminar Cuenta
               </button>
@@ -257,9 +272,17 @@ const UserDetail = () => {
             <h3 className="text-[#dee5ff] text-lg font-semibold mb-4">
               ¿Suspender cuenta?
             </h3>
-            <p className="text-[#a3aac4] mb-6">
+            <p className="text-[#a3aac4] mb-4">
               El usuario no podrá iniciar sesión hasta que se reactive su cuenta.
             </p>
+            {(stats.exchanges_sent > 0 || stats.exchanges_received > 0) && (
+              <div className="bg-orange-500/20 text-orange-400 px-4 py-3 rounded-lg mb-4">
+                <p className="text-sm font-medium mb-1">⚠️ Intercambios activos</p>
+                <p className="text-xs">
+                  Todos los intercambios pendientes o aceptados serán cancelados automáticamente.
+                </p>
+              </div>
+            )}
             <div className="flex gap-4">
               <button
                 onClick={() => setShowSuspendDialog(false)}
@@ -313,23 +336,48 @@ const UserDetail = () => {
             <h3 className="text-[#dee5ff] text-lg font-semibold mb-4">
               ⚠️ ¿Eliminar cuenta permanentemente?
             </h3>
-            <p className="text-[#a3aac4] mb-6">
-              Esta acción no se puede deshacer. Todos los datos del usuario serán eliminados.
-            </p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setShowDeleteDialog(false)}
-                className="flex-1 px-4 py-2 bg-[#1f2b49] text-[#dee5ff] rounded-lg"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg"
-              >
-                Eliminar
-              </button>
-            </div>
+            
+            {!userDetail?.user?.is_suspended ? (
+              <div className="space-y-4">
+                <div className="bg-red-500/20 text-red-400 px-4 py-3 rounded-lg">
+                  <p className="text-sm font-medium mb-1">❌ Acción no permitida</p>
+                  <p className="text-xs">
+                    Debes suspender la cuenta antes de poder eliminarla.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDeleteDialog(false)}
+                  className="w-full px-4 py-2 bg-[#1f2b49] text-[#dee5ff] rounded-lg"
+                >
+                  Entendido
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-[#a3aac4]">
+                  Esta acción no se puede deshacer. Todos los datos del usuario serán eliminados permanentemente.
+                </p>
+                <div className="bg-yellow-500/20 text-yellow-400 px-4 py-3 rounded-lg">
+                  <p className="text-xs">
+                    Se eliminarán: conversaciones, mensajes, reseñas, intercambios y habilidades del usuario.
+                  </p>
+                </div>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setShowDeleteDialog(false)}
+                    className="flex-1 px-4 py-2 bg-[#1f2b49] text-[#dee5ff] rounded-lg"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
