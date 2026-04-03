@@ -3,7 +3,7 @@ name: Deploy Frontend to GitHub Pages
 on:
   push:
     branches:
-      - Fix/todo
+      - Develop
   workflow_dispatch:
 
 permissions:
