@@ -95,7 +95,9 @@ function AppContent() {
   }
 
   const profile = currentUserRecord?.profile;
-  const needsOnboarding = !profile || !profile.teachSkills?.length || !profile.learnSkills?.length;
+  const userRole = currentUserRecord?.role || 'user';
+  const isAdmin = ['admin', 'superadmin'].includes(userRole);
+  const needsOnboarding = !isAdmin && (!profile || !profile.teachSkills?.length || !profile.learnSkills?.length);
 
   if (needsOnboarding) {
     return <OnboardingModal />;
