@@ -4,7 +4,7 @@ import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 
 const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, getToken, dbUser } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [ratingByMatch, setRatingByMatch] = useState({});
@@ -12,12 +12,15 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate }) => {
   const [ratingBusy, setRatingBusy] = useState({});
 
   const loadMyMatches = async () => {
-    if (!currentUser) return;
+    if (!dbUser?.id) return;
     setLoading(true);
     try {
+      const userId = dbUser.id;
+      const token = await getToken();
+      const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
       const [result, profileResult] = await Promise.all([
-        apiRequest(API_BASE, `/matches/${encodeURIComponent(currentUser)}`),
-        apiRequest(API_BASE, `/usuarios/${currentUser}`)
+        apiRequest(API_BASE, `/matches/${encodeURIComponent(userId)}`, authHeaders),
+        apiRequest(API_BASE, `/usuarios/${userId}`, authHeaders)
       ]);
       const myProfile = profileResult.user || profileResult;
       const loadedMatches = result.matches || [];
@@ -26,7 +29,7 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate }) => {
       const matchesWithDetails = await Promise.all(
         loadedMatches.map(async (match) => {
           try {
-            const otherProfileRes = await apiRequest(API_BASE, `/usuarios/${match.other_user_id}`);
+            const otherProfileRes = await apiRequest(API_BASE, `/usuarios/${match.other_user_id}`, authHeaders);
             const otherProfile = otherProfileRes.user || otherProfileRes;
             const myOfferedIds = new Set(myProfile.habilidades_ofertadas?.map(h => h.id) || []);
             const mySoughtIds = new Set(myProfile.habilidades_buscadas?.map(h => h.id) || []);
@@ -59,13 +62,15 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate }) => {
 
   useEffect(() => {
     loadMyMatches();
-  }, [currentUser]);
+  }, [dbUser]);
 
   const handleFinalize = async (matchId) => {
     try {
+      const token = await getToken();
       await apiRequest(API_BASE, `/matches/${encodeURIComponent(matchId)}/finalize`, {
         method: 'POST',
-        body: JSON.stringify({ user_id: Number(currentUser) })
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ user_id: dbUser.id })
       });
       loadMyMatches();
       if (onBadgeUpdate) onBadgeUpdate();
@@ -83,10 +88,12 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate }) => {
 
     setRatingBusy((prev) => ({ ...prev, [matchId]: true }));
     try {
+      const token = await getToken();
       await apiRequest(API_BASE, `/matches/${encodeURIComponent(matchId)}/rate`, {
         method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          user_id: Number(currentUser),
+          user_id: dbUser.id,
           rating,
           comentario: commentByMatch[matchId] || '',
         }),

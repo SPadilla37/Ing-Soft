@@ -12,7 +12,7 @@ import ChatView from './Views/ChatView';
 import ProfileView from './Views/ProfileView';
 
 const Dashboard = () => {
-  const { currentUser, currentUserRecord } = useAuth();
+  const { currentUser, currentUserRecord, getToken, dbUser } = useAuth();
   const [activeView, setActiveView] = useState('matchesView');
   const [chatConversationId, setChatConversationId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,15 +23,17 @@ const Dashboard = () => {
   });
 
   const loadBadges = useCallback(async () => {
-    if (!currentUser) return;
+    if (!dbUser?.id) return;
     
     try {
-      const userId = Number(currentUser);
+      const userId = dbUser.id;
+      const token = await getToken();
+      const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
       
       const [incomingResult, myMatchesResult, profileResult] = await Promise.all([
-        apiRequest(API_BASE, `/matches/${encodeURIComponent(userId)}/incoming`),
-        apiRequest(API_BASE, `/matches/${encodeURIComponent(userId)}`),
-        apiRequest(API_BASE, `/usuarios/${encodeURIComponent(userId)}`)
+        apiRequest(API_BASE, `/matches/${encodeURIComponent(userId)}/incoming`, authHeaders),
+        apiRequest(API_BASE, `/matches/${encodeURIComponent(userId)}`, authHeaders),
+        apiRequest(API_BASE, `/usuarios/${encodeURIComponent(userId)}`, authHeaders)
       ]);
 
       const incomingCount = (incomingResult.incoming || []).length;
@@ -45,14 +47,15 @@ const Dashboard = () => {
       const ultimoLogin = profile.ultimo_login ? new Date(profile.ultimo_login) : null;
 
       if (ultimoLogin) {
-        const conversationsResult = await apiRequest(API_BASE, `/conversations/${encodeURIComponent(userId)}`);
+        const conversationsResult = await apiRequest(API_BASE, `/conversations/${encodeURIComponent(userId)}`, authHeaders);
         const conversations = conversationsResult.conversations || [];
         
         for (const conv of conversations) {
           try {
             const messagesResult = await apiRequest(
               API_BASE, 
-              `/conversations/${encodeURIComponent(conv.id)}/messages?viewer_user_id=${encodeURIComponent(userId)}`
+              `/conversations/${encodeURIComponent(conv.id)}/messages?viewer_user_id=${encodeURIComponent(userId)}`,
+              authHeaders
             );
             const messages = messagesResult.messages || [];
             const unreadFromOther = messages.filter(m => 

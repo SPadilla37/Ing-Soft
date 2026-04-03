@@ -54,22 +54,8 @@ class MatchRatePayload(BaseModel):
     comentario: Optional[str] = Field(default=None, max_length=500)
 
 
-class UserRegisterPayload(BaseModel):
-    email: EmailStr
-    username: str = Field(min_length=3, max_length=25)
-    password: str = Field(min_length=4, max_length=200)
-    clerk_id: str = Field(default="")
-
-
-class UserLoginPayload(BaseModel):
-    email: str = Field(min_length=3, max_length=120)
-    password: str = Field(min_length=4, max_length=200)
-
-
-class AuthTokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user: dict[str, Any]
+# Auth schemas removidos (Clerk maneja login/register)
+# Mantener para compatibilidad temporal si necesario
 
 
 class UserProfileUpdatePayload(BaseModel):

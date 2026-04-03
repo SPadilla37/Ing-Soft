@@ -32,21 +32,21 @@ function toErrorMessage(payload) {
 
 
 export async function api(apiBase, path, options = {}) {
-  const token = localStorage.getItem(dbKeyToken);
   const headers = {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
+  };
+
+  const fetchOptions = {
+    ...options,
+    headers,
   };
 
   let response;
   const maxAttempts = 2;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      response = await fetch(`${apiBase}${path}`, {
-        headers,
-        ...options,
-      });
+      response = await fetch(`${apiBase}${path}`, fetchOptions);
       break;
     } catch (error) {
       if (attempt < maxAttempts) {

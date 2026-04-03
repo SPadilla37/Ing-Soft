@@ -4,7 +4,6 @@ const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject 
   const author = [request.nombre, request.apellido].filter(Boolean).join(' ').trim() || `Usuario ${request.id}`;
   const username = request.username ? `@${request.username}` : '';
   
-  // Use intersected matches if available, otherwise just use the first skill defensively as fallback
   const offeredSkills = matchDetails?.theyOfferIWant?.length > 0 
     ? matchDetails.theyOfferIWant.map(s => s.nombre).join(', ')
     : (request.habilidades_ofertadas?.[0]?.nombre || 'Sin habilidad ofertada');
@@ -32,6 +31,9 @@ const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject 
             <div style={{fontSize: '0.95em', color: '#888', marginBottom: 2}}>{author}</div>
           )}
           <div className="muted">Usuario compatible</div>
+          {matchState === 'finished' && (
+            <div className="badge-finished">✓ Ya colaboraron</div>
+          )}
         </div>
       </div>
       <div>
@@ -75,4 +77,3 @@ const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject 
 };
 
 export default MarketplaceCard;
-

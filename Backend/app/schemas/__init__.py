@@ -1,5 +1,4 @@
 from app.schemas.contracts import (
-	AuthTokenResponse,
 	ChatMessageCreate,
 	ConversationCreatePayload,
 	HabilidadCreate,
@@ -12,14 +11,11 @@ from app.schemas.contracts import (
 	MessageRequestResponse,
 	RequestStatus,
 	ResenaCreate,
-	UserLoginPayload,
 	UserProfileUpdatePayload,
-	UserRegisterPayload,
 )
 
 __all__ = [
 	"RequestStatus",
-	"AuthTokenResponse",
 	"MessageRequestCreate",
 	"MessageRequestResponse",
 	"ChatMessageCreate",
@@ -28,8 +24,6 @@ __all__ = [
 	"MarketplaceAcceptRequest",
 	"MatchFinalizePayload",
 	"MatchRatePayload",
-	"UserRegisterPayload",
-	"UserLoginPayload",
 	"UserProfileUpdatePayload",
 	"HabilidadCreate",
 	"HabilidadResponse",

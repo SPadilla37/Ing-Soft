@@ -6,7 +6,7 @@ import SkillPicker from '../../Common/SkillPicker';
 import { ensureSkillIds } from '../../../services/skills';
 
 const ProfileView = () => {
-  const { currentUser, currentUserRecord, setCurrentUserRecord } = useAuth();
+  const { currentUser, currentUserRecord, dbUser, setCurrentUserRecord, getToken } = useAuth();
   const [formData, setFormData] = useState({
     fullName: '',
     bio: '',
@@ -17,29 +17,46 @@ const ProfileView = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (currentUserRecord?.profile) {
-      const p = currentUserRecord.profile;
-      setFormData({
-        fullName: p.fullName || '',
-        bio: p.bio || '',
-        teachSkills: new Set(p.teachSkills || []),
-        learnSkills: new Set(p.learnSkills || [])
-      });
-    }
-  }, [currentUserRecord]);
+    // Intentamos buscar la informacion en todas las posibles ubicaciones del objeto
+    const source = dbUser || currentUserRecord?.dbUser || currentUserRecord || {};
+    
+    console.log('ProfileView loading from source:', source);
+
+    const profile = source.profile || {};
+    
+    // Extraemos las habilidades con una logica simplificada pero infalible
+    const getSkillNames = (list) => {
+      if (!list || !Array.isArray(list)) return [];
+      return list.map(item => typeof item === 'object' ? (item.nombre || item.name) : item).filter(Boolean);
+    };
+
+    const teach = getSkillNames(profile.teachSkills || source.habilidades_ofertadas);
+    const learn = getSkillNames(profile.learnSkills || source.habilidades_buscadas);
+
+    console.log('ProfileView final skills:', { teach, learn });
+
+    setFormData({
+      fullName: profile.fullName || `${source.nombre || ''} ${source.apellido || ''}`.trim() || '',
+      bio: profile.bio || source.biografia || '',
+      teachSkills: new Set(teach),
+      learnSkills: new Set(learn)
+    });
+  }, [dbUser, currentUserRecord]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const teachSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.teachSkills));
-      const learnSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.learnSkills));
+      const token = await getToken();
+      const teachSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.teachSkills), token);
+      const learnSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.learnSkills), token);
 
       const parts = formData.fullName.trim().split(/\s+/).filter(Boolean);
       const nombre = parts[0] || '';
       const apellido = parts.slice(1).join(' ');
 
-      const result = await apiRequest(API_BASE, `/usuarios/${encodeURIComponent(currentUser)}/profile`, {
+      const result = await apiRequest(API_BASE, `/usuarios/me/profile`, {
         method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           nombre,
           apellido,

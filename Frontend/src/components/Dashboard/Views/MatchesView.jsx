@@ -6,23 +6,30 @@ import MarketplaceCard from '../MarketplaceCard';
 import PublicProfileModal from '../PublicProfileModal';
 
 const MatchesView = ({ searchQuery }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, getToken, dbUser } = useAuth();
   const [requests, setRequests] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [categories, setCategories] = useState(['Todas']);
   const [loading, setLoading] = useState(true);
-  const [profileUserId, setProfileUserId] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [popup, setPopup] = useState('');
   const [currentUserProfile, setCurrentUserProfile] = useState(null);
 
   const loadMarketplace = async () => {
-    if (!currentUser) return;
+    if (!dbUser?.id) {
+      // Si no hay ID de base de datos, no podemos cargar pero debemos quitar el spinner
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
+      const userId = dbUser.id;
+      const token = await getToken();
+      const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
       // Fetch both the marketplace requests and the current user's profile in parallel
       const [marketResult, profileResult] = await Promise.all([
-        apiRequest(API_BASE, `/marketplace/habilidades?viewer_user_id=${currentUser}${searchQuery ? `&q=${searchQuery}` : ''}`),
-        apiRequest(API_BASE, `/usuarios/${currentUser}`)
+        apiRequest(API_BASE, `/marketplace/habilidades?viewer_user_id=${userId}${searchQuery ? `&q=${searchQuery}` : ''}`, authHeaders),
+        apiRequest(API_BASE, `/usuarios/${userId}`, authHeaders)
       ]);
 
       setCurrentUserProfile(profileResult.user || profileResult);
@@ -32,7 +39,7 @@ const MatchesView = ({ searchQuery }) => {
       users = await Promise.all(users.map(async (u) => {
         if (!u.username && u.id) {
           try {
-            const userRes = await apiRequest(API_BASE, `/usuarios/${u.id}`);
+            const userRes = await apiRequest(API_BASE, `/usuarios/${u.id}`, authHeaders);
             return { ...u, username: userRes.user?.username || userRes.username };
           } catch {
             return u;
@@ -50,14 +57,16 @@ const MatchesView = ({ searchQuery }) => {
 
   useEffect(() => {
     loadMarketplace();
-  }, [currentUser, searchQuery]);
+  }, [dbUser, searchQuery]);
 
   useEffect(() => {
     let active = true;
 
     const loadCategories = async () => {
       try {
-        const result = await apiRequest(API_BASE, '/habilidades');
+        const token = await getToken();
+        const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
+        const result = await apiRequest(API_BASE, '/habilidades', authHeaders);
         const habilidades = Array.isArray(result?.habilidades) ? result.habilidades : [];
         const uniqueCategories = new Set();
 
@@ -103,10 +112,13 @@ const MatchesView = ({ searchQuery }) => {
       const habilidadQueBusco = matchDetails.theyOfferIWant[0]?.id || user.habilidades_ofertadas?.[0]?.id;
       const habilidadQueOfrezco = matchDetails.iOfferTheyWant[0]?.id || user.habilidades_buscadas?.[0]?.id;
       
+      const token = await getToken();
+
       const result = await apiRequest(API_BASE, '/message-requests', {
         method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          from_user_id: Number(currentUser),
+          from_user_id: dbUser.id,
           to_user_id: user.id,
           habilidad_id: habilidadQueOfrezco,
           habilidad_solicitada_id: habilidadQueBusco,
@@ -190,8 +202,13 @@ const MatchesView = ({ searchQuery }) => {
       </div>
 
       <div className="cards-grid">
-        {loading ? <p>Cargando matches...</p> : 
-         filteredRequests.length === 0 ? <p>No se encontraron resultados.</p> :
+        {loading ? (
+          <p className="loading-text">Buscando coincidencias para tu perfil...</p>
+        ) : !dbUser?.id ? (
+          <p>Esperando datos de usuario...</p>
+        ) : filteredRequests.length === 0 ? (
+          <p>No se encontraron personas que coincidan con tus habilidades actuales.</p>
+        ) :
          filteredRequests.map(req => {
            const matchDetails = getMatchDetails(req);
            return (
@@ -200,19 +217,20 @@ const MatchesView = ({ searchQuery }) => {
                request={req} 
                matchDetails={matchDetails}
                onAccept={(user) => handleAccept(user, matchDetails)}
-               onProfile={(userId) => setProfileUserId(userId)}
+               onProfile={() => setSelectedUser(req)}
              />
            );
          })
         }
       </div>
 
-      {profileUserId ? (
+      {selectedUser && (
         <PublicProfileModal
-          userId={profileUserId}
-          onClose={() => setProfileUserId(null)}
+          userId={selectedUser.id}
+          userData={selectedUser}
+          onClose={() => setSelectedUser(null)}
         />
-      ) : null}
+      )}
 
       {popup ? (
         <section className="auth-modal" onClick={() => setPopup('')}>
@@ -228,4 +246,3 @@ const MatchesView = ({ searchQuery }) => {
 };
 
 export default MatchesView;
-

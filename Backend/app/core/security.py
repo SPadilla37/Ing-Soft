@@ -1,49 +1,58 @@
 import os
-from datetime import datetime, timedelta, timezone
-from hashlib import sha256
 from typing import Any
+from clerk_backend_api import Clerk, authenticate_request
+from clerk_backend_api.security.types import AuthenticateRequestOptions
+from dotenv import load_dotenv
 
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+# Cargar variables desde el .env en la raiz si existe
+root_dotenv = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), ".env")
+load_dotenv(root_dotenv)
 
+CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key-for-dev-change-in-prod")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+clerk_client = Clerk(bearer_auth=CLERK_SECRET_KEY)
 
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+class MockRequest:
+    """Clase para simular un request para el SDK de Clerk"""
+    def __init__(self, token: str):
+        self.headers = {"Authorization": f"Bearer {token}"}
 
-
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    if not hashed_password:
-        return False
-
-    if hashed_password.startswith("$argon2"):
-        return pwd_context.verify(plain_password, hashed_password)
-
-    # Backward compatibility for legacy SHA-256 hashes.
-    return sha256(plain_password.encode("utf-8")).hexdigest() == hashed_password
-
-
-def needs_rehash(hashed_password: str) -> bool:
-    if not hashed_password or not hashed_password.startswith("$argon2"):
-        return True
-    return pwd_context.needs_update(hashed_password)
-
-
-def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-def verify_token(token: str) -> dict[str, Any] | None:
+def verify_clerk_token(token: str) -> dict[str, Any] | None:
+    """
+    Verifica el token JWT de Clerk usando exclusivamente el SDK oficial
+    """
     try:
-        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except JWTError:
+        # Usamos authenticate_request del SDK para validar el token
+        request = MockRequest(token)
+        options = AuthenticateRequestOptions(secret_key=CLERK_SECRET_KEY)
+        
+        state = authenticate_request(request, options)
+        
+        # Obtenemos el user_id del estado (si el token es decodificable)
+        payload = state.payload if state.payload else None
+        user_id = payload.get('sub') if payload else None
+        
+        if not user_id:
+            return None
+            
+        # Validar el usuario contra la API de Clerk
+        # Esto garantiza que tengamos email y username para el registro en DB
+        user = clerk_client.users.get(user_id=user_id)
+        if user:
+            email = user.email_addresses[0].email_address if user.email_addresses else ""
+            return {
+                **(payload or {}),
+                "email": email,
+                "username": user.username or user_id,
+                "first_name": user.first_name or "",
+                "last_name": user.last_name or "",
+            }
+                
         return None
+    except Exception as e:
+        print(f"Clerk SDK verification failed: {e}")
+        return None
+
+def get_user_id_from_token(token: str) -> str | None:
+    verified = verify_clerk_token(token)
+    return verified.get('sub') if verified else None

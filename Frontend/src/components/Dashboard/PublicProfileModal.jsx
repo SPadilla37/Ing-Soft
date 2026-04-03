@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { api as apiRequest } from '../../services/api';
 import { API_BASE } from '../../config/constants';
+import { useAuth } from '../../context/AuthContext';
 
 const PublicProfileModal = ({ userId, onClose }) => {
+  const { getToken } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
@@ -16,7 +18,9 @@ const PublicProfileModal = ({ userId, onClose }) => {
       setError('');
 
       try {
-        const result = await apiRequest(API_BASE, `/usuarios/${encodeURIComponent(userId)}`);
+        const token = await getToken();
+        const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
+        const result = await apiRequest(API_BASE, `/usuarios/${encodeURIComponent(userId)}`, authHeaders);
         if (!cancelled) {
           setUser(result.user || null);
         }
@@ -47,7 +51,6 @@ const PublicProfileModal = ({ userId, onClose }) => {
       <div className="modal-card glass" onClick={(e) => e.stopPropagation()}>
         <div className="profile-modal-header">
           <h2>Perfil publico</h2>
-          <button className="mini-btn" onClick={onClose}>Cerrar</button>
         </div>
 
         {loading ? <p>Cargando perfil...</p> : null}

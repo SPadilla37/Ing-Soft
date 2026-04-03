@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { API_BASE, languagesCatalog } from '../../config/constants';
 import { api as apiRequest } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Set() }) => {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [selection, setSelection] = useState(new Set(initialSelection));
@@ -15,11 +17,16 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
       return;
     }
 
+    if (!isLoaded || !isSignedIn) return;
+
     let active = true;
     const loadCatalog = async () => {
       setCatalogLoading(true);
       try {
-        const result = await apiRequest(API_BASE, '/habilidades');
+        const token = await getToken();
+        const result = await apiRequest(API_BASE, '/habilidades', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         const habilidades = Array.isArray(result?.habilidades) ? result.habilidades : [];
         const grouped = { Todas: [] };
 
@@ -52,7 +59,7 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
     return () => {
       active = false;
     };
-  }, [mode]);
+  }, [mode, isLoaded, isSignedIn]);
 
   useEffect(() => {
     if (mode === 'language') return;

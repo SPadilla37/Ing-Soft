@@ -4,17 +4,20 @@ import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 
 const HistoryView = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, getToken, dbUser } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadCompletedMatches = async () => {
-    if (!currentUser) return;
+    if (!dbUser?.id) return;
     setLoading(true);
     try {
+      const userId = dbUser.id;
+      const token = await getToken();
+      const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
       const [result, profileResult] = await Promise.all([
-        apiRequest(API_BASE, `/matches/${encodeURIComponent(currentUser)}`),
-        apiRequest(API_BASE, `/usuarios/${currentUser}`)
+        apiRequest(API_BASE, `/matches/${encodeURIComponent(userId)}`, authHeaders),
+        apiRequest(API_BASE, `/usuarios/${userId}`, authHeaders)
       ]);
       const myProfile = profileResult.user || profileResult;
       
@@ -25,7 +28,7 @@ const HistoryView = () => {
       const matchesWithDetails = await Promise.all(
         completedMatches.map(async (match) => {
           try {
-            const otherProfileRes = await apiRequest(API_BASE, `/usuarios/${match.other_user_id}`);
+            const otherProfileRes = await apiRequest(API_BASE, `/usuarios/${match.other_user_id}`, authHeaders);
             const otherProfile = otherProfileRes.user || otherProfileRes;
             const myOfferedIds = new Set(myProfile.habilidades_ofertadas?.map(h => h.id) || []);
             const mySoughtIds = new Set(myProfile.habilidades_buscadas?.map(h => h.id) || []);
@@ -58,7 +61,7 @@ const HistoryView = () => {
 
   useEffect(() => {
     loadCompletedMatches();
-  }, [currentUser]);
+  }, [dbUser]);
 
   return (
     <section id="historyView" className="view active">

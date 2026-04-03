@@ -5,10 +5,12 @@ const TopBar = ({ onSearch, showSearch }) => {
   const { currentUser, currentUserRecord, clearSession } = useAuth();
   
   const profile = currentUserRecord?.profile || {};
-  const visibleName = profile.fullName || currentUserRecord?.name || currentUser;
+  // Si no hay nombre en el perfil, intentamos usar el username del registro de la DB
+  // o el nombre que viene de Clerk (user.fullName)
+  const visibleName = profile.fullName || currentUserRecord?.username || currentUserRecord?.fullName || currentUser;
 
   const getInitials = (name) => {
-    if (!name) return 'U';
+    if (!name || name.startsWith('user_')) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 

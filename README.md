@@ -1,20 +1,33 @@
-# Proyecto_Software-I
-Plataforma de Intercambio de habilidades
+# SkillSwap - Intercambio de Habilidades (Clerk Auth)
 
-## Sistema de mensajeria (solicitud -> aceptacion/rechazo -> chat)
+Plataforma full-stack para intercambio de habilidades con chat WebSocket.
 
-Se implemento un backend en Python con FastAPI y WebSocket para el flujo de intercambio de habilidades:
+## Stack
+**Backend:** FastAPI + SQLAlchemy + SQLite/Postgres + Clerk Auth
+**Frontend:** React 18 + Vite + Clerk Auth + Tailwind CSS
+**Deploy:** Render
 
-- Un usuario envia una solicitud de chat con las habilidades a intercambiar.
-- El receptor puede aceptar o rechazar.
-- Si acepta, se crea una conversacion.
-- Solo los participantes de una conversacion aceptada pueden conectarse al WebSocket y chatear.
+## Autenticación
+**Migrado a Clerk** (no más JWT/password local):
+- Frontend: `<ClerkProvider>`, `<SignInButton>`, `<UserButton>`
+- Backend: `clerk-sdk` verify token, auto-user create from Clerk ID
 
-## Estructura
+**Keys (.env):**
 
-- `Backend/app/main.py`: punto de entrada FastAPI y orquestacion.
-- `Backend/app/core/security.py`: utilidades de autenticacion (hash de password).
-- `Backend/app/db/database.py`: configuracion de engine/sesion SQLAlchemy.
+#### Frontend (`/Frontend/.env`)
+```text
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_YmV0dGVyLWFudC03MS5jbGVyay5hY2NvdW50cy5kZXYk
+VITE_API_BASE=http://127.0.0.1:8000
+```
+
+#### .env (afuera de las carpetas)
+```text
+CLERK_PUBLISHABLE_KEY=pk_test_YmV0dGVyLWFudC03MS5jbGVyay5hY2NvdW50cy5kZXYk
+CLERK_SECRET_KEY=sk_test_2e0B0xCZX1c2O5CzYRHfjBeBSjVHh1xyaoK3Wi5QXu
+CLERK_FRONTEND_URL=https://better-ant-71.clerk.accounts.dev
+CLERK_INSTANCE=better-ant-71
+```
+
 - `Backend/app/db/models/`: modelos SQLAlchemy por dominio.
 - `Backend/app/schemas/`: validaciones Pydantic (payloads y contratos).
 - `Backend/app/services/`: logica reusable (websocket, matching, reputacion).

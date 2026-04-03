@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from app.api.routes.auth import get_current_user
 from app.db.database import SessionLocal
 from app.db.models.entities import Habilidad
 from app.schemas.contracts import HabilidadCreate, HabilidadResponse
@@ -40,13 +41,13 @@ def get_habilidad(habilidad_id: int) -> dict:
 
 
 @router.post("/habilidades")
-def create_habilidad(payload: HabilidadCreate) -> dict:
+def create_habilidad(payload: HabilidadCreate, current_user: dict = Depends(get_current_user)) -> dict:
     # Bloquear la creación de nuevas habilidades desde el frontend
     raise HTTPException(status_code=403, detail="No está permitido crear nuevas habilidades desde la aplicación. Solo se pueden seleccionar habilidades existentes.")
 
 
 @router.put("/habilidades/{habilidad_id}")
-def update_habilidad(habilidad_id: int, payload: HabilidadCreate) -> dict:
+def update_habilidad(habilidad_id: int, payload: HabilidadCreate, current_user: dict = Depends(get_current_user)) -> dict:
     with SessionLocal() as session:
         habilidad = session.execute(
             select(Habilidad).where(Habilidad.id == habilidad_id)
@@ -71,7 +72,7 @@ def update_habilidad(habilidad_id: int, payload: HabilidadCreate) -> dict:
 
 
 @router.delete("/habilidades/{habilidad_id}")
-def delete_habilidad(habilidad_id: int) -> dict:
+def delete_habilidad(habilidad_id: int, current_user: dict = Depends(get_current_user)) -> dict:
     with SessionLocal() as session:
         habilidad = session.execute(
             select(Habilidad).where(Habilidad.id == habilidad_id)

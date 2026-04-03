@@ -5,7 +5,7 @@ import { API_BASE } from '../../../config/constants';
 import { wsUrl } from '../../../services/websocket';
 
 const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
-  const { currentUser, currentUserRecord } = useAuth();
+  const { currentUser, currentUserRecord, getToken, dbUser } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -26,7 +26,9 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
   const loadMessages = async (convId) => {
     if (!currentUser || !convId) return;
     try {
-      const result = await apiRequest(API_BASE, `/conversations/${encodeURIComponent(convId)}/messages?viewer_user_id=${encodeURIComponent(currentUser)}`);
+      const token = await getToken();
+      const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
+      const result = await apiRequest(API_BASE, `/conversations/${encodeURIComponent(convId)}/messages?viewer_user_id=${encodeURIComponent(currentUser)}`, authHeaders);
       setMessages(result.messages || []);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -36,7 +38,9 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
   const loadConversations = async () => {
     if (!currentUser) return;
     try {
-      const result = await apiRequest(API_BASE, `/conversations/${encodeURIComponent(currentUser)}`);
+      const token = await getToken();
+      const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
+      const result = await apiRequest(API_BASE, `/conversations/${encodeURIComponent(currentUser)}`, authHeaders);
       const list = result.conversations || [];
       setConversations(list);
 
@@ -123,11 +127,16 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
       reconnectTimerRef.current = null;
     }
     if (socketRef.current) {
+      // Quitamos el listener antes de cerrar para que este cierre manual
+      // no dispare la lógica de reconexión automáticamente.
+      socketRef.current.onclose = null;
       socketRef.current.close();
     }
 
+    // Limpiar mensajes anteriores al cambiar de conversación para evitar confusión
+    setMessages([]);
     setStatus('Conectando chat...');
-    const url = wsUrl(API_BASE, convId, currentUser);
+    const url = wsUrl(API_BASE, convId, dbUser?.id || currentUser);
     const ws = new WebSocket(url);
     socketRef.current = ws;
 
@@ -144,16 +153,22 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
       } else if (data.type === 'chat_message') {
         setMessages(prev => [...prev, data.message]);
       } else if (data.type === 'error') {
-        setStatus(data.detail || 'No se pudo enviar el mensaje.');
+        // Si el error es por match finalizado, no intentamos reconectar
+        if (data.detail?.includes('finalizado')) {
+           shouldReconnectRef.current = false;
+           setStatus('Chat cerrado: el match fue finalizado.');
+        } else {
+           setStatus(data.detail || 'No se pudo enviar el mensaje.');
+        }
       }
     };
 
     ws.onclose = () => {
       if (socketRef.current === ws) {
         socketRef.current = null;
+        setStatus('Chat desconectado.');
+        scheduleReconnect(convId);
       }
-      setStatus('Chat desconectado.');
-      scheduleReconnect(convId);
     };
     ws.onerror = () => setStatus('Error en la conexión.');
   };
@@ -198,7 +213,7 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
 
   const getSenderDisplayName = (fromUserId) => {
     if (String(fromUserId) === String(currentUser)) {
-      return currentUserRecord?.name || 'Tú';
+      return currentUserRecord?.username || currentUserRecord?.firstName || 'Tú';
     }
     if (selectedConv?.other_user_name) {
       return selectedConv.other_user_name;
@@ -231,8 +246,13 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
           <div className="chat-box" ref={chatBoxRef}>
             {messages.map((msg, i) => (
               <div key={i} className={`chat-msg ${String(msg.from_user_id) === String(currentUser) ? 'mine' : ''}`}>
-                <span className="chat-meta">{getSenderDisplayName(msg.from_user_id)}</span>
-                <div>{msg.content}</div>
+                <div className="message-bubble">
+                  <span className="chat-meta">{getSenderDisplayName(msg.from_user_id)}</span>
+                  <div className="message-content">{msg.content}</div>
+                  {msg.timestamp && (
+                    <span className="message-timestamp">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>

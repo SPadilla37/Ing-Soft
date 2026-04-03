@@ -6,27 +6,30 @@ import MarketplaceCard from '../MarketplaceCard';
 import PublicProfileModal from '../PublicProfileModal';
 
 const IncomingMatchesView = ({ onBadgeUpdate }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, getToken, dbUser } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [profileUserId, setProfileUserId] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [popup, setPopup] = useState('');
   const [currentUserProfile, setCurrentUserProfile] = useState(null);
 
   const loadIncoming = async () => {
-    if (!currentUser) return;
+    if (!dbUser?.id) return;
     setLoading(true);
     try {
+      const userId = dbUser.id;
+      const token = await getToken();
+      const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
       const [result, profileResult] = await Promise.all([
-        apiRequest(API_BASE, `/matches/${encodeURIComponent(currentUser)}/incoming`),
-        apiRequest(API_BASE, `/usuarios/${currentUser}`)
+        apiRequest(API_BASE, `/matches/${encodeURIComponent(userId)}/incoming`, authHeaders),
+        apiRequest(API_BASE, `/usuarios/${userId}`, authHeaders)
       ]);
       setCurrentUserProfile(profileResult.user || profileResult);
       let incoming = result.incoming || [];
       incoming = await Promise.all(incoming.map(async (u) => {
         if (!u.username && u.id) {
           try {
-            const userRes = await apiRequest(API_BASE, `/usuarios/${u.id}`);
+            const userRes = await apiRequest(API_BASE, `/usuarios/${u.id}`, authHeaders);
             return { ...u, username: userRes.user?.username || userRes.username };
           } catch {
             return u;
@@ -44,13 +47,15 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
 
   useEffect(() => {
     loadIncoming();
-  }, [currentUser]);
+  }, [dbUser]);
 
   const handleAccept = async (requestId) => {
     try {
+      const token = await getToken();
       await apiRequest(API_BASE, `/message-requests/${requestId}/respond`, {
         method: 'PATCH',
-        body: JSON.stringify({ user_id: Number(currentUser), action: 'accept' })
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ user_id: dbUser.id, action: 'accept' })
       });
       setPopup('Interés aceptado. Si ambos se aceptaron, ya tienen chat disponible.');
       loadIncoming();
@@ -62,9 +67,11 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
 
   const handleReject = async (requestId) => {
     try {
+      const token = await getToken();
       await apiRequest(API_BASE, `/message-requests/${requestId}/respond`, {
         method: 'PATCH',
-        body: JSON.stringify({ user_id: Number(currentUser), action: 'reject' })
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ user_id: dbUser.id, action: 'reject' })
       });
       setPopup('Solicitud rechazada.');
       loadIncoming();
@@ -106,19 +113,20 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
                 matchDetails={matchDetails}
                 onAccept={() => handleAccept(item.id)}
                 onReject={() => handleReject(item.id)}
-                onProfile={() => setProfileUserId(item.usuario_emisor_id)}
+                onProfile={() => setSelectedUser(item)}
               />
             );
           })
         }
       </div>
 
-      {profileUserId ? (
+      {selectedUser && (
         <PublicProfileModal
-          userId={profileUserId}
-          onClose={() => setProfileUserId(null)}
+          userId={selectedUser.id || selectedUser.usuario_emisor_id}
+          userData={selectedUser}
+          onClose={() => setSelectedUser(null)}
         />
-      ) : null}
+      )}
 
       {popup ? (
         <section className="auth-modal" onClick={() => setPopup('')}>

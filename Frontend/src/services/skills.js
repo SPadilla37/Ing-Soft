@@ -15,47 +15,28 @@ function toCatalogMap(habilidades) {
   return map;
 }
 
-export async function ensureSkillIds(apiBase, skillNames) {
+export async function ensureSkillIds(apiBase, skillNames, token = null) {
   const cleaned = Array.from(new Set((skillNames || [])
     .map(normalizeSkillName)
     .filter(Boolean)));
 
   if (!cleaned.length) return [];
 
-  const initial = await apiRequest(apiBase, '/habilidades');
-  let idByName = toCatalogMap(initial.habilidades);
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  // Obtenemos el catálogo completo de habilidades permitidas
+  const response = await apiRequest(apiBase, '/habilidades', { headers });
+  const idByName = toCatalogMap(response.habilidades);
 
   const ids = [];
   for (const name of cleaned) {
     const key = name.toLowerCase();
-    let id = idByName.get(key);
-
-    if (!Number.isInteger(id)) {
-      try {
-        const created = await apiRequest(apiBase, '/habilidades', {
-          method: 'POST',
-          body: JSON.stringify({
-            nombre: name,
-            categoria: DEFAULT_CATEGORY,
-          }),
-        });
-        id = created?.habilidad?.id;
-      } catch (error) {
-        // If backend reports duplicate, refresh catalog and resolve by name.
-        const message = String(error?.message || '').toLowerCase();
-        if (!message.includes('existe')) throw error;
-      }
-
-      if (!Number.isInteger(id)) {
-        const refreshed = await apiRequest(apiBase, '/habilidades');
-        idByName = toCatalogMap(refreshed.habilidades);
-        id = idByName.get(key);
-      }
-    }
+    const id = idByName.get(key);
 
     if (Number.isInteger(id)) {
       ids.push(id);
-      idByName.set(key, id);
+    } else {
+      console.warn(`La habilidad "${name}" no existe en el catálogo y no puede ser creada.`);
     }
   }
 

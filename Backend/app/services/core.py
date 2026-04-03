@@ -34,11 +34,11 @@ def calculate_received_rating(session, user_id: int) -> dict:
     ).scalars().all()
 
     if not reseñas:
-        return {"average": None, "count": 0}
+        return {"average": 0, "count": 0}
 
     ratings = [int(r.calificacion) for r in reseñas if r.calificacion is not None]
     if not ratings:
-        return {"average": None, "count": 0}
+        return {"average": 0, "count": 0}
 
     return {"average": average_rating(ratings), "count": len(ratings)}
 
@@ -59,7 +59,7 @@ def get_user_habilidades(session, usuario_id: int, categoria: str) -> List[Habil
 
 
 def serialize_user(user: Usuario, session=None) -> dict:
-    rating_info = {"average": None, "count": 0}
+    rating_info = {"average": 0, "count": 0}
     if session is not None:
         rating_info = calculate_received_rating(session, user.id)
 
@@ -87,6 +87,12 @@ def serialize_user(user: Usuario, session=None) -> dict:
         },
         "habilidades_ofertadas": habilidades_ofertadas,
         "habilidades_buscadas": habilidades_buscadas,
+        "profile": {
+            "fullName": f"{user.nombre} {user.apellido}".strip(),
+            "bio": user.biografia or "",
+            "teachSkills": [h["nombre"] for h in habilidades_ofertadas],
+            "learnSkills": [h["nombre"] for h in habilidades_buscadas],
+        }
     }
 
 
@@ -253,11 +259,26 @@ def serialize_intercambio_for_viewer(
     existing_match = get_match_for_users(session, viewer_user_id, intercambio.usuario_emisor_id)
     if existing_match:
         serialized["viewer_match_state"] = "matched"
+        # ... (código existente)
+        return serialized
+
+    # Si no hay match activo, buscar si hubo uno completado
+    completed = session.execute(
+        select(Intercambio).where(
+            or_(
+                (Intercambio.usuario_emisor_id == viewer_user_id) & (Intercambio.usuario_receptor_id == intercambio.usuario_emisor_id),
+                (Intercambio.usuario_emisor_id == intercambio.usuario_emisor_id) & (Intercambio.usuario_receptor_id == viewer_user_id),
+            ),
+            Intercambio.estado == "completado"
+        )
+    ).scalars().first()
+    if completed:
+        serialized["viewer_match_state"] = "finished"
         existing_conv = session.execute(
             select(Conversacion).where(
                 or_(
-                    (Conversacion.usuario_1_id == existing_match.usuario_emisor_id) & (Conversacion.usuario_2_id == existing_match.usuario_receptor_id),
-                    (Conversacion.usuario_1_id == existing_match.usuario_receptor_id) & (Conversacion.usuario_2_id == existing_match.usuario_emisor_id),
+                    (Conversacion.usuario_1_id == viewer_user_id) & (Conversacion.usuario_2_id == intercambio.usuario_emisor_id),
+                    (Conversacion.usuario_1_id == intercambio.usuario_emisor_id) & (Conversacion.usuario_2_id == viewer_user_id),
                 )
             )
         ).scalars().first()

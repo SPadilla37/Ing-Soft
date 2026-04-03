@@ -1,101 +1,53 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { dbKeySession, dbKeyToken } from '../config/constants';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { useUser, useClerk, useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { api as apiRequest } from '../services/api';
 import { API_BASE } from '../config/constants';
 
 const AuthContext = createContext();
 
-export const useAuth = () => useContext(AuthContext);
+export const AuthProvider = ({ children }) => {
+  const { signOut } = useClerk();
+  const auth = useClerkAuth();
+  const { user, isLoaded: userLoaded } = useUser();
+  const [dbUserRecord, setDbUserRecord] = useState(null);
 
-const normalizeUserRecord = (user) => {
-  if (!user || typeof user !== 'object') return null;
+  const loadUserRecord = useCallback(async () => {
+    if (!auth.isSignedIn || !auth.isLoaded || !user) return null;
+    
+    try {
+      const token = await auth.getToken();
+      const result = await apiRequest(API_BASE, `/usuarios/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('API /usuarios/me result:', result);
+      const userData = result.user || result;
+      setDbUserRecord(userData);
+      return userData;
+    } catch (error) {
+      console.error('Failed to load user record:', error);
+      return null;
+    }
+  }, [auth.isSignedIn, auth.isLoaded, user, auth.getToken]);
 
-  const teachSkills = Array.isArray(user.habilidades_ofertadas)
-    ? user.habilidades_ofertadas
-        .map((skill) => skill?.nombre)
-        .filter((name) => typeof name === 'string' && name.trim())
-    : [];
+  const value = useMemo(() => ({
+    isLoaded: auth.isLoaded && userLoaded,
+    isSignedIn: auth.isSignedIn,
+    user,
+    getToken: auth.getToken,
+    signOut,
+    loadUserRecord,
+    currentUser: dbUserRecord?.id || user?.id,
+    currentUserRecord: dbUserRecord ? { ...user, ...dbUserRecord } : user,
+    setCurrentUserRecord: setDbUserRecord,
+    dbUser: dbUserRecord,
+    clearSession: signOut, // Mapeamos clearSession a signOut de Clerk
+  }), [auth.isLoaded, userLoaded, auth.isSignedIn, user, auth.getToken, signOut, loadUserRecord, dbUserRecord]);
 
-  const learnSkills = Array.isArray(user.habilidades_buscadas)
-    ? user.habilidades_buscadas
-        .map((skill) => skill?.nombre)
-        .filter((name) => typeof name === 'string' && name.trim())
-    : [];
-
-  const fullName = [user.nombre, user.apellido]
-    .filter((part) => typeof part === 'string' && part.trim())
-    .join(' ')
-    .trim();
-
-  return {
-    ...user,
-    name: fullName || user.username || user.email || String(user.id),
-    profile: {
-      fullName,
-      bio: user.biografia || '',
-      teachSkills,
-      learnSkills,
-      languages: [],
-    },
-  };
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(localStorage.getItem(dbKeySession) || null);
-  const [currentUserRecord, setCurrentUserRecordState] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const setCurrentUserRecord = (userRecord) => {
-    setCurrentUserRecordState(normalizeUserRecord(userRecord));
-  };
-
-  const setSession = (userId, token = null) => {
-    localStorage.setItem(dbKeySession, userId);
-    if (token) {
-      localStorage.setItem(dbKeyToken, token);
-    }
-    setCurrentUser(userId);
-  };
-
-  const clearSession = () => {
-    localStorage.removeItem(dbKeySession);
-    localStorage.removeItem(dbKeyToken);
-    setCurrentUser(null);
-    setCurrentUserRecordState(null);
-  };
-
-  const loadUserRecord = async (userId) => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-    try {
-      const result = await apiRequest(API_BASE, `/usuarios/${encodeURIComponent(userId)}`);
-      if (!result || !result.user) {
-        clearSession();
-        return;
-      }
-      setCurrentUserRecordState(normalizeUserRecord(result.user));
-    } catch (error) {
-      // Si falla la carga del usuario, limpiar sesión y forzar login
-      console.error('Failed to load user record:', error);
-      clearSession();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (currentUser) {
-      loadUserRecord(currentUser);
-    } else {
-      setLoading(false);
-    }
-  }, [currentUser]);
-
-  return (
-    <AuthContext.Provider value={{ currentUser, currentUserRecord, setSession, clearSession, loading, setCurrentUserRecord }}>
-      {children}
-    </AuthContext.Provider>
-  );
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth debe usarse dentro de un AuthProvider");
+  return context;
 };

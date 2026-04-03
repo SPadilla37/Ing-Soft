@@ -79,6 +79,18 @@ def list_marketplace_habilidades(
                 )
             ).scalars().first()
 
+            # Buscamos si hubo una colaboración previa (independientemente de solicitudes pendientes)
+            completed_match = None
+            completed_match = session.execute(
+                select(Intercambio).where(
+                    or_(
+                        (Intercambio.usuario_emisor_id == viewer_user_id) & (Intercambio.usuario_receptor_id == user.id),
+                        (Intercambio.usuario_emisor_id == user.id) & (Intercambio.usuario_receptor_id == viewer_user_id),
+                    ),
+                    Intercambio.estado == "completado"
+                )
+            ).scalars().first()
+
             if existing_match:
                 match_state = "matched"
             elif viewer_sent and viewer_received:
@@ -87,6 +99,8 @@ def list_marketplace_habilidades(
                 match_state = "sent"
             elif viewer_received:
                 match_state = "received"
+            elif completed_match:
+                match_state = "finished"
             else:
                 match_state = "none"
 
@@ -147,6 +161,25 @@ def create_message_request(payload: MessageRequestCreate) -> dict:
             receptor_id = payload.to_user_id
         else:
             receptor_id = payload.from_user_id
+
+            # Verificar si ya existe una publicacion EXACTAMENTE igual (mismo usuario, mismas habilidades)
+            # Esto evita duplicados durante el onboarding si el usuario pulsa varias veces
+            existing_duplicate = session.execute(
+                select(Intercambio).where(
+                    Intercambio.usuario_emisor_id == payload.from_user_id,
+                    Intercambio.usuario_receptor_id == payload.from_user_id,
+                    Intercambio.habilidad_id == payload.habilidad_id,
+                    Intercambio.habilidad_solicitada_id == payload.habilidad_solicitada_id,
+                    Intercambio.estado == "pendiente",
+                )
+            ).scalars().first()
+
+            if existing_duplicate:
+                return {
+                    "request": serialize_intercambio_with_names(session, existing_duplicate),
+                    "matched": False,
+                    "conversation_id": None,
+                }
 
             active_public_requests = session.execute(
                 select(Intercambio).where(

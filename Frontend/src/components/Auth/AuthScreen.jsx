@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
-import LoginForm from './LoginForm';
-import SignupForm from './SignupForm';
+import React from 'react';
+import { SignInButton, SignUpButton, UserButton } from '@clerk/clerk-react';
 
 const AuthScreen = () => {
-  const [mode, setMode] = useState('login');
-
   return (
     <section id="authScreen" className="auth-screen">
       <div className="auth-card">
@@ -36,26 +33,21 @@ const AuthScreen = () => {
         </div>
 
         <div className="auth-panel glass">
-          <div className="tab-row">
-            <button 
-              className={`tab-btn ${mode === 'login' ? 'active' : ''}`} 
-              onClick={() => setMode('login')}
-            >
-              Iniciar sesión
-            </button>
-            <button 
-              className={`tab-btn ${mode === 'signup' ? 'active' : ''}`} 
-              onClick={() => setMode('signup')}
-            >
-              Crear cuenta
-            </button>
+          <div className="clerk-buttons">
+            <SignInButton mode="modal" forceRedirectUrl="/Ing-Soft/Frontend/">
+              <button className="primary-btn full-width">
+                Iniciar sesión
+              </button>
+            </SignInButton>
+            <div className="divider">
+              <span>o</span>
+            </div>
+            <SignUpButton mode="modal" forceRedirectUrl="/Ing-Soft/Frontend/">
+              <button className="secondary-btn full-width">
+                Crear cuenta
+              </button>
+            </SignUpButton>
           </div>
-
-          {mode === 'login' ? (
-            <LoginForm onSignupTab={() => setMode('signup')} />
-          ) : (
-            <SignupForm onLoginTab={() => setMode('login')} />
-          )}
         </div>
       </div>
     </section>
