@@ -49,7 +49,7 @@ function handleHttpError(status, data, path) {
       }
       throw new Error("No tienes permisos para esta acción");
     case 404:
-      throw new Error("Recurso no encontrado");
+      throw new Error(toErrorMessage(data) || "Recurso no encontrado");
     case 409:
       // Conflicto - usar mensaje del servidor
       throw new Error(toErrorMessage(data));

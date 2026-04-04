@@ -143,9 +143,10 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
                 <div className="absolute top-4 right-4">
                   <button
                     onClick={() => {
+                      const reportedUserId = item.usuario_emisor_id || item.other_user_id || item.id;
                       setReportTarget({
-                        userId: item.id,
-                        username: item.username || item.nombre || `Usuario ${item.id}`
+                        userId: reportedUserId,
+                        username: item.username || item.nombre || `Usuario ${reportedUserId}`
                       });
                       setShowReportModal(true);
                     }}
