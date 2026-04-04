@@ -2,29 +2,11 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api as apiRequest } from '../../services/api';
 import { API_BASE } from '../../config/constants';
+import { parseModerationErrorMessage, validateUsernameText } from '../../utils/textModeration';
 
 const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
-};
-
-const validateUsername = (username) => {
-  if (!username || username.trim() === '') {
-    return 'El nombre de usuario es requerido';
-  }
-  if (/^[\d]+$/.test(username)) {
-    return 'El nombre de usuario no puede ser solo números';
-  }
-  if (/^[^\w]+$/.test(username)) {
-    return 'El nombre de usuario no puede tener solo caracteres especiales';
-  }
-  if (!/^[a-zA-Z0-9._]+$/.test(username)) {
-    return 'Solo letras, números, puntos (.) y guiones bajos (_)';
-  }
-  if (/\s/.test(username)) {
-    return 'No se permiten espacios';
-  }
-  return '';
 };
 
 const SignupForm = ({ onLoginTab }) => {
@@ -50,18 +32,18 @@ const SignupForm = ({ onLoginTab }) => {
     if (id === 'username') {
       setUsernameError('');
       if (value) {
-        const error = validateUsername(value);
+        const error = validateUsernameText(value);
         if (error) setUsernameError(error);
       }
     }
   };
 
-  const usernameValidation = validateUsername(formData.username);
+  const usernameValidation = validateUsernameText(formData.username);
   const canSubmit = formData.username.trim() !== '' && formData.email.trim() !== '' && formData.password.trim() !== '' && validateEmail(formData.email) === true && usernameValidation === '' && !loading;
 
   const handleSignup = async () => {
     const { email, password, username } = formData;
-    const usernameVal = validateUsername(username);
+    const usernameVal = validateUsernameText(username);
     if (usernameVal) {
       setUsernameError(usernameVal);
       return;
@@ -84,7 +66,8 @@ const SignupForm = ({ onLoginTab }) => {
       setSession(result.user.id, result.access_token || null);
     } catch (error) {
       const msg = error.message;
-      if (msg.includes("nombre de usuario")) {
+      const moderation = parseModerationErrorMessage(msg);
+      if (moderation?.field === 'username' || msg.includes("nombre de usuario")) {
         setUsernameError(msg);
       } else if (msg.includes("correo")) {
         setEmailError(msg);

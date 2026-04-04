@@ -33,6 +33,40 @@ Se implemento un backend en Python con FastAPI y WebSocket para el flujo de inte
 pip install -r requirements.txt
 ```
 
+3.1 Crear archivo de variables de entorno para backend:
+
+```bash
+cp .env.example .env
+```
+
+Variables nuevas de moderacion local:
+
+- `TEXT_MODERATION_LEVEL`: `strict`, `medium` o `relaxed`.
+- `TEXT_MODERATION_ENABLE_PROFANITY`: activa/desactiva `better-profanity`.
+- `TEXT_MODERATION_EXTRA_BLOCKED_TERMS`: terminos extra separados por comas.
+
+El archivo de ejemplo esta en `Backend/.env.example`.
+
+Pruebas manuales recomendadas de moderacion (antes de deploy):
+
+1. Registro (`POST /auth/register`)
+- Caso valido: `username` normal (ej: `pedro_dev`) debe crear cuenta.
+- Caso bloqueado: `username` con termino bloqueado por politica debe devolver `400` con detalle por campo.
+
+2. Perfil (`PUT /usuarios/{user_id}/profile`)
+- Caso valido: nombre/apellido reales con acentos y bio neutra.
+- Caso bloqueado: bio con patrones de spam (repeticiones o teclado) debe devolver `400`.
+
+3. Reseña (`POST /matches/{match_id}/rate`)
+- Caso valido: comentario de reseña constructivo.
+- Caso bloqueado: comentario con contenido +18/toxico/odio o terminos extra configurados debe devolver `400`.
+
+4. Verificacion anti-evasion
+- Probar variantes ofuscadas (ej: con numeros o simbolos intermedios) y confirmar que la normalizacion tambien las detecta.
+
+5. Revision de falsos positivos
+- Probar palabras legitimas del dominio y nombres comunes para confirmar que no se bloquean por error.
+
 4. Ejecutar servidor:
 
 ```bash

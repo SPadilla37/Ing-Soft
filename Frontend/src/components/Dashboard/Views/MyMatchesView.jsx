@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
+import { parseModerationErrorMessage, validateReviewCommentText } from '../../../utils/textModeration';
+
+const REVIEW_COMMENT_MAX_LENGTH = 500;
 
 const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate, reloadKey, forceReload, onReloadHandled }) => {
   const { currentUser } = useAuth();
@@ -9,6 +12,7 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate, reloadKey, forceR
   const [loading, setLoading] = useState(true);
   const [ratingByMatch, setRatingByMatch] = useState({});
   const [commentByMatch, setCommentByMatch] = useState({});
+  const [commentErrorByMatch, setCommentErrorByMatch] = useState({});
   const [ratingBusy, setRatingBusy] = useState({});
   // Persist can_rate state for each match after it first becomes true, using localStorage
   const [persistCanRate, setPersistCanRate] = useState(() => {
@@ -146,6 +150,14 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate, reloadKey, forceR
 
   const handleRate = async (matchId) => {
     const rating = Number(ratingByMatch[matchId] || 0);
+    const comment = commentByMatch[matchId] || '';
+    const commentError = validateReviewCommentText(comment, REVIEW_COMMENT_MAX_LENGTH);
+
+    if (commentError) {
+      setCommentErrorByMatch((prev) => ({ ...prev, [matchId]: commentError }));
+      return;
+    }
+
     if (rating < 1 || rating > 5) {
       alert('Selecciona una calificación de 1 a 5 estrellas.');
       return;
@@ -158,12 +170,18 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate, reloadKey, forceR
         body: JSON.stringify({
           user_id: Number(currentUser),
           rating,
-          comentario: commentByMatch[matchId] || '',
+          comentario: comment,
         }),
       });
       loadMyMatches();
+      setCommentErrorByMatch((prev) => ({ ...prev, [matchId]: '' }));
     } catch (error) {
-      alert(error.message);
+      const moderation = parseModerationErrorMessage(error.message);
+      if (moderation?.field === 'comentario') {
+        setCommentErrorByMatch((prev) => ({ ...prev, [matchId]: moderation.reason }));
+      } else {
+        alert(error.message);
+      }
     } finally {
       setRatingBusy((prev) => ({ ...prev, [matchId]: false }));
     }
@@ -305,14 +323,25 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate, reloadKey, forceR
                   <textarea
                     placeholder="Comentario opcional"
                     value={commentByMatch[match.id] || ''}
-                    onChange={(e) => setCommentByMatch((prev) => ({ ...prev, [match.id]: e.target.value }))}
+                    onChange={(e) => {
+                      const next = e.target.value.slice(0, REVIEW_COMMENT_MAX_LENGTH);
+                      setCommentByMatch((prev) => ({ ...prev, [match.id]: next }));
+                      const nextError = validateReviewCommentText(next, REVIEW_COMMENT_MAX_LENGTH);
+                      setCommentErrorByMatch((prev) => ({ ...prev, [match.id]: nextError }));
+                    }}
                     className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
                     rows={3}
                   />
+                  {commentErrorByMatch[match.id] && (
+                    <span className="text-error text-xs mt-1 block">{commentErrorByMatch[match.id]}</span>
+                  )}
+                  <span className="text-on-surface-variant text-xs mt-1 block text-right">
+                    {(commentByMatch[match.id] || '').length}/{REVIEW_COMMENT_MAX_LENGTH}
+                  </span>
                   <button
                     className="w-full bg-primary-dim hover:bg-primary text-white py-3 rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => handleRate(match.id)}
-                    disabled={Boolean(ratingBusy[match.id])}
+                    disabled={Boolean(ratingBusy[match.id]) || Boolean(commentErrorByMatch[match.id])}
                   >
                     {ratingBusy[match.id] ? 'Enviando...' : 'Enviar calificación'}
                   </button>

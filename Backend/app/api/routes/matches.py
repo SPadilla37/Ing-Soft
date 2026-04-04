@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from sqlalchemy import or_, select
+from app.core.text_moderation import assert_text_is_allowed
 from app.db.database import SessionLocal
 from app.db.models.entities import Intercambio, IntercambioFinalizacion, Reseña, Usuario, Habilidad
 from app.schemas import MatchFinalizePayload, MatchRatePayload
@@ -201,12 +202,18 @@ def rate_match(match_id: int, payload: MatchRatePayload) -> dict:
         if existing:
             raise HTTPException(status_code=400, detail="Ya calificaste este match")
 
+        clean_comment = (payload.comentario or "").strip()
+        try:
+            assert_text_is_allowed("comentario", clean_comment)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
         nueva_reseña = Reseña(
             intercambio_id=match_id,
             autor_id=payload.user_id,
             receptor_id=other_user_id,
             calificacion=payload.rating,
-            comentario=payload.comentario,
+            comentario=clean_comment,
             created_at=datetime.now(timezone.utc),
         )
         session.add(nueva_reseña)
