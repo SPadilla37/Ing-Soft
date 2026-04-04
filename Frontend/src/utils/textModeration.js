@@ -15,6 +15,7 @@ const HATE_TERMS = [
 const ADULT_TERMS = ["sexo", "sexual", "porn", "porno", "xxx", "nudes", "desnudo", "cuca", "vagina", "pene", "culo", "culos"];
 const TOXIC_TERMS = [
   "idiota", "imbecil", "estupido", "inutil", "asqueroso", "basura",
+  "mierda",
   "hijo de puta", "malparido", "gonorrea", "concha de tu madre", "culiao",
   "pendejo", "mamaguevo", "cabron", "pinche",
   "motherfucker", "bitch", "asshole", "cunt", "slut", "whore"
