@@ -4,6 +4,10 @@ import { api as apiRequest } from '../../../services/api';
 import { API_BASE, MIN_SKILLS, MAX_SKILLS } from '../../../config/constants';
 import SkillPicker from '../../Common/SkillPicker';
 import { ensureSkillIds } from '../../../services/skills';
+import { parseModerationErrorMessage, validateBioText, validateNameText } from '../../../utils/textModeration';
+
+const NAME_MAX_LENGTH = 25;
+const BIO_MAX_LENGTH = 500;
 
 const ProfileView = ({ forceReload, onReloadHandled }) => {
   const { currentUser, currentUserRecord, setCurrentUserRecord, loadUserRecord } = useAuth();
@@ -15,6 +19,10 @@ const ProfileView = ({ forceReload, onReloadHandled }) => {
   });
   const [pickerConfig, setPickerConfig] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({
+    fullName: '',
+    bio: '',
+  });
 
   useEffect(() => {
     if (currentUserRecord?.profile) {
@@ -35,7 +43,25 @@ const ProfileView = ({ forceReload, onReloadHandled }) => {
     }
   }, [forceReload, loadUserRecord, currentUser, onReloadHandled]);
 
+  const validateProfileText = (fullName, bio) => {
+    const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+    const nombre = parts[0] || '';
+    const apellido = parts.slice(1).join(' ');
+    const nameError = validateNameText(nombre, NAME_MAX_LENGTH) || (apellido ? validateNameText(apellido, NAME_MAX_LENGTH) : '');
+    const bioError = validateBioText(bio, BIO_MAX_LENGTH);
+    return { nameError, bioError, nombre, apellido };
+  };
+
   const handleSave = async () => {
+    const validation = validateProfileText(formData.fullName, formData.bio);
+    if (validation.nameError || validation.bioError) {
+      setErrors({
+        fullName: validation.nameError,
+        bio: validation.bioError,
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const teachSkillIds = await ensureSkillIds(API_BASE, Array.from(formData.teachSkills));
@@ -60,15 +86,11 @@ const ProfileView = ({ forceReload, onReloadHandled }) => {
         return;
       }
 
-      const parts = formData.fullName.trim().split(/\s+/).filter(Boolean);
-      const nombre = parts[0] || '';
-      const apellido = parts.slice(1).join(' ');
-
       const result = await apiRequest(API_BASE, `/usuarios/${encodeURIComponent(currentUser)}/profile`, {
         method: 'PUT',
         body: JSON.stringify({
-          nombre,
-          apellido,
+          nombre: validation.nombre,
+          apellido: validation.apellido,
           biografia: formData.bio,
           habilidades_ofertadas: teachSkillIds,
           habilidades_buscadas: learnSkillIds,
@@ -77,7 +99,14 @@ const ProfileView = ({ forceReload, onReloadHandled }) => {
       setCurrentUserRecord(result.user);
       alert('Perfil guardado correctamente.');
     } catch (error) {
-      alert(error.message);
+      const moderation = parseModerationErrorMessage(error.message);
+      if (moderation?.field === 'nombre' || moderation?.field === 'apellido') {
+        setErrors((prev) => ({ ...prev, fullName: moderation.reason }));
+      } else if (moderation?.field === 'biografia') {
+        setErrors((prev) => ({ ...prev, bio: moderation.reason }));
+      } else {
+        alert(error.message);
+      }
     } finally {
       setSaving(false);
     }
@@ -148,9 +177,15 @@ const ProfileView = ({ forceReload, onReloadHandled }) => {
             <input 
               placeholder="Tu nombre completo" 
               value={formData.fullName}
-              onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+              onChange={(e) => {
+                const next = e.target.value.slice(0, (NAME_MAX_LENGTH * 2) + 1);
+                setFormData({ ...formData, fullName: next });
+                const { nameError } = validateProfileText(next, formData.bio);
+                setErrors((prev) => ({ ...prev, fullName: nameError }));
+              }}
               className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
             />
+            {errors.fullName && <span className="text-error text-xs mt-1 block">{errors.fullName}</span>}
           </div>
 
           <div>
@@ -158,10 +193,19 @@ const ProfileView = ({ forceReload, onReloadHandled }) => {
             <textarea 
               placeholder="Habla de tus intereses..." 
               value={formData.bio}
-              onChange={(e) => setFormData({...formData, bio: e.target.value})}
+              onChange={(e) => {
+                const next = e.target.value.slice(0, BIO_MAX_LENGTH);
+                setFormData({ ...formData, bio: next });
+                const { bioError } = validateProfileText(formData.fullName, next);
+                setErrors((prev) => ({ ...prev, bio: bioError }));
+              }}
               rows={4}
               className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
             />
+            {errors.bio && <span className="text-error text-xs mt-1 block">{errors.bio}</span>}
+            <span className="text-on-surface-variant text-xs mt-1 block text-right">
+              {formData.bio.length}/{BIO_MAX_LENGTH}
+            </span>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
@@ -215,7 +259,7 @@ const ProfileView = ({ forceReload, onReloadHandled }) => {
           <button 
             className="w-full bg-gradient-to-br from-primary-dim to-primary hover:from-primary hover:to-primary-dim text-white font-bold py-4 rounded-full shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
             onClick={handleSave} 
-            disabled={saving}
+            disabled={saving || Boolean(errors.fullName) || Boolean(errors.bio)}
           >
             {saving ? 'Guardando...' : 'Guardar perfil'}
           </button>

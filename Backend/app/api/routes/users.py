@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import delete, select
+from app.core.text_moderation import assert_text_is_allowed
 from app.db.database import SessionLocal
 from app.db.models.entities import Usuario, UsuarioHabilidad, Reseña
 from app.schemas import UserProfileUpdatePayload
@@ -27,13 +28,28 @@ def update_user_profile(user_id: int, payload: UserProfileUpdatePayload) -> dict
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
         if payload.nombre is not None:
-            user.nombre = payload.nombre.strip()
+            clean_nombre = payload.nombre.strip()
+            try:
+                assert_text_is_allowed("nombre", clean_nombre)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            user.nombre = clean_nombre
         if payload.apellido is not None:
-            user.apellido = payload.apellido.strip()
+            clean_apellido = payload.apellido.strip()
+            try:
+                assert_text_is_allowed("apellido", clean_apellido)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            user.apellido = clean_apellido
         if payload.foto_url is not None:
             user.foto_url = payload.foto_url.strip()
         if payload.biografia is not None:
-            user.biografia = payload.biografia.strip()
+            clean_biografia = payload.biografia.strip()
+            try:
+                assert_text_is_allowed("biografia", clean_biografia)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            user.biografia = clean_biografia
 
         if payload.habilidades_ofertadas is not None and payload.habilidades_buscadas is not None:
             overlap = set(payload.habilidades_ofertadas) & set(payload.habilidades_buscadas)

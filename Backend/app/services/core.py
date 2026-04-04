@@ -28,6 +28,15 @@ def ensure_user(session, user_id: int) -> None:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
 
+def ensure_user_not_suspended(session, user_id: int) -> None:
+    """Valida que el usuario exista y no esté suspendido"""
+    user = session.get(Usuario, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if user.is_suspended:
+        raise HTTPException(status_code=403, detail="Usuario suspendido")
+
+
 def calculate_received_rating(session, user_id: int) -> dict:
     reseñas = session.execute(
         select(Reseña).where(Reseña.receptor_id == user_id)

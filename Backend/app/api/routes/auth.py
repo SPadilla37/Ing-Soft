@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from app.core.security import create_access_token, hash_password, needs_rehash, verify_password
+from app.core.text_moderation import assert_text_is_allowed
 from app.db.database import SessionLocal
 from app.db.models.entities import Usuario
 from app.schemas import AuthTokenResponse, UserLoginPayload, UserRegisterPayload
@@ -19,6 +20,12 @@ def health() -> dict:
 @router.post("/auth/register")
 def register_user(payload: UserRegisterPayload) -> AuthTokenResponse:
     email = payload.email.strip().lower()
+    clean_username = payload.username.strip()
+    try:
+        assert_text_is_allowed("username", clean_username)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     with SessionLocal() as session:
         existing = session.execute(
             select(Usuario).where(Usuario.email == email)
@@ -28,7 +35,7 @@ def register_user(payload: UserRegisterPayload) -> AuthTokenResponse:
             raise HTTPException(status_code=409, detail="Ese correo ya esta registrado")
 
         existing_username = session.execute(
-            select(Usuario).where(Usuario.username == payload.username.strip())
+            select(Usuario).where(Usuario.username == clean_username)
         ).scalars().first()
 
         if existing_username:
@@ -37,7 +44,7 @@ def register_user(payload: UserRegisterPayload) -> AuthTokenResponse:
         now = datetime.now(timezone.utc)
         if not existing:
             existing = Usuario(
-                username=payload.username.strip(),
+                username=clean_username,
                 email=email,
                 password_hash=hash_password(payload.password),
                 clerk_id=payload.clerk_id or "",
@@ -47,7 +54,7 @@ def register_user(payload: UserRegisterPayload) -> AuthTokenResponse:
             )
             session.add(existing)
         else:
-            existing.username = payload.username.strip()
+            existing.username = clean_username
             existing.password_hash = hash_password(payload.password)
             if payload.clerk_id:
                 existing.clerk_id = payload.clerk_id

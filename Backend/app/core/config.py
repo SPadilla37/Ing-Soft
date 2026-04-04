@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     USE_CREDENTIALS: bool = True
     VALIDATE_CERTS: bool = True
 
+    # Text moderation settings
+    TEXT_MODERATION_LEVEL: str = "medium"  # strict | medium | relaxed
+    TEXT_MODERATION_ENABLE_PROFANITY: bool = True
+    TEXT_MODERATION_EXTRA_BLOCKED_TERMS: str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

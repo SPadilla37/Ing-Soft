@@ -4,12 +4,10 @@ import SkillPicker from '../Common/SkillPicker';
 import { api as apiRequest } from '../../services/api';
 import { API_BASE, MIN_SKILLS, MAX_SKILLS } from '../../config/constants';
 import { ensureSkillIds } from '../../services/skills';
+import { parseModerationErrorMessage, sanitizeNameInput, validateBioText, validateNameText } from '../../utils/textModeration';
 
 const NAME_MAX_LENGTH = 25;
 const BIO_MAX_LENGTH = 500;
-
-const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/;
-const BIO_REGEX = /^[\w\sáéíóúÁÉÍÓÚñÑ+*=/%^.,!?:;()"'\\/-]*$/;
 
 const OnboardingModal = () => {
   const { currentUser, setCurrentUserRecord } = useAuth();
@@ -29,22 +27,10 @@ const OnboardingModal = () => {
 
   const validateField = (field, value) => {
     if (field === 'firstName' || field === 'lastName') {
-      if (value.length > NAME_MAX_LENGTH) {
-        return `Máximo ${NAME_MAX_LENGTH} caracteres`;
-      }
-      if (!NAME_REGEX.test(value)) {
-        return 'Solo se permiten letras a-z';
-      }
-      return '';
+      return validateNameText(value, NAME_MAX_LENGTH);
     }
     if (field === 'bio') {
-      if (value.length > BIO_MAX_LENGTH) {
-        return `Máximo ${BIO_MAX_LENGTH} caracteres`;
-      }
-      if (!BIO_REGEX.test(value)) {
-        return 'Caracteres no permitidos';
-      }
-      return '';
+      return validateBioText(value, BIO_MAX_LENGTH);
     }
     return '';
   };
@@ -54,9 +40,7 @@ const OnboardingModal = () => {
     const maxLength = field === 'bio' ? BIO_MAX_LENGTH : NAME_MAX_LENGTH;
     
     if (field === 'firstName' || field === 'lastName') {
-      processedValue = value.slice(0, maxLength);
-      const filtered = processedValue.split('').filter(char => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]$/.test(char)).join('');
-      processedValue = filtered.slice(0, maxLength);
+      processedValue = sanitizeNameInput(value, maxLength);
     } else if (field === 'bio') {
       processedValue = value.slice(0, maxLength);
     }
@@ -130,6 +114,19 @@ const OnboardingModal = () => {
       });
 
     } catch (error) {
+      const moderation = parseModerationErrorMessage(error.message);
+      if (moderation?.field === 'nombre') {
+        setErrors((prev) => ({ ...prev, firstName: moderation.reason }));
+        return;
+      }
+      if (moderation?.field === 'apellido') {
+        setErrors((prev) => ({ ...prev, lastName: moderation.reason }));
+        return;
+      }
+      if (moderation?.field === 'biografia') {
+        setErrors((prev) => ({ ...prev, bio: moderation.reason }));
+        return;
+      }
       alert(error.message);
     }
   };

@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from sqlalchemy import or_, select
+from app.core.text_moderation import assert_text_is_allowed
 from app.db.database import SessionLocal
 from app.db.models.entities import Intercambio, IntercambioFinalizacion, Reseña, Usuario, Habilidad
 from app.schemas import MatchFinalizePayload, MatchRatePayload
@@ -37,13 +38,17 @@ def get_incoming_match_intents(user_id: int) -> dict:
             if intercambio.usuario_emisor_id == user_id:
                 continue
 
+            # Filtrar usuarios suspendidos
+            emisor = session.get(Usuario, intercambio.usuario_emisor_id)
+            if not emisor or emisor.is_suspended:
+                continue
+
             existing_match = get_match_for_users(session, user_id, intercambio.usuario_emisor_id)
             if existing_match:
                 continue
 
             serialized = serialize_intercambio_for_viewer(session, intercambio, user_id)
 
-            emisor = session.get(Usuario, intercambio.usuario_emisor_id)
             if emisor:
                 user_data = serialize_user(emisor, session)
                 serialized["nombre"] = user_data["nombre"]
@@ -74,7 +79,15 @@ def list_user_matches(user_id: int) -> dict:
             ).order_by(Intercambio.fecha_creacion.desc())
         ).scalars().all()
 
-        return {"matches": [serialize_intercambio_for_user(session, item, user_id) for item in intercambios]}
+        # Filtrar matches donde el otro usuario esté suspendido
+        filtered_matches = []
+        for item in intercambios:
+            other_user_id = item.usuario_receptor_id if item.usuario_emisor_id == user_id else item.usuario_emisor_id
+            other_user = session.get(Usuario, other_user_id)
+            if other_user and not other_user.is_suspended:
+                filtered_matches.append(serialize_intercambio_for_user(session, item, user_id))
+
+        return {"matches": filtered_matches}
 
 
 @router.post("/matches/{match_id}/finalize")
@@ -201,12 +214,18 @@ def rate_match(match_id: int, payload: MatchRatePayload) -> dict:
         if existing:
             raise HTTPException(status_code=400, detail="Ya calificaste este match")
 
+        clean_comment = (payload.comentario or "").strip()
+        try:
+            assert_text_is_allowed("comentario", clean_comment)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
         nueva_reseña = Reseña(
             intercambio_id=match_id,
             autor_id=payload.user_id,
             receptor_id=other_user_id,
             calificacion=payload.rating,
-            comentario=payload.comentario,
+            comentario=clean_comment,
             created_at=datetime.now(timezone.utc),
         )
         session.add(nueva_reseña)
