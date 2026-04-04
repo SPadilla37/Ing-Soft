@@ -95,6 +95,9 @@ const isSpamLike = (text) => {
 };
 
 const moderationError = (value) => {
+  const rawText = (value || "").trim().toLowerCase();
+  if (/\bcoño(s)?\b/iu.test(rawText)) return "Contiene comentarios toxicos";
+
   const text = normalize(value);
   if (!text) return "";
   if (containsAny(text, HATE_TERMS)) return "Contiene discurso de odio o violencia";

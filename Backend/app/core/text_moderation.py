@@ -306,6 +306,10 @@ def _is_spam_like(text: str) -> bool:
 
 
 def get_text_policy_error(text: Optional[str]) -> Optional[str]:
+    raw_text = (text or "").strip().lower()
+    if re.search(r"\bcoño(s)?\b", raw_text):
+        return "contiene comentarios toxicos"
+
     normalized = _normalize(text)
     if not normalized:
         return None
