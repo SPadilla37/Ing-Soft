@@ -133,31 +133,30 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
             const matchDetails = getMatchDetails(item);
             return (
               <div key={item.id} className="relative">
-                <MarketplaceCard 
+                <MarketplaceCard
                   request={{ ...item, viewer_match_state: item.viewer_match_state || 'received' }}
                   matchDetails={matchDetails}
                   onAccept={() => handleAccept(item.id)}
                   onReject={() => handleReject(item.id)}
                   onProfile={(userId) => setProfileUserId(userId)}
                 />
-                <div className="absolute top-4 right-4">
-                  <button
-                    onClick={() => {
-                      const reportedUserId = item.usuario_emisor_id || item.other_user_id || item.id;
-                      setReportTarget({
-                        userId: reportedUserId,
-                        username: item.username || item.nombre || `Usuario ${reportedUserId}`
-                      });
-                      setShowReportModal(true);
-                    }}
-                    className="w-8 h-8 rounded-full bg-surface-container-highest hover:bg-surface-container-low flex items-center justify-center transition-colors shadow-md"
-                    aria-label="Reportar usuario"
-                    title="Reportar usuario"
-                  >
-                    <span className="material-symbols-outlined text-error text-lg">flag</span>
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    const reportedUserId = item.usuario_emisor_id || item.other_user_id || item.id;
+                    setReportTarget({
+                      userId: reportedUserId,
+                      username: item.username || item.nombre || `Usuario ${reportedUserId}`
+                    });
+                    setShowReportModal(true);
+                  }}
+                  className="absolute top-4 right-14 w-8 h-8 rounded-full hover:bg-surface-container-low flex items-center justify-center transition-colors z-10"
+                  aria-label="Reportar usuario"
+                  title="Reportar usuario"
+                >
+                  <span className="material-symbols-outlined text-error text-lg">flag</span>
+                </button>
               </div>
+
             );
           })
         )}
