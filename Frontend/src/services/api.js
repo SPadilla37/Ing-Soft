@@ -37,7 +37,7 @@ function handleHttpError(status, data, path) {
       if (!path.includes('/auth/login') && !path.includes('/auth/register')) {
         localStorage.removeItem(dbKeyToken);
         localStorage.removeItem('currentUser');
-        window.location.href = '/';
+        window.location.href = '/Ing-Soft/Frontend/';
         throw new Error("Sesión expirada");
       }
       // Para login/register, solo lanzar el error sin redirigir
@@ -62,7 +62,8 @@ function handleHttpError(status, data, path) {
 
 
 export async function api(apiBase, path, options = {}) {
-  const token = localStorage.getItem(dbKeyToken);
+  const isAuthPath = path.includes('/auth/login') || path.includes('/auth/register');
+  const token = isAuthPath ? null : localStorage.getItem(dbKeyToken);
   const headers = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

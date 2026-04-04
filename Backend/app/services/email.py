@@ -1,6 +1,6 @@
 from pathlib import Path
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-from pydantic import EmailStr
+from typing import Optional
 from app.core.config import settings
 import logging
 
@@ -9,22 +9,32 @@ logger = logging.getLogger(__name__)
 # Base directory for email templates
 TEMPLATE_FOLDER = Path(__file__).parent.parent / "templates"
 
-# Configure fastapi-mail ConnectionConfig
-conf = ConnectionConfig(
-    MAIL_USERNAME=settings.MAIL_USERNAME,
-    MAIL_PASSWORD=settings.MAIL_PASSWORD,
-    MAIL_FROM=settings.MAIL_FROM,
-    MAIL_PORT=settings.MAIL_PORT,
-    MAIL_SERVER=settings.MAIL_SERVER,
-    MAIL_FROM_NAME=settings.MAIL_FROM_NAME,
-    MAIL_STARTTLS=settings.MAIL_STARTTLS,
-    MAIL_SSL_TLS=settings.MAIL_SSL_TLS,
-    USE_CREDENTIALS=settings.USE_CREDENTIALS,
-    VALIDATE_CERTS=settings.VALIDATE_CERTS,
-    TEMPLATE_FOLDER=TEMPLATE_FOLDER,
-)
+def _clean_env_string(value: str) -> str:
+    return (value or "").strip().strip('"').strip("'")
 
-fast_mail = FastMail(conf)
+
+def _build_mail_client() -> Optional[FastMail]:
+    try:
+        conf = ConnectionConfig(
+            MAIL_USERNAME=_clean_env_string(settings.MAIL_USERNAME),
+            MAIL_PASSWORD=_clean_env_string(settings.MAIL_PASSWORD),
+            MAIL_FROM=_clean_env_string(settings.MAIL_FROM),
+            MAIL_PORT=settings.MAIL_PORT,
+            MAIL_SERVER=_clean_env_string(settings.MAIL_SERVER),
+            MAIL_FROM_NAME=_clean_env_string(settings.MAIL_FROM_NAME),
+            MAIL_STARTTLS=settings.MAIL_STARTTLS,
+            MAIL_SSL_TLS=settings.MAIL_SSL_TLS,
+            USE_CREDENTIALS=settings.USE_CREDENTIALS,
+            VALIDATE_CERTS=settings.VALIDATE_CERTS,
+            TEMPLATE_FOLDER=TEMPLATE_FOLDER,
+        )
+        return FastMail(conf)
+    except Exception as exc:
+        logger.warning("Email disabled due to invalid configuration: %s", exc)
+        return None
+
+
+fast_mail = _build_mail_client()
 
 async def send_notification_email(
     subject: str,
@@ -35,7 +45,12 @@ async def send_notification_email(
     """
     Sends an automated email notification asynchronously using HTML templates.
     """
-    if not settings.MAIL_USERNAME or not settings.MAIL_PASSWORD:
+    if fast_mail is None:
+        logger.warning("Email client disabled. Simulating email send.")
+        logger.info(f"Simulated Email -> To: {email_to} | Subject: {subject} | Template: {template_name}")
+        return
+
+    if not _clean_env_string(settings.MAIL_USERNAME) or not _clean_env_string(settings.MAIL_PASSWORD):
         logger.warning("Email configuration missing. Simulating email send in dev mode.")
         logger.info(f"Simulated Email -> To: {email_to} | Subject: {subject} | Template: {template_name}")
         return

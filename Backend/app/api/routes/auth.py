@@ -27,6 +27,13 @@ def register_user(payload: UserRegisterPayload) -> AuthTokenResponse:
         if existing and existing.password_hash:
             raise HTTPException(status_code=409, detail="Ese correo ya esta registrado")
 
+        existing_username = session.execute(
+            select(Usuario).where(Usuario.username == payload.username.strip())
+        ).scalars().first()
+
+        if existing_username:
+            raise HTTPException(status_code=409, detail="Ese nombre de usuario ya esta en uso")
+
         now = datetime.now(timezone.utc)
         if not existing:
             existing = Usuario(

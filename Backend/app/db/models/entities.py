@@ -23,6 +23,7 @@ class Usuario(Base):
 
     __table_args__ = (
         CheckConstraint("role IN ('user', 'admin', 'superadmin')", name="usuarios_role_check"),
+        UniqueConstraint("username", name="uq_usuarios_username"),
     )
 
     habilidades_ofertadas = relationship("UsuarioHabilidad", foreign_keys="UsuarioHabilidad.usuario_id", back_populates="usuario")

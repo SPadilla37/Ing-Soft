@@ -7,6 +7,19 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+const getStoredSessionUser = () => {
+  const stored = localStorage.getItem(dbKeySession);
+  if (!stored) return null;
+
+  const normalized = String(stored).trim();
+  if (!/^\d+$/.test(normalized) || Number(normalized) <= 0) {
+    localStorage.removeItem(dbKeySession);
+    return null;
+  }
+
+  return normalized;
+};
+
 const normalizeUserRecord = (user) => {
   if (!user || typeof user !== 'object') return null;
 
@@ -41,7 +54,7 @@ const normalizeUserRecord = (user) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(localStorage.getItem(dbKeySession) || null);
+  const [currentUser, setCurrentUser] = useState(getStoredSessionUser());
   const [currentUserRecord, setCurrentUserRecordState] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSuspendedPopup, setShowSuspendedPopup] = useState(false);
@@ -52,11 +65,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const setSession = (userId, token = null) => {
-    localStorage.setItem(dbKeySession, userId);
+    const normalizedUserId = String(userId).trim();
+    if (!/^\d+$/.test(normalizedUserId) || Number(normalizedUserId) <= 0) {
+      return;
+    }
+
+    localStorage.setItem(dbKeySession, normalizedUserId);
     if (token) {
       localStorage.setItem(dbKeyToken, token);
     }
-    setCurrentUser(userId);
+    setCurrentUser(normalizedUserId);
   };
 
   const clearSession = () => {

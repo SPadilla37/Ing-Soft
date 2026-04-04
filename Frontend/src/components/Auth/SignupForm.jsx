@@ -83,7 +83,14 @@ const SignupForm = ({ onLoginTab }) => {
       setCurrentUserRecord(result.user);
       setSession(result.user.id, result.access_token || null);
     } catch (error) {
-      alert(error.message);
+      const msg = error.message;
+      if (msg.includes("nombre de usuario")) {
+        setUsernameError(msg);
+      } else if (msg.includes("correo")) {
+        setEmailError(msg);
+      } else {
+        alert(msg);
+      }
     } finally {
       setLoading(false);
     }
