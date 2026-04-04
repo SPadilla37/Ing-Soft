@@ -18,8 +18,10 @@ from app.db.database import SessionLocal
 
 app = FastAPI(title="Skill Exchange Messaging API", version="1.0.0")
 
-allowed_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "*")
-allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+allowed_origins = [
+    "https://spadilla37.github.io",
+    "http://localhost:5173"
+]
 
 app.add_middleware(
     CORSMiddleware,
