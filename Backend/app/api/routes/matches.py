@@ -135,9 +135,11 @@ def finalize_match(match_id: int, payload: MatchFinalizePayload, background_task
 
                 for row in pair_rows:
                     row.estado = "completado"
-                
-                background_tasks.add_task(push_notification, intercambio.usuario_emisor_id, {"type": "badge_update"})
-                background_tasks.add_task(push_notification, intercambio.usuario_receptor_id, {"type": "badge_update"})
+
+                # Notificar a ambos usuarios que el match fue completado
+                for uid in [intercambio.usuario_emisor_id, intercambio.usuario_receptor_id]:
+                    background_tasks.add_task(push_notification, uid, {"type": "badge_update"})
+                    background_tasks.add_task(push_notification, uid, {"type": "match_completed", "match_id": match_id})
             else:
                 # One user has confirmed, the other hasn't. Send email notification.
                 other_user_id = intercambio.usuario_receptor_id if payload.user_id == intercambio.usuario_emisor_id else intercambio.usuario_emisor_id

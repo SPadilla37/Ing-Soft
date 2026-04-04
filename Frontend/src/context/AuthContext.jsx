@@ -148,7 +148,8 @@ export const AuthProvider = ({ children }) => {
       loading, 
       setCurrentUserRecord,
       showSuspendedPopup,
-      setShowSuspendedPopup
+      setShowSuspendedPopup,
+      loadUserRecord
     }}>
       {children}
     </AuthContext.Provider>

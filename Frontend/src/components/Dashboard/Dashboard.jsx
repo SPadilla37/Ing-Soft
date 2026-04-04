@@ -12,9 +12,12 @@ import ChatView from './Views/ChatView';
 import ProfileView from './Views/ProfileView';
 
 const Dashboard = () => {
-  const { currentUser, currentUserRecord } = useAuth();
+  const { currentUser, currentUserRecord, setCurrentUserRecord, loadUserRecord } = useAuth();
   const [activeView, setActiveView] = useState('matchesView');
+  const [myMatchesReloadKey, setMyMatchesReloadKey] = useState(0);
+  const [forceReloadMatches, setForceReloadMatches] = useState(false);
   const [chatConversationId, setChatConversationId] = useState(null);
+  const [forceReloadProfile, setForceReloadProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [badges, setBadges] = useState({
     incoming: 0,
@@ -24,6 +27,8 @@ const Dashboard = () => {
   
   // Usar ref para evitar recrear la función en cada render
   const loadBadgesRef = useRef(null);
+
+
 
   const loadBadges = useCallback(async () => {
     if (!currentUser) return;
@@ -92,14 +97,27 @@ const Dashboard = () => {
     const userId = Number(currentUser);
     const eventSource = new EventSource(`${API_BASE}/notifications/stream/${userId}`);
 
+
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'badge_update') {
-          // Usar la ref para evitar dependencias
-          if (loadBadgesRef.current) {
-            loadBadgesRef.current();
-          }
+        if (data.type === 'badge_update' || data.type === 'match_completed') {
+          setTimeout(() => {
+            if (loadBadgesRef.current) {
+              loadBadgesRef.current();
+            }
+            if (typeof loadUserRecord === 'function' && currentUser) {
+              loadUserRecord(currentUser);
+            }
+            setForceReloadMatches(true); // Forzar recarga matches
+            setForceReloadProfile(true); // Forzar recarga perfil
+          }, 600);
+        }
+        if (data.type === 'match_completed') {
+          setTimeout(() => {
+            setActiveView('myMatchesView');
+            setMyMatchesReloadKey(prev => prev + 1);
+          }, 600);
         }
       } catch (e) {
         console.error('Error parsing SSE message:', e);
@@ -135,10 +153,13 @@ const Dashboard = () => {
       case 'myMatchesView':
         return (
           <MyMatchesView
+            reloadKey={myMatchesReloadKey}
+            forceReload={forceReloadMatches}
             onOpenChat={(conversationId) => {
               setChatConversationId(conversationId);
               setActiveView('chatView');
             }}
+            onReloadHandled={() => setForceReloadMatches(false)}
           />
         );
       case 'historyView':
@@ -146,7 +167,7 @@ const Dashboard = () => {
       case 'chatView':
         return <ChatView initialConversationId={chatConversationId} onBadgeUpdate={handleBadgeUpdate} />;
       case 'profileView':
-        return <ProfileView />;
+        return <ProfileView forceReload={forceReloadProfile} onReloadHandled={() => setForceReloadProfile(false)} />;
       default:
         return <MatchesView searchQuery={searchQuery} />;
     }

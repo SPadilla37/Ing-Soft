@@ -5,8 +5,8 @@ import { API_BASE, MIN_SKILLS, MAX_SKILLS } from '../../../config/constants';
 import SkillPicker from '../../Common/SkillPicker';
 import { ensureSkillIds } from '../../../services/skills';
 
-const ProfileView = () => {
-  const { currentUser, currentUserRecord, setCurrentUserRecord } = useAuth();
+const ProfileView = ({ forceReload, onReloadHandled }) => {
+  const { currentUser, currentUserRecord, setCurrentUserRecord, loadUserRecord } = useAuth();
   const [formData, setFormData] = useState({
     fullName: '',
     bio: '',
@@ -27,6 +27,13 @@ const ProfileView = () => {
       });
     }
   }, [currentUserRecord]);
+
+  useEffect(() => {
+    if (forceReload && typeof loadUserRecord === 'function' && currentUser) {
+      loadUserRecord(currentUser);
+      if (onReloadHandled) onReloadHandled();
+    }
+  }, [forceReload, loadUserRecord, currentUser, onReloadHandled]);
 
   const handleSave = async () => {
     setSaving(true);

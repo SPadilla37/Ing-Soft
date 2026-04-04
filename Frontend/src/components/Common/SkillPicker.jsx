@@ -135,78 +135,134 @@ const SkillPicker = ({ mode, source, onSave, onCancel, initialSelection = new Se
           </div>
         </div>
 
-        {/* Category Filters */}
-        {mode !== 'language' && (
-          <div className="px-6 py-4 border-b border-outline-variant/10 overflow-x-auto">
-            <div className="flex gap-2 min-w-max">
+
+        {/* Categorías a la izquierda y habilidades a la derecha */}
+        {mode !== 'language' ? (
+          <div className="flex flex-1 min-h-0">
+            {/* Categorías */}
+            <div className="w-48 min-w-[15rem] max-w-[14rem] border-r border-outline-variant/20 bg-surface-container-low flex flex-col overflow-y-auto custom-scrollbar py-2">
+              <div className="px-4 pb-2">
+                <span className="block text-lg font-bold text-primary mb-2">Categorías</span>
+              </div>
               {categories.map(cat => (
-                <button 
-                  key={cat} 
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-                    selectedCategory === cat 
-                      ? 'bg-primary text-white shadow-lg' 
-                      : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-                  }`}
-                  onClick={() => setSelectedCategory(cat)}
-                >
-                  {cat}
-                </button>
+                <div key={cat} className={`m-2 rounded-xl border-2 transition-all ${selectedCategory === cat ? 'border-primary' : 'border-outline-variant/30'} bg-surface-container`}>
+                  <button
+                    className={`w-full px-4 py-3 text-left rounded-xl transition-all break-words whitespace-pre-line text-sm font-medium ${
+                      selectedCategory === cat
+                        ? 'bg-primary/10 text-primary font-bold'
+                        : 'bg-transparent text-on-surface-variant hover:bg-surface-container-high'
+                    }`}
+                    style={{wordBreak: 'break-word', whiteSpace: 'pre-line'}}
+                    onClick={() => setSelectedCategory(cat)}
+                  >
+                    {cat}
+                  </button>
+                </div>
               ))}
             </div>
+            {/* Habilidades */}
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+              {catalogLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-on-surface-variant">Cargando habilidades...</p>
+                  </div>
+                </div>
+              ) : filteredSkills.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <span className="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4">
+                    search_off
+                  </span>
+                  <p className="text-on-surface-variant">No se encontraron habilidades</p>
+                  <p className="text-on-surface-variant/70 text-sm mt-1">Intenta con otra búsqueda</p>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {filteredSkills.map(skill => {
+                    const isSelected = selection.has(skill);
+                    const colorClass = mode === 'language' ? 'primary' : (mode === 'teach' ? 'secondary' : 'tertiary');
+                    return (
+                      <button
+                        key={skill}
+                        className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all hover:scale-105 active:scale-95 ${
+                          isSelected
+                            ? mode === 'language'
+                              ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                              : mode === 'teach'
+                              ? 'bg-secondary-container/40 text-secondary-fixed border-2 border-secondary-container/40 shadow-lg'
+                              : 'bg-tertiary-container/30 text-tertiary-fixed border-2 border-tertiary-container/30 shadow-lg'
+                            : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high border-2 border-transparent'
+                        }`}
+                        onClick={() => toggleSkill(skill)}
+                      >
+                        <span className="flex items-center gap-2">
+                          {isSelected && (
+                            <span className="material-symbols-outlined text-base" style={{fontVariationSettings: "'FILL' 1"}}>
+                              check_circle
+                            </span>
+                          )}
+                          {skill}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          // ...modo language original...
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+            {catalogLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-on-surface-variant">Cargando habilidades...</p>
+                </div>
+              </div>
+            ) : filteredSkills.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <span className="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4">
+                  search_off
+                </span>
+                <p className="text-on-surface-variant">No se encontraron habilidades</p>
+                <p className="text-on-surface-variant/70 text-sm mt-1">Intenta con otra búsqueda</p>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {filteredSkills.map(skill => {
+                  const isSelected = selection.has(skill);
+                  const colorClass = mode === 'language' ? 'primary' : (mode === 'teach' ? 'secondary' : 'tertiary');
+                  return (
+                    <button
+                      key={skill}
+                      className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all hover:scale-105 active:scale-95 ${
+                        isSelected
+                          ? mode === 'language'
+                            ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                            : mode === 'teach'
+                            ? 'bg-secondary-container/40 text-secondary-fixed border-2 border-secondary-container/40 shadow-lg'
+                            : 'bg-tertiary-container/30 text-tertiary-fixed border-2 border-tertiary-container/30 shadow-lg'
+                          : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high border-2 border-transparent'
+                      }`}
+                      onClick={() => toggleSkill(skill)}
+                    >
+                      <span className="flex items-center gap-2">
+                        {isSelected && (
+                          <span className="material-symbols-outlined text-base" style={{fontVariationSettings: "'FILL' 1"}}>
+                            check_circle
+                          </span>
+                        )}
+                        {skill}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
-
-        {/* Skills List */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-          {catalogLoading && mode !== 'language' ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-on-surface-variant">Cargando habilidades...</p>
-              </div>
-            </div>
-          ) : filteredSkills.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <span className="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4">
-                search_off
-              </span>
-              <p className="text-on-surface-variant">No se encontraron habilidades</p>
-              <p className="text-on-surface-variant/70 text-sm mt-1">Intenta con otra búsqueda</p>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {filteredSkills.map(skill => {
-                const isSelected = selection.has(skill);
-                const colorClass = mode === 'language' ? 'primary' : (mode === 'teach' ? 'secondary' : 'tertiary');
-                
-                return (
-                  <button 
-                    key={skill} 
-                    className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all hover:scale-105 active:scale-95 ${
-                      isSelected
-                        ? mode === 'language'
-                          ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                          : mode === 'teach'
-                          ? 'bg-secondary-container/40 text-secondary-fixed border-2 border-secondary-container/40 shadow-lg'
-                          : 'bg-tertiary-container/30 text-tertiary-fixed border-2 border-tertiary-container/30 shadow-lg'
-                        : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high border-2 border-transparent'
-                    }`}
-                    onClick={() => toggleSkill(skill)}
-                  >
-                    <span className="flex items-center gap-2">
-                      {isSelected && (
-                        <span className="material-symbols-outlined text-base" style={{fontVariationSettings: "'FILL' 1"}}>
-                          check_circle
-                        </span>
-                      )}
-                      {skill}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
 
         {/* Footer Actions */}
         <div className="p-6 border-t border-outline-variant/10 bg-surface-container-low/50">

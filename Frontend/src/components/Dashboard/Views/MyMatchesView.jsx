@@ -1,15 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 
-const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate }) => {
+const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate, reloadKey, forceReload, onReloadHandled }) => {
   const { currentUser } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [ratingByMatch, setRatingByMatch] = useState({});
   const [commentByMatch, setCommentByMatch] = useState({});
   const [ratingBusy, setRatingBusy] = useState({});
+  // Persist can_rate state for each match after it first becomes true, using localStorage
+  const [persistCanRate, setPersistCanRate] = useState(() => {
+    try {
+      const key = `persistCanRate_${currentUser || ''}`;
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Helper to update localStorage when persistCanRate changes
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      const key = `persistCanRate_${currentUser}`;
+      localStorage.setItem(key, JSON.stringify(persistCanRate));
+    } catch {}
+  }, [persistCanRate, currentUser]);
 
   const loadMyMatches = async () => {
     if (!currentUser) return;
@@ -49,6 +68,20 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate }) => {
       );
 
       setMatches(matchesWithDetails);
+      // Update persistCanRate: once can_rate is true for a match, keep it true until review is submitted
+      setPersistCanRate((prev) => {
+        const updated = { ...prev };
+        matchesWithDetails.forEach((match) => {
+          if (match.can_rate) {
+            updated[match.id] = true;
+          }
+          // Si el usuario ya calificó, eliminar la persistencia
+          if (match.my_reseña) {
+            delete updated[match.id];
+          }
+        });
+        return updated;
+      });
     } catch (error) {
       console.error('Error loading my matches:', error);
     } finally {
@@ -56,9 +89,41 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate }) => {
     }
   };
 
+  const [refetchTimeout, setRefetchTimeout] = useState(null);
+  const matchesRef = useRef([]);
+
   useEffect(() => {
+    console.log('Recargando matches: reloadKey', reloadKey, 'forceReload', forceReload);
     loadMyMatches();
-  }, [currentUser]);
+    if (refetchTimeout) clearTimeout(refetchTimeout);
+    if (forceReload && onReloadHandled) onReloadHandled();
+  }, [currentUser, reloadKey, forceReload]);
+
+  // Scroll automático al formulario de reseña si existe
+  useEffect(() => {
+    if (!loading) {
+      setTimeout(() => {
+        const el = document.querySelector('.bg-surface-container-low/50 textarea');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  }, [matches, loading]);
+
+  useEffect(() => {
+    matchesRef.current = matches;
+    // Si tras recarga no hay matches calificables pero sí hay matches completados sin reseña, reintentar tras 500ms
+    if (!loading && matches.length > 0) {
+      const needsRefetch = matches.some(m => m.estado === 'completado' && m.my_reseña == null && !m.can_rate);
+      if (needsRefetch) {
+        const timeout = setTimeout(() => {
+          loadMyMatches();
+        }, 600);
+        setRefetchTimeout(timeout);
+        return () => clearTimeout(timeout);
+      }
+    }
+    return () => {};
+  }, [matches, loading]);
 
   const handleFinalize = async (matchId) => {
     try {
@@ -67,6 +132,12 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate }) => {
         body: JSON.stringify({ user_id: Number(currentUser) })
       });
       loadMyMatches();
+      // Remove persistCanRate for this match after rating
+      setPersistCanRate((prev) => {
+        const updated = { ...prev };
+        delete updated[matchId];
+        return updated;
+      });
       if (onBadgeUpdate) onBadgeUpdate();
     } catch (error) {
       alert(error.message);
@@ -210,7 +281,7 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate }) => {
               </div>
 
               {/* Rating Section */}
-              {match.can_rate && (
+              {(match.can_rate || persistCanRate[match.id]) && !match.my_reseña && (
                 <div className="bg-surface-container-low/50 rounded-xl p-4 space-y-3">
                   <p className="text-sm font-semibold text-on-surface">Califica este intercambio</p>
                   <div className="flex gap-1">

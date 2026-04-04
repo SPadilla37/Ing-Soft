@@ -382,7 +382,7 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
                       <p className="text-xs font-semibold mb-1 opacity-70">
                         {getSenderDisplayName(msg.from_user_id)}
                       </p>
-                      <p className="text-sm leading-relaxed">{msg.content}</p>
+                      <p className="text-sm leading-relaxed break-words whitespace-pre-line">{msg.content}</p>
                     </div>
                   </div>
                 </div>
