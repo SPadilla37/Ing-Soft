@@ -11,6 +11,7 @@ from app.api.routes.conversations import router as conversations_router
 from app.api.routes.habilidades import router as habilidades_router
 from app.api.routes.matches import router as matches_router
 from app.api.routes.notifications import router as notifications_router
+from app.api.routes.reports import router as reports_router
 from app.api.routes.requests import router as requests_router
 from app.api.routes.users import router as users_router
 from app.api.routes.websocket import router as websocket_router
@@ -25,7 +26,7 @@ app = FastAPI(title="Skill Exchange Messaging API", version="1.0.0")
 
 allowed_origins = [
     "https://spadilla37.github.io",
-    "http://localhost:5173"
+    "http://localhost:3000"
 ]
 
 app.add_middleware(
@@ -114,6 +115,7 @@ app.include_router(admin_router)
 app.include_router(auth_router)
 app.include_router(habilidades_router)
 app.include_router(matches_router)
+app.include_router(reports_router)
 app.include_router(requests_router)
 app.include_router(users_router)
 app.include_router(websocket_router)

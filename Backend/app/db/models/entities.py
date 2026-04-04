@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, CheckConstraint, UniqueConstraint, Boolean
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, ForeignKey, CheckConstraint, UniqueConstraint, Boolean, Index
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import text
 
 from app.db.database import Base
 
@@ -34,6 +35,9 @@ class Usuario(Base):
     mensajes = relationship("Mensaje", back_populates="remitente")
     conversaciones_iniciadas = relationship("Conversacion", foreign_keys="Conversacion.usuario_1_id", back_populates="usuario1")
     conversaciones_recibidas = relationship("Conversacion", foreign_keys="Conversacion.usuario_2_id", back_populates="usuario2")
+    reportes_creados = relationship("Reporte", foreign_keys="Reporte.reportante_id", back_populates="reportante")
+    reportes_recibidos = relationship("Reporte", foreign_keys="Reporte.reportado_id", back_populates="reportado")
+    reportes_resueltos = relationship("Reporte", foreign_keys="Reporte.resuelto_por", back_populates="resolvedor")
 
 
 class Habilidad(Base):
@@ -137,3 +141,37 @@ class Conversacion(Base):
     usuario1 = relationship("Usuario", foreign_keys=[usuario_1_id], back_populates="conversaciones_iniciadas")
     usuario2 = relationship("Usuario", foreign_keys=[usuario_2_id], back_populates="conversaciones_recibidas")
     mensajes = relationship("Mensaje", back_populates="conversacion")
+
+
+class Reporte(Base):
+    __tablename__ = "reportes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    reportante_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True, index=True)
+    reportado_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True, index=True)
+    reportado_username_snapshot = Column(String(25), nullable=False)
+    motivo = Column(String(100), nullable=False)
+    descripcion = Column(Text, nullable=True)
+    estado = Column(String(15), nullable=False, default='pendiente', index=True)
+    fecha_creacion = Column(TIMESTAMP, nullable=False, default=lambda: __import__('datetime').datetime.utcnow(), index=True)
+    fecha_resolucion = Column(TIMESTAMP, nullable=True)
+    resuelto_por = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
+    accion_tomada = Column(String(15), nullable=True)
+    notas_admin = Column(Text, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "estado IN ('pendiente', 'en_revision', 'resuelto', 'descartado')",
+            name="reportes_estado_check"
+        ),
+        CheckConstraint(
+            "accion_tomada IS NULL OR accion_tomada IN ('ninguna', 'advertencia', 'suspension', 'eliminacion')",
+            name="reportes_accion_check"
+        ),
+        Index('idx_active_reports', 'reportante_id', 'reportado_id', 'estado',
+              postgresql_where=text("estado IN ('pendiente', 'en_revision')"))
+    )
+
+    reportante = relationship("Usuario", foreign_keys=[reportante_id], back_populates="reportes_creados")
+    reportado = relationship("Usuario", foreign_keys=[reportado_id], back_populates="reportes_recibidos")
+    resolvedor = relationship("Usuario", foreign_keys=[resuelto_por], back_populates="reportes_resueltos")

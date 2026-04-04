@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
+import ReportModal from './ReportModal';
 
 const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject }) => {
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const author = [request.nombre, request.apellido].filter(Boolean).join(' ').trim() || `Usuario ${request.id}`;
   const username = request.username ? `@${request.username}` : '';
   
@@ -22,31 +25,60 @@ const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject 
   };
 
   return (
-    <div className="bg-surface-container-highest p-8 rounded-lg group hover:bg-surface-bright transition-all duration-300 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl transition-all group-hover:bg-primary/10"></div>
-      
-      <div className="flex items-start justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-primary/20 p-1 group-hover:border-primary/40 transition-colors bg-gradient-to-br from-primary-dim to-primary flex items-center justify-center text-white font-bold text-xl">
-            {getInitials(author)}
+    <>
+      <div className="bg-surface-container-highest p-8 rounded-lg group hover:bg-surface-bright transition-all duration-300 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl transition-all group-hover:bg-primary/10"></div>
+        
+        <div className="flex items-start justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-primary/20 p-1 group-hover:border-primary/40 transition-colors bg-gradient-to-br from-primary-dim to-primary flex items-center justify-center text-white font-bold text-xl">
+              {getInitials(author)}
+            </div>
+            <div>
+              <h4 className="text-xl font-headline font-bold text-primary-fixed">{username || author}</h4>
+              {rating != null && (
+                <div className="flex items-center gap-1 text-secondary">
+                  <span className="material-symbols-outlined text-sm" style={{fontVariationSettings: "'FILL' 1"}}>star</span>
+                  <span className="text-sm font-bold">{Number(rating).toFixed(1)}</span>
+                  <span className="text-on-surface-variant text-xs font-normal ml-1">(reviews)</span>
+                </div>
+              )}
+            </div>
           </div>
-          <div>
-            <h4 className="text-xl font-headline font-bold text-primary-fixed">{username || author}</h4>
-            {rating != null && (
-              <div className="flex items-center gap-1 text-secondary">
-                <span className="material-symbols-outlined text-sm" style={{fontVariationSettings: "'FILL' 1"}}>star</span>
-                <span className="text-sm font-bold">{Number(rating).toFixed(1)}</span>
-                <span className="text-on-surface-variant text-xs font-normal ml-1">(reviews)</span>
-              </div>
+          <div className="flex items-center gap-2">
+            {matchState === 'matched' && (
+              <span className="bg-surface-container-low text-on-surface-variant text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full">
+                Match
+              </span>
             )}
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="w-8 h-8 rounded-full hover:bg-surface-container-low flex items-center justify-center transition-colors"
+                aria-label="Más opciones"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant">more_vert</span>
+              </button>
+              {showMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                  <div className="absolute right-0 top-10 bg-surface-container-highest rounded-lg shadow-lg border border-outline-variant/20 py-2 min-w-[160px] z-20">
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        setShowReportModal(true);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-surface-container-low transition-colors flex items-center gap-2 text-error"
+                    >
+                      <span className="material-symbols-outlined text-sm">flag</span>
+                      <span className="text-sm font-medium">Reportar usuario</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
-        {matchState === 'matched' && (
-          <span className="bg-surface-container-low text-on-surface-variant text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full">
-            Match
-          </span>
-        )}
-      </div>
 
       <div className="space-y-6">
         <div>
@@ -110,6 +142,14 @@ const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject 
         )}
       </div>
     </div>
+
+    <ReportModal
+      isOpen={showReportModal}
+      onClose={() => setShowReportModal(false)}
+      reportedUserId={request.usuario_emisor_id || request.id}
+      reportedUsername={request.username || request.nombre || `Usuario ${request.usuario_emisor_id || request.id}`}
+    />
+  </>
   );
 };
 

@@ -826,3 +826,363 @@ async def delete_user(
         }
     finally:
         db.close()
+
+
+# ============================================================================
+# REPORT MANAGEMENT ENDPOINTS
+# ============================================================================
+
+from app.db.models.entities import Reporte
+from app.schemas.reports import (
+    ReportDetailResponse, ReportStatsResponse, ReportListResponse,
+    ReportStatusUpdateRequest, ReportResolveRequest, PaginationMeta as ReportPaginationMeta
+)
+from app.services.reports import validate_status_transition
+
+
+@router.get("/reports", response_model=ReportListResponse)
+@require_admin
+async def get_reports(
+    authorization: Annotated[str, Header()],
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(10, ge=1, le=100, description="Items per page"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    search: Optional[str] = Query(None, description="Search by reported username"),
+    current_user_id: int = None,
+    current_user_role: str = None
+):
+    """
+    Get paginated list of reports with optional filtering.
+    
+    Requires admin or superadmin role.
+    Supports filtering by status and searching by reported username.
+    """
+    db = SessionLocal()
+    try:
+        # Build query
+        query = db.query(Reporte)
+        
+        # Apply status filter if provided
+        if status and status != 'all':
+            query = query.filter(Reporte.estado == status)
+        
+        # Apply search filter if provided
+        if search:
+            query = query.filter(
+                Reporte.reportado_username_snapshot.ilike(f"%{search}%")
+            )
+        
+        # Get total count
+        total = query.count()
+        
+        # Apply pagination
+        offset = (page - 1) * limit
+        reports = query.order_by(Reporte.fecha_creacion.desc()).offset(offset).limit(limit).all()
+        
+        # Convert to response format
+        from app.schemas.reports import ReportResponse
+        report_responses = [
+            ReportResponse(
+                id=r.id,
+                reportado_username=r.reportado_username_snapshot,
+                motivo=r.motivo,
+                descripcion=r.descripcion,
+                estado=r.estado,
+                fecha_creacion=r.fecha_creacion.isoformat(),
+                fecha_resolucion=r.fecha_resolucion.isoformat() if r.fecha_resolucion else None,
+                accion_tomada=r.accion_tomada
+            )
+            for r in reports
+        ]
+        
+        # Calculate total pages
+        total_pages = (total + limit - 1) // limit
+        
+        return ReportListResponse(
+            reports=report_responses,
+            pagination=ReportPaginationMeta(
+                page=page,
+                limit=limit,
+                total=total,
+                pages=total_pages
+            )
+        )
+    finally:
+        db.close()
+
+
+@router.get("/reports/stats", response_model=ReportStatsResponse)
+@require_admin
+async def get_report_stats(
+    authorization: Annotated[str, Header()],
+    current_user_id: int = None,
+    current_user_role: str = None
+):
+    """
+    Get report statistics.
+    
+    Requires admin or superadmin role.
+    Returns counts of pending and resolved reports.
+    """
+    db = SessionLocal()
+    try:
+        pending_count = db.query(func.count(Reporte.id)).filter(
+            Reporte.estado == 'pendiente'
+        ).scalar() or 0
+        
+        resolved_count = db.query(func.count(Reporte.id)).filter(
+            Reporte.estado == 'resuelto'
+        ).scalar() or 0
+        
+        total_count = db.query(func.count(Reporte.id)).scalar() or 0
+        
+        return ReportStatsResponse(
+            pending_count=pending_count,
+            resolved_count=resolved_count,
+            total_count=total_count
+        )
+    finally:
+        db.close()
+
+
+@router.get("/reports/{report_id}", response_model=ReportDetailResponse)
+@require_admin
+async def get_report_detail(
+    report_id: int,
+    authorization: Annotated[str, Header()],
+    current_user_id: int = None,
+    current_user_role: str = None
+):
+    """
+    Get detailed information about a specific report.
+    
+    Requires admin or superadmin role.
+    Returns full report details including reporter information.
+    """
+    db = SessionLocal()
+    try:
+        report = db.query(Reporte).filter(Reporte.id == report_id).first()
+        
+        if not report:
+            raise HTTPException(status_code=404, detail="Reporte no encontrado")
+        
+        # Log report access for audit trail
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"Report accessed: report_id={report_id}, admin_id={current_user_id}, "
+            f"timestamp={datetime.utcnow().isoformat()}"
+        )
+        
+        # Build reporter info if available
+        reportante_info = None
+        if report.reportante_id:
+            reportante = db.query(Usuario).filter(Usuario.id == report.reportante_id).first()
+            if reportante:
+                reportante_info = {
+                    "id": reportante.id,
+                    "username": reportante.username,
+                    "email": reportante.email
+                }
+        
+        # Build reported user info
+        reportado_info = None
+        if report.reportado_id:
+            reportado = db.query(Usuario).filter(Usuario.id == report.reportado_id).first()
+            if reportado:
+                reportado_info = {
+                    "id": reportado.id,
+                    "username": reportado.username,
+                    "email": reportado.email
+                }
+        
+        # Build resolver info if available
+        resolvedor_info = None
+        if report.resuelto_por:
+            resolvedor = db.query(Usuario).filter(Usuario.id == report.resuelto_por).first()
+            if resolvedor:
+                resolvedor_info = {
+                    "id": resolvedor.id,
+                    "username": resolvedor.username,
+                    "email": resolvedor.email
+                }
+        
+        return ReportDetailResponse(
+            id=report.id,
+            reportante=reportante_info,
+            reportado=reportado_info,
+            reportado_username=report.reportado_username_snapshot,
+            motivo=report.motivo,
+            descripcion=report.descripcion,
+            estado=report.estado,
+            fecha_creacion=report.fecha_creacion.isoformat(),
+            fecha_resolucion=report.fecha_resolucion.isoformat() if report.fecha_resolucion else None,
+            accion_tomada=report.accion_tomada,
+            resuelto_por=resolvedor_info,
+            notas_admin=report.notas_admin
+        )
+    finally:
+        db.close()
+
+
+@router.patch("/reports/{report_id}/status")
+@require_admin
+async def update_report_status(
+    report_id: int,
+    payload: ReportStatusUpdateRequest,
+    authorization: Annotated[str, Header()],
+    current_user_id: int = None,
+    current_user_role: str = None
+):
+    """
+    Update report status.
+    
+    Requires admin or superadmin role.
+    Validates status transitions before updating.
+    """
+    db = SessionLocal()
+    try:
+        report = db.query(Reporte).filter(Reporte.id == report_id).first()
+        
+        if not report:
+            raise HTTPException(status_code=404, detail="Reporte no encontrado")
+        
+        # Validate status transition
+        is_valid, error_message = validate_status_transition(report.estado, payload.status)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error_message)
+        
+        # Update status
+        old_status = report.estado
+        report.estado = payload.status
+        db.commit()
+        
+        # Log status change
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"Report status changed: report_id={report_id}, "
+            f"old_status={old_status}, new_status={payload.status}, "
+            f"admin_id={current_user_id}, timestamp={datetime.utcnow().isoformat()}"
+        )
+        
+        from app.schemas.reports import ReportResponse
+        return ReportResponse(
+            id=report.id,
+            reportado_username=report.reportado_username_snapshot,
+            motivo=report.motivo,
+            descripcion=report.descripcion,
+            estado=report.estado,
+            fecha_creacion=report.fecha_creacion.isoformat(),
+            fecha_resolucion=report.fecha_resolucion.isoformat() if report.fecha_resolucion else None,
+            accion_tomada=report.accion_tomada
+        )
+    finally:
+        db.close()
+
+
+@router.patch("/reports/{report_id}/resolve")
+@require_admin
+async def resolve_report(
+    report_id: int,
+    payload: ReportResolveRequest,
+    authorization: Annotated[str, Header()],
+    background_tasks: BackgroundTasks,
+    current_user_id: int = None,
+    current_user_role: str = None
+):
+    """
+    Resolve a report with an action.
+    
+    Requires admin or superadmin role.
+    Handles suspension/deletion integration and notifications.
+    """
+    db = SessionLocal()
+    try:
+        report = db.query(Reporte).filter(Reporte.id == report_id).first()
+        
+        if not report:
+            raise HTTPException(status_code=404, detail="Reporte no encontrado")
+        
+        # Update report
+        report.estado = 'resuelto'
+        report.accion_tomada = payload.action
+        report.resuelto_por = current_user_id
+        report.fecha_resolucion = datetime.utcnow()
+        if payload.notas_admin:
+            report.notas_admin = payload.notas_admin
+        
+        # Handle actions
+        if payload.action == 'suspension':
+            if report.reportado_id:
+                reported_user = db.query(Usuario).filter(Usuario.id == report.reportado_id).first()
+                if reported_user:
+                    reported_user.is_suspended = True
+                    
+                    # Cancel active exchanges
+                    active_exchanges = db.query(Intercambio).filter(
+                        or_(
+                            Intercambio.usuario_emisor_id == report.reportado_id,
+                            Intercambio.usuario_receptor_id == report.reportado_id
+                        ),
+                        Intercambio.estado.in_(['pendiente', 'aceptado'])
+                    ).all()
+                    
+                    for exchange in active_exchanges:
+                        exchange.estado = 'cancelado'
+                    
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"Report resolved with suspension: report_id={report_id}, "
+                        f"user_id={report.reportado_id}, admin_id={current_user_id}, "
+                        f"timestamp={datetime.utcnow().isoformat()}"
+                    )
+        
+        elif payload.action == 'eliminacion':
+            if report.reportado_id:
+                reported_user = db.query(Usuario).filter(Usuario.id == report.reportado_id).first()
+                if reported_user:
+                    # Mark as suspended first (required for deletion)
+                    reported_user.is_suspended = True
+                    
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"Report resolved with deletion: report_id={report_id}, "
+                        f"user_id={report.reportado_id}, admin_id={current_user_id}, "
+                        f"timestamp={datetime.utcnow().isoformat()}"
+                    )
+        
+        db.commit()
+        
+        # Send notifications
+        if report.reportante_id:
+            background_tasks.add_task(
+                push_notification,
+                report.reportante_id,
+                {
+                    "type": "report_resolved",
+                    "message": "Tu reporte ha sido revisado y resuelto"
+                }
+            )
+        
+        if report.reportado_id:
+            background_tasks.add_task(
+                push_notification,
+                report.reportado_id,
+                {
+                    "type": "report_action",
+                    "message": f"Se ha tomado una acción en tu cuenta: {payload.action}"
+                }
+            )
+        
+        from app.schemas.reports import ReportResponse
+        return ReportResponse(
+            id=report.id,
+            reportado_username=report.reportado_username_snapshot,
+            motivo=report.motivo,
+            descripcion=report.descripcion,
+            estado=report.estado,
+            fecha_creacion=report.fecha_creacion.isoformat(),
+            fecha_resolucion=report.fecha_resolucion.isoformat() if report.fecha_resolucion else None,
+            accion_tomada=report.accion_tomada
+        )
+    finally:
+        db.close()

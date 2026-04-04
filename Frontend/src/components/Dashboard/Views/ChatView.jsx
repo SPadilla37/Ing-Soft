@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 import { wsUrl } from '../../../services/websocket';
+import ReportModal from '../ReportModal';
 
 const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
   const { currentUser, currentUserRecord } = useAuth();
@@ -11,6 +12,7 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [status, setStatus] = useState('Selecciona una conversación.');
+  const [showReportModal, setShowReportModal] = useState(false);
   const socketRef = useRef(null);
   const chatBoxRef = useRef(null);
   const reconnectTimerRef = useRef(null);
@@ -349,6 +351,13 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
                   </div>
                 </div>
               </div>
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="w-10 h-10 rounded-full bg-surface-container hover:bg-error/10 transition-colors flex items-center justify-center text-on-surface-variant hover:text-error"
+                title="Reportar usuario"
+              >
+                <span className="material-symbols-outlined">flag</span>
+              </button>
             </div>
           ) : (
             <div className="text-center py-4">
@@ -414,6 +423,16 @@ const ChatView = ({ initialConversationId = null, onBadgeUpdate }) => {
           </div>
         </div>
       </div>
+
+      {/* Report Modal */}
+      {selectedConv && (
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reportedUserId={selectedConv.other_user_id}
+          reportedUsername={selectedConv.other_user_name || `Usuario ${selectedConv.other_user_id}`}
+        />
+      )}
     </section>
   );
 };

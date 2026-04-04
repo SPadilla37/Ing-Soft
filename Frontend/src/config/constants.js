@@ -1,4 +1,4 @@
-const rawApiBase = "https://ing-soft-5shh.onrender.com";
+const rawApiBase = "http://localhost:8000";
 export const API_BASE = rawApiBase.replace(/\/$/, "");
 
 export const dbKeySession = "skillswap_session";

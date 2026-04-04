@@ -10,15 +10,23 @@ Usage:
 
 Available migrations:
     001_add_role_to_usuarios - Adds role column to usuarios table
+    002_add_is_suspended_to_usuarios - Adds is_suspended column to usuarios table
+    003_add_username_unique_constraint - Adds unique constraint on username
+    004_add_reportes_table - Creates reportes table for user reports system
 """
 
 import sys
 import os
+import importlib
 
 # Add the Backend directory to the path so we can import app modules
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app.db.migrations import add_role_to_usuarios_001 as migration_001
+# Import migrations dynamically
+migration_001 = importlib.import_module('app.db.migrations.001_add_role_to_usuarios')
+migration_002 = importlib.import_module('app.db.migrations.002_add_is_suspended_to_usuarios')
+migration_003 = importlib.import_module('app.db.migrations.003_add_username_unique_constraint')
+migration_004 = importlib.import_module('app.db.migrations.004_add_reportes_table')
 
 
 def main():
@@ -40,7 +48,10 @@ def main():
     
     # Run migrations in order
     migrations = [
-        ("001_add_role_to_usuarios", add_role_to_usuarios_001)
+        ("001_add_role_to_usuarios", migration_001),
+        ("002_add_is_suspended_to_usuarios", migration_002),
+        ("003_add_username_unique_constraint", migration_003),
+        ("004_add_reportes_table", migration_004),
     ]
     
     if command == "upgrade":

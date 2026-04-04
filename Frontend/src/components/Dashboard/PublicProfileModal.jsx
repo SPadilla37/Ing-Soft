@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api as apiRequest } from '../../services/api';
 import { API_BASE } from '../../config/constants';
 import ReviewCard from './ReviewCard';
+import ReportModal from './ReportModal';
 
 const PublicProfileModal = ({ userId, onClose }) => {
   const [loading, setLoading] = useState(true);
@@ -9,6 +10,7 @@ const PublicProfileModal = ({ userId, onClose }) => {
   const [user, setUser] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsError, setReviewsError] = useState('');
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,12 +103,21 @@ const PublicProfileModal = ({ userId, onClose }) => {
             </div>
             <h2 className="font-headline font-bold text-2xl text-on-surface">Perfil público</h2>
           </div>
-          <button 
-            onClick={onClose}
-            className="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors flex items-center justify-center text-on-surface-variant hover:text-on-surface"
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowReportModal(true)}
+              className="w-10 h-10 rounded-full bg-surface-container hover:bg-error/10 transition-colors flex items-center justify-center text-on-surface-variant hover:text-error"
+              title="Reportar usuario"
+            >
+              <span className="material-symbols-outlined">flag</span>
+            </button>
+            <button 
+              onClick={onClose}
+              className="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors flex items-center justify-center text-on-surface-variant hover:text-on-surface"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -236,6 +247,16 @@ const PublicProfileModal = ({ userId, onClose }) => {
           )}
         </div>
       </div>
+
+      {/* Report Modal */}
+      {user && (
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reportedUserId={user.id}
+          reportedUsername={user.username || fullName}
+        />
+      )}
     </div>
   );
 };

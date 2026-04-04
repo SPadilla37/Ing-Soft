@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
+import ReportModal from '../ReportModal';
 
 const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate, reloadKey, forceReload, onReloadHandled }) => {
   const { currentUser } = useAuth();
@@ -10,6 +11,8 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate, reloadKey, forceR
   const [ratingByMatch, setRatingByMatch] = useState({});
   const [commentByMatch, setCommentByMatch] = useState({});
   const [ratingBusy, setRatingBusy] = useState({});
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportTarget, setReportTarget] = useState(null);
   // Persist can_rate state for each match after it first becomes true, using localStorage
   const [persistCanRate, setPersistCanRate] = useState(() => {
     try {
@@ -238,6 +241,20 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate, reloadKey, forceR
                     </span>
                   </div>
                 </div>
+                <button
+                  onClick={() => {
+                    setReportTarget({
+                      userId: match.other_user_id,
+                      username: match.other_user_username || match.other_user_name || `Usuario ${match.other_user_id}`
+                    });
+                    setShowReportModal(true);
+                  }}
+                  className="w-8 h-8 rounded-full hover:bg-surface-container-low flex items-center justify-center transition-colors"
+                  aria-label="Reportar usuario"
+                  title="Reportar usuario"
+                >
+                  <span className="material-symbols-outlined text-error text-lg">flag</span>
+                </button>
               </div>
 
               {/* Skills Exchange */}
@@ -328,6 +345,16 @@ const MyMatchesView = ({ onOpenChat = () => {}, onBadgeUpdate, reloadKey, forceR
           ))
         )}
       </div>
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => {
+          setShowReportModal(false);
+          setReportTarget(null);
+        }}
+        reportedUserId={reportTarget?.userId}
+        reportedUsername={reportTarget?.username}
+      />
     </section>
   );
 };

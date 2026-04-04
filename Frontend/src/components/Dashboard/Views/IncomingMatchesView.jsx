@@ -4,6 +4,7 @@ import { api as apiRequest } from '../../../services/api';
 import { API_BASE } from '../../../config/constants';
 import MarketplaceCard from '../MarketplaceCard';
 import PublicProfileModal from '../PublicProfileModal';
+import ReportModal from '../ReportModal';
 
 const IncomingMatchesView = ({ onBadgeUpdate }) => {
   const { currentUser } = useAuth();
@@ -12,6 +13,8 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
   const [profileUserId, setProfileUserId] = useState(null);
   const [popup, setPopup] = useState('');
   const [currentUserProfile, setCurrentUserProfile] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportTarget, setReportTarget] = useState(null);
 
   const loadIncoming = async () => {
     if (!currentUser) return;
@@ -129,14 +132,31 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
           items.map(item => {
             const matchDetails = getMatchDetails(item);
             return (
-              <MarketplaceCard 
-                key={item.id}
-                request={{ ...item, viewer_match_state: item.viewer_match_state || 'received' }}
-                matchDetails={matchDetails}
-                onAccept={() => handleAccept(item.id)}
-                onReject={() => handleReject(item.id)}
-                onProfile={(userId) => setProfileUserId(userId)}
-              />
+              <div key={item.id} className="relative">
+                <MarketplaceCard 
+                  request={{ ...item, viewer_match_state: item.viewer_match_state || 'received' }}
+                  matchDetails={matchDetails}
+                  onAccept={() => handleAccept(item.id)}
+                  onReject={() => handleReject(item.id)}
+                  onProfile={(userId) => setProfileUserId(userId)}
+                />
+                <div className="absolute top-4 right-4">
+                  <button
+                    onClick={() => {
+                      setReportTarget({
+                        userId: item.id,
+                        username: item.username || item.nombre || `Usuario ${item.id}`
+                      });
+                      setShowReportModal(true);
+                    }}
+                    className="w-8 h-8 rounded-full bg-surface-container-highest hover:bg-surface-container-low flex items-center justify-center transition-colors shadow-md"
+                    aria-label="Reportar usuario"
+                    title="Reportar usuario"
+                  >
+                    <span className="material-symbols-outlined text-error text-lg">flag</span>
+                  </button>
+                </div>
+              </div>
             );
           })
         )}
@@ -168,6 +188,16 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
           </div>
         </div>
       )}
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => {
+          setShowReportModal(false);
+          setReportTarget(null);
+        }}
+        reportedUserId={reportTarget?.userId}
+        reportedUsername={reportTarget?.username}
+      />
     </section>
   );
 };
