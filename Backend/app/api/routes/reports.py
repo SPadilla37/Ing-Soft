@@ -60,13 +60,19 @@ def get_user_from_token(authorization: str) -> int:
         )
     
     user_id = payload.get('sub')
-    if not user_id:
+    if user_id is None:
         raise HTTPException(
             status_code=401,
             detail="Token inválido"
         )
-    
-    return user_id
+
+    try:
+        return int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=401,
+            detail="Token inválido"
+        )
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=ReportResponse)

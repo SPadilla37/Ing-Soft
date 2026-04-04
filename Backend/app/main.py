@@ -43,6 +43,8 @@ def run_startup_migrations() -> None:
     migration_modules = [
         "app.db.migrations.001_add_role_to_usuarios",
         "app.db.migrations.002_add_is_suspended_to_usuarios",
+        "app.db.migrations.003_add_username_unique_constraint",
+        "app.db.migrations.004_add_reportes_table",
     ]
 
     for module_name in migration_modules:
