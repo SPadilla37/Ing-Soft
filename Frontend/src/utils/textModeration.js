@@ -2,15 +2,65 @@ const USERNAME_REGEX = /^[a-zA-Z0-9._]+$/;
 const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/;
 const BIO_REGEX = /^[\w\sáéíóúÁÉÍÓÚñÑ+*=/%^.,!?:;()"'\\/-]*$/;
 
-const HATE_TERMS = ["odio", "racista", "nazi", "matar", "muerte", "xenofobo"];
+const HATE_TERMS = [
+  "odio", "racista", "nazi", "matar", "muerte", "xenofobo",
+  "maricon", "marica", "traba", "tortillera", "comepijas", "tragaleche", "sodomita", "maraco",
+  "faggot", "fag", "dyke", "dyae", "tranny", "queer", "homo", "pansy",
+  "negro de mierda", "sudaca", "veneco", "tiraflechas", "indio", "saltamuros", "gachupin",
+  "nigger", "nigga", "spic", "wetback", "chink", "raghead", "gook", "coon",
+  "retrasado", "mogolico", "down", "subnormal", "invalido", "deficiente", "mongolo", "vegetal",
+  "retard", "tard", "spastic", "spaz", "special ed", "moron",
+  "judio de mierda", "perro infiel", "comecuras", "fanatico", "kike", "bible thumper", "infidel"
+];
 const ADULT_TERMS = ["sexo", "sexual", "porn", "porno", "xxx", "nudes", "desnudo", "cuca", "vagina", "pene", "culo", "culos"];
-const TOXIC_TERMS = ["idiota", "imbecil", "estupido", "inutil", "asqueroso", "basura"];
+const TOXIC_TERMS = [
+  "idiota", "imbecil", "estupido", "inutil", "asqueroso", "basura",
+  "hijo de puta", "malparido", "gonorrea", "concha de tu madre", "culiao",
+  "pendejo", "mamaguevo", "cabron", "pinche",
+  "motherfucker", "bitch", "asshole", "cunt", "slut", "whore"
+];
+const CRIMINAL_TERMS = [
+  "violador", "violacion", "violin", "pedofilo", "pedofilia", "pederasta",
+  "rapist", "rape", "raping", "raped", "pedo", "paedo", "pedophile", "pedophilia",
+  "groomer", "grooming", "acosador de menores", "zoofilia", "zoofilico", "bestiality", "animal molester",
+  "necrofilia", "necrofilico", "necrophilia", "incesto", "incest", "incestuoso",
+  "depredador sexual", "sexual predator", "predatory", "abusador", "abuser", "sexual abuser",
+  "molestador", "molester", "child molester"
+];
 const SENSITIVE_ENTITY_TERMS = ["diddy", "epstein"];
 const KEYBOARD_SPAM_PARTS = ["qwerty", "asdf", "zxcv", "qazwsx", "poiuy", "lkjhg", "kjhg"];
+const LEET_MAP = {
+  "0": "o",
+  "1": "i",
+  "2": "z",
+  "3": "e",
+  "4": "a",
+  "5": "s",
+  "6": "g",
+  "7": "t",
+  "8": "b",
+  "9": "g",
+  "@": "a",
+  "$": "s",
+  "!": "i"
+};
 
-const normalize = (value) => (value || "").trim().toLowerCase();
+const normalize = (value) => {
+  const lowered = (value || "").trim().toLowerCase();
+  const withoutAccents = lowered.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const mapped = withoutAccents.split("").map((ch) => LEET_MAP[ch] || ch).join("");
+  return mapped.replace(/\s+/g, " ");
+};
 
-const containsAny = (text, words) => words.some((word) => text.includes(word));
+const compact = (value) => (value || "").replace(/[^a-z0-9]+/g, "");
+
+const containsAny = (text, words) => {
+  const compactText = compact(text);
+  return words.some((word) => {
+    const normalizedWord = normalize(word);
+    return text.includes(normalizedWord) || (compact(normalizedWord) && compactText.includes(compact(normalizedWord)));
+  });
+};
 
 const isSpamLike = (text) => {
   const compact = text.replace(/\s+/g, "");
@@ -47,6 +97,7 @@ const moderationError = (value) => {
   const text = normalize(value);
   if (!text) return "";
   if (containsAny(text, HATE_TERMS)) return "Contiene discurso de odio o violencia";
+  if (containsAny(text, CRIMINAL_TERMS)) return "Contiene lenguaje criminal o abuso sexual";
   if (containsAny(text, ADULT_TERMS)) return "Contiene contenido para adultos (+18)";
   if (containsAny(text, SENSITIVE_ENTITY_TERMS)) return "Contiene lenguaje bloqueado por politica";
   if (containsAny(text, TOXIC_TERMS)) return "Contiene comentarios toxicos";

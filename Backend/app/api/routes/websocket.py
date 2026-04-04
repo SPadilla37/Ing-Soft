@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
+from app.core.text_moderation import assert_text_is_allowed
 from app.db.database import SessionLocal
 from app.db.models.entities import Conversacion, Mensaje
 from app.services.core import can_users_chat, serialize_message, utc_now_iso
@@ -77,6 +78,19 @@ async def chat_socket_impl(websocket: WebSocket, conversation_id: int, user_id: 
             content = str(incoming.get("content", "")).strip()
             if not content:
                 await websocket.send_text(json.dumps({"type": "error", "detail": "Mensaje vacio"}))
+                continue
+
+            try:
+                assert_text_is_allowed("content", content)
+            except ValueError as exc:
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "type": "error",
+                            "detail": str(exc),
+                        }
+                    )
+                )
                 continue
 
             with SessionLocal() as session:

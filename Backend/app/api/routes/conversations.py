@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import or_, select
+from app.core.text_moderation import assert_text_is_allowed
 from app.db.database import SessionLocal
 from app.db.models.entities import Conversacion, Mensaje
 from app.schemas import ChatMessageCreate, ConversationCreatePayload, MessageCreatePayload
@@ -110,10 +111,16 @@ def send_message(conversation_id: int, payload: ChatMessageCreate) -> dict:
         if not can_users_chat(session, conv.usuario_1_id, conv.usuario_2_id):
             raise HTTPException(status_code=403, detail="No puedes enviar mensajes: el match ya fue finalizado")
 
+        clean_content = payload.content.strip()
+        try:
+            assert_text_is_allowed("content", clean_content)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
         mensaje = Mensaje(
             conversacion_id=conversation_id,
             remitente_id=payload.from_user_id,
-            contenido=payload.content,
+            contenido=clean_content,
             enviado_at=datetime.now(timezone.utc),
         )
         session.add(mensaje)
