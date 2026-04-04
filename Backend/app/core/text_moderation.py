@@ -98,6 +98,7 @@ _TOXIC_TERMS = {
     "inutil",
     "asqueroso",
     "basura",
+    "mierda",
     "hijo de puta",
     "malparido",
     "gonorrea",
@@ -157,6 +158,13 @@ _CRIMINAL_TERMS = {
 _SENSITIVE_ENTITY_TERMS = {
     "diddy",
     "epstein",
+}
+
+_NEUTRAL_STANDALONE_TERMS = {
+    "negro",
+    "negra",
+    "negros",
+    "negras",
 }
 
 _KEYBOARD_SPAM_PARTS = (
@@ -234,6 +242,10 @@ def _contains_profanity(text: str) -> bool:
     return False
 
 
+def _is_neutral_standalone_term(text: str) -> bool:
+    return text.strip() in _NEUTRAL_STANDALONE_TERMS
+
+
 def _contains_any_terms(text: str, terms: set[str]) -> bool:
     if not text:
         return False
@@ -296,6 +308,10 @@ def _is_spam_like(text: str) -> bool:
 def get_text_policy_error(text: Optional[str]) -> Optional[str]:
     normalized = _normalize(text)
     if not normalized:
+        return None
+
+    # Allow neutral color words when submitted without extra context.
+    if _is_neutral_standalone_term(normalized):
         return None
 
     level = _moderation_level()
