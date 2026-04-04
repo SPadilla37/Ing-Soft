@@ -1,4 +1,5 @@
 import os
+import importlib
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -32,9 +33,26 @@ app.add_middleware(
 )
 
 
+def run_startup_migrations() -> None:
+    """Run idempotent DB migrations required by runtime code."""
+    migration_modules = [
+        "app.db.migrations.001_add_role_to_usuarios",
+        "app.db.migrations.002_add_is_suspended_to_usuarios",
+    ]
+
+    for module_name in migration_modules:
+        try:
+            module = importlib.import_module(module_name)
+            module.upgrade()
+        except Exception as exc:
+            # Keep startup alive, but print enough context for Render logs.
+            print(f"[startup-migration] Failed: {module_name} -> {exc}")
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
+    run_startup_migrations()
     with SessionLocal() as session:
         seed_default_habilidades(session)
 
