@@ -10,6 +10,7 @@ from app.services.core import (
     calculate_received_rating,
     create_conversation_for_intercambio,
     ensure_user,
+    ensure_user_not_suspended,
     get_match_for_users,
     get_user_habilidades,
     serialize_intercambio_for_viewer,
@@ -46,6 +47,7 @@ def list_marketplace_habilidades(
             select(Usuario).where(
                 Usuario.id != viewer_user_id,
                 Usuario.role == "user",
+                Usuario.is_suspended == False,
             )
         ).scalars().all()
 
@@ -149,9 +151,9 @@ def create_message_request(payload: MessageRequestCreate, background_tasks: Back
         raise HTTPException(status_code=400, detail="No puedes enviarte solicitud a ti mismo")
 
     with SessionLocal() as session:
-        ensure_user(session, payload.from_user_id)
+        ensure_user_not_suspended(session, payload.from_user_id)
         if payload.to_user_id:
-            ensure_user(session, payload.to_user_id)
+            ensure_user_not_suspended(session, payload.to_user_id)
             receptor_id = payload.to_user_id
         else:
             receptor_id = payload.from_user_id
@@ -287,6 +289,11 @@ def list_marketplace_requests(
 
         serialized = []
         for item in intercambios_raw:
+            # Filtrar usuarios suspendidos
+            emisor = session.get(Usuario, item.usuario_emisor_id)
+            if not emisor or emisor.is_suspended:
+                continue
+            
             if viewer_user_id:
                 emisor_habilidades_ofertadas = get_user_habilidades(session, item.usuario_emisor_id, "ofertada")
                 emisor_habilidades_buscadas = get_user_habilidades(session, item.usuario_emisor_id, "buscada")
@@ -349,10 +356,15 @@ def accept_marketplace_request(request_id: int, payload: MarketplaceAcceptReques
         if not _is_public_marketplace_request(intercambio):
             raise HTTPException(status_code=400, detail="Esta solicitud no es publica")
 
-        ensure_user(session, payload.viewer_user_id)
+        ensure_user_not_suspended(session, payload.viewer_user_id)
 
         viewer = payload.viewer_user_id
         target = intercambio.usuario_emisor_id
+        
+        # Validar que el usuario objetivo no esté suspendido
+        target_user = session.get(Usuario, target)
+        if not target_user or target_user.is_suspended:
+            raise HTTPException(status_code=400, detail="El usuario de esta solicitud ya no está disponible")
 
         if viewer == target:
             raise HTTPException(status_code=400, detail="No puedes aceptar tu propia solicitud")
