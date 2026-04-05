@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Header, Query, HTTPException, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from typing import Annotated, Optional
 from sqlalchemy import func, and_, or_
 from datetime import datetime, timedelta, timezone
 import logging
+import asyncio
+import json
 
 from app.core.auth_middleware import require_admin, require_superadmin
 from app.db.database import SessionLocal
@@ -20,6 +23,22 @@ import math
 
 # Initialize router with admin prefix and tags
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+# SSE event queue for broadcasting admin events
+admin_event_queues = []
+
+async def broadcast_admin_event(event_data: dict):
+    """Broadcast an event to all connected admin SSE clients."""
+    dead_queues = []
+    for queue in admin_event_queues:
+        try:
+            await queue.put(event_data)
+        except:
+            dead_queues.append(queue)
+    
+    # Remove dead queues
+    for queue in dead_queues:
+        admin_event_queues.remove(queue)
 
 
 @router.get("/stats", response_model=StatsResponse)
@@ -957,7 +976,10 @@ async def get_report_detail(
     Get detailed information about a specific report.
     
     Requires admin role.
-    Returns full report details including reporter information.
+    Returns full report details including:
+    - Reporter and reported user information
+    - Reviews received by both users
+    - Conversation history between them
     """
     db = SessionLocal()
     try:
@@ -992,7 +1014,8 @@ async def get_report_detail(
                 reportado_info = {
                     "id": reportado.id,
                     "username": reportado.username,
-                    "email": reportado.email
+                    "email": reportado.email,
+                    "is_suspended": reportado.is_suspended
                 }
         
         # Build resolver info if available
@@ -1004,6 +1027,103 @@ async def get_report_detail(
                     "id": resolvedor.id,
                     "username": resolvedor.username,
                     "email": resolvedor.email
+                }
+        
+        # Get reviews received by reported user
+        reportado_reviews = []
+        if report.reportado_id:
+            reviews = db.query(Reseña).filter(
+                Reseña.receptor_id == report.reportado_id
+            ).order_by(Reseña.created_at.desc()).limit(10).all()
+            
+            for review in reviews:
+                autor = db.query(Usuario).filter(Usuario.id == review.autor_id).first()
+                reportado_reviews.append({
+                    "id": review.id,
+                    "calificacion": review.calificacion,
+                    "comentario": review.comentario,
+                    "fecha_creacion": review.created_at.isoformat() if review.created_at else None,
+                    "autor_username": autor.username if autor else "Usuario eliminado",
+                    "intercambio_id": review.intercambio_id
+                })
+        
+        # Get reviews received by reporter
+        reportante_reviews = []
+        if report.reportante_id:
+            reviews = db.query(Reseña).filter(
+                Reseña.receptor_id == report.reportante_id
+            ).order_by(Reseña.created_at.desc()).limit(10).all()
+            
+            for review in reviews:
+                autor = db.query(Usuario).filter(Usuario.id == review.autor_id).first()
+                reportante_reviews.append({
+                    "id": review.id,
+                    "calificacion": review.calificacion,
+                    "comentario": review.comentario,
+                    "fecha_creacion": review.created_at.isoformat() if review.created_at else None,
+                    "autor_username": autor.username if autor else "Usuario eliminado",
+                    "intercambio_id": review.intercambio_id
+                })
+        
+        # Get conversation history between reporter and reported user
+        conversation_info = None
+        if report.reportante_id and report.reportado_id:
+            # Find conversation between these two users
+            conversacion = db.query(Conversacion).filter(
+                or_(
+                    and_(
+                        Conversacion.usuario_1_id == report.reportante_id,
+                        Conversacion.usuario_2_id == report.reportado_id
+                    ),
+                    and_(
+                        Conversacion.usuario_1_id == report.reportado_id,
+                        Conversacion.usuario_2_id == report.reportante_id
+                    )
+                )
+            ).first()
+            
+            if conversacion:
+                # Get total message count BEFORE report creation
+                total_mensajes = db.query(func.count(Mensaje.id)).filter(
+                    and_(
+                        Mensaje.conversacion_id == conversacion.id,
+                        Mensaje.enviado_at <= report.fecha_creacion
+                    )
+                ).scalar() or 0
+                
+                # Get first message for fecha_inicio
+                primer_mensaje = db.query(Mensaje).filter(
+                    Mensaje.conversacion_id == conversacion.id
+                ).order_by(Mensaje.enviado_at.asc()).first()
+                
+                # Get last 10 messages BEFORE report creation
+                mensajes = db.query(Mensaje).filter(
+                    and_(
+                        Mensaje.conversacion_id == conversacion.id,
+                        Mensaje.enviado_at <= report.fecha_creacion
+                    )
+                ).order_by(Mensaje.enviado_at.desc()).limit(10).all()
+                
+                mensajes_info = []
+                for mensaje in reversed(mensajes):  # Reverse to show chronologically
+                    remitente = db.query(Usuario).filter(Usuario.id == mensaje.remitente_id).first()
+                    mensajes_info.append({
+                        "id": mensaje.id,
+                        "remitente_id": mensaje.remitente_id,
+                        "remitente_username": remitente.username if remitente else "Usuario eliminado",
+                        "contenido": mensaje.contenido,
+                        "enviado_at": mensaje.enviado_at.isoformat() if mensaje.enviado_at else None
+                    })
+                
+                # Get last message content (before report)
+                ultimo_mensaje = mensajes[0].contenido if mensajes else None
+                
+                conversation_info = {
+                    "id": conversacion.id,
+                    "fecha_inicio": primer_mensaje.enviado_at.isoformat() if primer_mensaje and primer_mensaje.enviado_at else None,
+                    "ultimo_mensaje": ultimo_mensaje,
+                    "total_mensajes": total_mensajes,
+                    "mensajes_recientes": mensajes_info
                 }
         
         return ReportDetailResponse(
@@ -1018,7 +1138,10 @@ async def get_report_detail(
             fecha_resolucion=report.fecha_resolucion.isoformat() if report.fecha_resolucion else None,
             accion_tomada=report.accion_tomada,
             resuelto_por=resolvedor_info,
-            notas_admin=report.notas_admin
+            notas_admin=report.notas_admin,
+            reportado_reviews=reportado_reviews,
+            reportante_reviews=reportante_reviews,
+            conversation_history=conversation_info
         )
     finally:
         db.close()
@@ -1094,6 +1217,8 @@ async def resolve_report(
     
     Requires admin role.
     Handles suspension/deletion integration and notifications.
+    For suspension: suspends user and sends email.
+    For deletion: suspends user first (with email), then deletes the account.
     """
     db = SessionLocal()
     try:
@@ -1115,6 +1240,71 @@ async def resolve_report(
             if report.reportado_id:
                 reported_user = db.query(Usuario).filter(Usuario.id == report.reportado_id).first()
                 if reported_user:
+                    # Suspend user
+                    reported_user.is_suspended = True
+                    
+                    # Cancel active exchanges
+                    active_exchanges = db.query(Intercambio).filter(
+                        or_(
+                            Intercambio.usuario_emisor_id == report.reportado_id,
+                            Intercambio.usuario_receptor_id == report.reportado_id
+                        ),
+                        Intercambio.estado.in_(['pendiente', 'aceptado'])
+                    ).all()
+                    
+                    affected_users = set()
+                    for exchange in active_exchanges:
+                        exchange.estado = 'cancelado'
+                        other_user_id = exchange.usuario_receptor_id if exchange.usuario_emisor_id == report.reportado_id else exchange.usuario_emisor_id
+                        affected_users.add(other_user_id)
+                    
+                    db.commit()
+                    
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"Report resolved with suspension: report_id={report_id}, "
+                        f"user_id={report.reportado_id}, admin_id={current_user_id}, "
+                        f"timestamp={datetime.utcnow().isoformat()}"
+                    )
+                    
+                    # Send suspension email
+                    if reported_user.email:
+                        user_name = f"{reported_user.nombre} {reported_user.apellido}".strip() or reported_user.username
+                        background_tasks.add_task(
+                            send_notification_email,
+                            subject="Tu cuenta ha sido suspendida - Habilio",
+                            email_to=reported_user.email,
+                            template_name="cuenta_suspendida.html",
+                            context={"user_name": user_name, "frontend_url": settings.FRONTEND_URL}
+                        )
+                    
+                    # Notify affected users
+                    for affected_user_id in affected_users:
+                        background_tasks.add_task(
+                            push_notification,
+                            affected_user_id,
+                            {
+                                "type": "exchange_cancelled",
+                                "message": "Un intercambio ha sido cancelado debido a la suspensión de una cuenta"
+                            }
+                        )
+                    
+                    # Broadcast SSE event
+                    background_tasks.add_task(
+                        broadcast_admin_event,
+                        {
+                            "type": "user_suspended",
+                            "user_id": report.reportado_id,
+                            "report_id": report_id,
+                            "message": f"Usuario {reported_user.username} ha sido suspendido"
+                        }
+                    )
+        
+        elif payload.action == 'eliminacion':
+            if report.reportado_id:
+                reported_user = db.query(Usuario).filter(Usuario.id == report.reportado_id).first()
+                if reported_user:
+                    # Step 1: Suspend user first
                     reported_user.is_suspended = True
                     
                     # Cancel active exchanges
@@ -1129,25 +1319,58 @@ async def resolve_report(
                     for exchange in active_exchanges:
                         exchange.estado = 'cancelado'
                     
-                    logger = logging.getLogger(__name__)
-                    logger.warning(
-                        f"Report resolved with suspension: report_id={report_id}, "
-                        f"user_id={report.reportado_id}, admin_id={current_user_id}, "
-                        f"timestamp={datetime.utcnow().isoformat()}"
-                    )
-        
-        elif payload.action == 'eliminacion':
-            if report.reportado_id:
-                reported_user = db.query(Usuario).filter(Usuario.id == report.reportado_id).first()
-                if reported_user:
-                    # Mark as suspended first (required for deletion)
-                    reported_user.is_suspended = True
+                    db.commit()
+                    
+                    # Send suspension email before deletion
+                    if reported_user.email:
+                        user_name = f"{reported_user.nombre} {reported_user.apellido}".strip() or reported_user.username
+                        background_tasks.add_task(
+                            send_notification_email,
+                            subject="Tu cuenta ha sido suspendida - Habilio",
+                            email_to=reported_user.email,
+                            template_name="cuenta_suspendida.html",
+                            context={"user_name": user_name, "frontend_url": settings.FRONTEND_URL}
+                        )
+                    
+                    # Step 2: Delete user account
+                    # Delete related data
+                    db.query(Mensaje).filter(Mensaje.remitente_id == report.reportado_id).delete()
+                    db.query(Conversacion).filter(
+                        or_(
+                            Conversacion.usuario_1_id == report.reportado_id,
+                            Conversacion.usuario_2_id == report.reportado_id
+                        )
+                    ).delete()
+                    db.query(UsuarioHabilidad).filter(UsuarioHabilidad.usuario_id == report.reportado_id).delete()
+                    db.query(Reseña).filter(or_(Reseña.autor_id == report.reportado_id, Reseña.receptor_id == report.reportado_id)).delete()
+                    db.query(IntercambioFinalizacion).filter(IntercambioFinalizacion.usuario_id == report.reportado_id).delete()
+                    db.query(Intercambio).filter(
+                        or_(
+                            Intercambio.usuario_emisor_id == report.reportado_id,
+                            Intercambio.usuario_receptor_id == report.reportado_id
+                        )
+                    ).delete()
+                    
+                    # Delete user
+                    db.delete(reported_user)
+                    db.commit()
                     
                     logger = logging.getLogger(__name__)
                     logger.warning(
                         f"Report resolved with deletion: report_id={report_id}, "
                         f"user_id={report.reportado_id}, admin_id={current_user_id}, "
                         f"timestamp={datetime.utcnow().isoformat()}"
+                    )
+                    
+                    # Broadcast SSE event
+                    background_tasks.add_task(
+                        broadcast_admin_event,
+                        {
+                            "type": "user_deleted",
+                            "user_id": report.reportado_id,
+                            "report_id": report_id,
+                            "message": f"Usuario ha sido eliminado"
+                        }
                     )
         
         db.commit()
@@ -1163,15 +1386,26 @@ async def resolve_report(
                 }
             )
         
-        if report.reportado_id:
+        # Only send notification to reported user if action is 'ninguna' (no suspension/deletion)
+        if report.reportado_id and payload.action == 'ninguna':
             background_tasks.add_task(
                 push_notification,
                 report.reportado_id,
                 {
                     "type": "report_action",
-                    "message": f"Se ha tomado una acción en tu cuenta: {payload.action}"
+                    "message": "Se ha revisado un reporte sobre tu cuenta. No se tomó ninguna acción."
                 }
             )
+        
+        # Broadcast report update
+        background_tasks.add_task(
+            broadcast_admin_event,
+            {
+                "type": "report_updated",
+                "report_id": report_id,
+                "message": f"Reporte #{report_id} ha sido resuelto"
+            }
+        )
         
         from app.schemas.reports import ReportResponse
         return ReportResponse(
@@ -1186,3 +1420,54 @@ async def resolve_report(
         )
     finally:
         db.close()
+
+
+
+@router.get("/reports/stream")
+@require_admin
+async def reports_stream(
+    authorization: Annotated[str, Header()],
+    current_user_id: int = None,
+    current_user_role: str = None
+):
+    """
+    Server-Sent Events (SSE) endpoint for real-time report updates.
+    
+    Requires admin role.
+    Streams events when reports are updated, users are suspended, or users are deleted.
+    """
+    async def event_generator():
+        # Create a queue for this client
+        queue = asyncio.Queue()
+        admin_event_queues.append(queue)
+        
+        try:
+            # Send initial connection message
+            yield f"data: {json.dumps({'type': 'connected', 'message': 'Conectado al stream de reportes'})}\n\n"
+            
+            # Keep connection alive and send events
+            while True:
+                try:
+                    # Wait for events with timeout to send keepalive
+                    event = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    # Send keepalive comment
+                    yield ": keepalive\n\n"
+        except asyncio.CancelledError:
+            # Client disconnected
+            pass
+        finally:
+            # Remove queue when client disconnects
+            if queue in admin_event_queues:
+                admin_event_queues.remove(queue)
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )

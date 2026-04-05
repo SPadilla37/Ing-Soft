@@ -28,6 +28,7 @@ export default function ReportsView() {
   const [error, setError] = useState(null);
   const [selectedReport, setSelectedReport] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
 
   const LIMIT = 10;
 
@@ -36,6 +37,49 @@ export default function ReportsView() {
     fetchReports();
     fetchStats();
   }, [statusFilter, searchQuery, currentPage]);
+
+  // Setup SSE connection for real-time updates
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const eventSource = new EventSource(`${API_BASE}/admin/reports/stream`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'report_updated' || data.type === 'user_suspended' || data.type === 'user_deleted') {
+          // Refresh reports and stats
+          fetchReports();
+          fetchStats();
+          
+          // Show notification
+          showToast(data.message || 'Actualización recibida', 'info');
+          
+          // If the updated report is currently open, refresh it
+          if (selectedReport && data.report_id === selectedReport.id) {
+            handleViewDetail(selectedReport.id);
+          }
+        }
+      } catch (err) {
+        console.error('Error parsing SSE message:', err);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [selectedReport]);
 
   const fetchReports = async () => {
     setIsLoading(true);
@@ -131,7 +175,6 @@ export default function ReportsView() {
   const handleResolve = async (reportId, action, notas = '') => {
     const actionLabels = {
       ninguna: 'sin acción',
-      advertencia: 'con advertencia',
       suspension: 'con suspensión',
       eliminacion: 'con eliminación'
     };
@@ -139,6 +182,8 @@ export default function ReportsView() {
     if (!window.confirm(`¿Estás seguro de que deseas resolver este reporte ${actionLabels[action]}?`)) {
       return;
     }
+
+    setIsProcessingAction(true);
 
     try {
       await api(API_BASE, `/admin/reports/${reportId}/resolve`, {
@@ -152,6 +197,8 @@ export default function ReportsView() {
       setShowDetailModal(false);
     } catch (err) {
       showToast(err.message, 'error');
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -180,7 +227,7 @@ export default function ReportsView() {
             className="btn btn-primary btn-sm"
             onClick={() => handleViewDetail(report.id)}
           >
-            Resolver
+            Ver Detalles
           </button>
           <button
             className="btn btn-secondary btn-sm"
@@ -362,17 +409,22 @@ export default function ReportsView() {
             <div className="modal-body">
               <div className="detail-section">
                 <h3>Usuario Reportado</h3>
-                <p>{selectedReport.reportado_username}</p>
+                <p><strong>Username:</strong> {selectedReport.reportado_username}</p>
                 {selectedReport.reportado && (
-                  <p className="detail-meta">ID: {selectedReport.reportado.id} | Email: {selectedReport.reportado.email}</p>
+                  <>
+                    <p><strong>ID:</strong> {selectedReport.reportado.id}</p>
+                    <p><strong>Email:</strong> {selectedReport.reportado.email}</p>
+                    <p><strong>Estado:</strong> {selectedReport.reportado.is_suspended ? '🔴 Suspendido' : '🟢 Activo'}</p>
+                  </>
                 )}
               </div>
 
               {selectedReport.reportante && (
                 <div className="detail-section">
                   <h3>Reportado por</h3>
-                  <p>{selectedReport.reportante.username}</p>
-                  <p className="detail-meta">ID: {selectedReport.reportante.id} | Email: {selectedReport.reportante.email}</p>
+                  <p><strong>Username:</strong> {selectedReport.reportante.username}</p>
+                  <p><strong>ID:</strong> {selectedReport.reportante.id}</p>
+                  <p><strong>Email:</strong> {selectedReport.reportante.email}</p>
                 </div>
               )}
 
@@ -385,6 +437,87 @@ export default function ReportsView() {
                 <div className="detail-section">
                   <h3>Descripción</h3>
                   <p>{selectedReport.descripcion}</p>
+                </div>
+              )}
+
+              {/* Reviews Section */}
+              {selectedReport.reportado_reviews && selectedReport.reportado_reviews.length > 0 && (
+                <div className="detail-section">
+                  <h3>Reseñas del Usuario Reportado ({selectedReport.reportado_reviews.length})</h3>
+                  <div className="reviews-list">
+                    {selectedReport.reportado_reviews.map((review) => (
+                      <div key={review.id} className="review-item">
+                        <div className="review-header">
+                          <span className="review-rating">⭐ {review.calificacion}/5</span>
+                          <span className="review-author">por {review.autor_username}</span>
+                          <span className="review-date">
+                            {new Date(review.fecha_creacion).toLocaleDateString()}
+                          </span>
+                        </div>
+                        {review.comentario && (
+                          <p className="review-comment">{review.comentario}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedReport.reportante_reviews && selectedReport.reportante_reviews.length > 0 && (
+                <div className="detail-section">
+                  <h3>Reseñas del Reportante ({selectedReport.reportante_reviews.length})</h3>
+                  <div className="reviews-list">
+                    {selectedReport.reportante_reviews.map((review) => (
+                      <div key={review.id} className="review-item">
+                        <div className="review-header">
+                          <span className="review-rating">⭐ {review.calificacion}/5</span>
+                          <span className="review-author">por {review.autor_username}</span>
+                          <span className="review-date">
+                            {new Date(review.fecha_creacion).toLocaleDateString()}
+                          </span>
+                        </div>
+                        {review.comentario && (
+                          <p className="review-comment">{review.comentario}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Conversation History Section */}
+              {selectedReport.conversation_history && (
+                <div className="detail-section">
+                  <h3>Historial de Conversación (Antes del Reporte)</h3>
+                  <div className="conversation-info">
+                    <p><strong>Total de mensajes antes del reporte:</strong> {selectedReport.conversation_history.total_mensajes}</p>
+                    <p><strong>Fecha de inicio:</strong> {new Date(selectedReport.conversation_history.fecha_inicio).toLocaleDateString()}</p>
+                    <p><strong>Fecha del reporte:</strong> {new Date(selectedReport.fecha_creacion).toLocaleDateString()}</p>
+                  </div>
+                  {selectedReport.conversation_history.mensajes_recientes && 
+                   selectedReport.conversation_history.mensajes_recientes.length > 0 && (
+                    <div className="messages-list">
+                      <h4>Últimos 10 mensajes antes del reporte:</h4>
+                      {selectedReport.conversation_history.mensajes_recientes.map((mensaje) => (
+                        <div key={mensaje.id} className="message-item">
+                          <div className="message-header">
+                            <strong>{mensaje.remitente_username}</strong>
+                            <span className="message-date">
+                              {new Date(mensaje.enviado_at).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="message-content">{mensaje.contenido}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!selectedReport.conversation_history && (
+                <div className="detail-section">
+                  <h3>Historial de Conversación</h3>
+                  <p className="no-data">No hay conversaciones entre estos usuarios antes del reporte</p>
                 </div>
               )}
 
@@ -442,28 +575,28 @@ export default function ReportsView() {
                     <button
                       className="btn btn-success btn-sm"
                       onClick={() => handleResolve(selectedReport.id, 'ninguna')}
+                      disabled={isProcessingAction}
                     >
                       Sin Acción
                     </button>
                     <button
-                      className="btn btn-warning btn-sm"
-                      onClick={() => handleResolve(selectedReport.id, 'advertencia')}
-                    >
-                      Advertencia
-                    </button>
-                    <button
                       className="btn btn-danger btn-sm"
                       onClick={() => handleResolve(selectedReport.id, 'suspension')}
+                      disabled={isProcessingAction}
                     >
-                      Suspender Usuario
+                      {isProcessingAction ? 'Procesando...' : 'Suspender Usuario'}
                     </button>
                     <button
                       className="btn btn-danger btn-sm"
                       onClick={() => handleResolve(selectedReport.id, 'eliminacion')}
+                      disabled={isProcessingAction}
                     >
-                      Eliminar Usuario
+                      {isProcessingAction ? 'Procesando...' : 'Eliminar Usuario'}
                     </button>
                   </div>
+                  {isProcessingAction && (
+                    <p className="processing-message">⏳ Procesando acción, por favor espera...</p>
+                  )}
                 </div>
               )}
             </div>

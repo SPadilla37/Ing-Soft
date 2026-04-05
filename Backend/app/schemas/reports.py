@@ -65,6 +65,46 @@ class ReportResponse(BaseModel):
         from_attributes = True
 
 
+class ReviewInfo(BaseModel):
+    """Schema for review information."""
+    
+    id: int
+    calificacion: int
+    comentario: Optional[str]
+    fecha_creacion: str
+    autor_username: str
+    intercambio_id: int
+    
+    class Config:
+        from_attributes = True
+
+
+class MessageInfo(BaseModel):
+    """Schema for message information in conversation history."""
+    
+    id: int
+    remitente_id: int
+    remitente_username: str
+    contenido: str
+    enviado_at: str
+    
+    class Config:
+        from_attributes = True
+
+
+class ConversationInfo(BaseModel):
+    """Schema for conversation information."""
+    
+    id: int
+    fecha_inicio: str
+    ultimo_mensaje: Optional[str]
+    total_mensajes: int
+    mensajes_recientes: List[MessageInfo] = []  # Last 10 messages
+    
+    class Config:
+        from_attributes = True
+
+
 class ReportDetailResponse(BaseModel):
     """Schema for detailed report response (admin-facing, includes reporter info)."""
     
@@ -80,6 +120,11 @@ class ReportDetailResponse(BaseModel):
     accion_tomada: Optional[str]
     resuelto_por: Optional[dict] = None
     notas_admin: Optional[str] = None
+    
+    # New fields for context
+    reportado_reviews: List[ReviewInfo] = []  # Reviews received by reported user
+    reportante_reviews: List[ReviewInfo] = []  # Reviews received by reporter
+    conversation_history: Optional[ConversationInfo] = None  # Conversation between them
     
     class Config:
         from_attributes = True
@@ -104,7 +149,7 @@ class ReportStatusUpdateRequest(BaseModel):
 class ReportResolveRequest(BaseModel):
     """Schema for resolving a report with an action."""
     
-    action: Literal['ninguna', 'advertencia', 'suspension', 'eliminacion'] = Field(
+    action: Literal['ninguna', 'suspension', 'eliminacion'] = Field(
         ...,
         description="Action to take on the reported user"
     )

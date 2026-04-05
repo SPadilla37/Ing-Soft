@@ -165,7 +165,7 @@ class Reporte(Base):
             name="reportes_estado_check"
         ),
         CheckConstraint(
-            "accion_tomada IS NULL OR accion_tomada IN ('ninguna', 'advertencia', 'suspension', 'eliminacion')",
+            "accion_tomada IS NULL OR accion_tomada IN ('ninguna', 'suspension', 'eliminacion')",
             name="reportes_accion_check"
         ),
         Index('idx_active_reports', 'reportante_id', 'reportado_id', 'estado',

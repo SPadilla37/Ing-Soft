@@ -605,7 +605,7 @@
 
 .resolution-buttons {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
 }
 
@@ -634,5 +634,178 @@
 @media (max-width: 768px) {
   .resolution-buttons {
     grid-template-columns: 1fr;
+  }
+}
+
+
+/* Reviews Section */
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.review-item {
+  background: #0f1930;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #1f2b49;
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.review-rating {
+  color: #fbbf24;
+  font-weight: 600;
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.review-author {
+  color: #a3aac4;
+  font-size: 0.75rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.review-date {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-family: 'Inter', sans-serif;
+  margin-left: auto;
+}
+
+.review-comment {
+  color: #dee5ff;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Conversation History Section */
+.conversation-info {
+  background: #0f1930;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #1f2b49;
+  margin-top: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.conversation-info p {
+  margin: 0.25rem 0;
+  color: #dee5ff;
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.conversation-info strong {
+  color: #a3aac4;
+}
+
+.messages-list {
+  margin-top: 1rem;
+}
+
+.messages-list h4 {
+  color: #a3aac4;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.message-item {
+  background: #0f1930;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #1f2b49;
+  margin-bottom: 0.5rem;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.message-header strong {
+  color: #4967f4;
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.message-date {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.message-content {
+  color: #dee5ff;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  word-wrap: break-word;
+}
+
+.no-data {
+  color: #6b7280 !important;
+  font-style: italic;
+  font-size: 0.875rem !important;
+  font-family: 'Inter', sans-serif;
+}
+
+.processing-message {
+  color: #fbbf24 !important;
+  font-size: 0.875rem !important;
+  margin-top: 1rem !important;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Scrollbar styling for modal */
+.modal-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-container::-webkit-scrollbar-track {
+  background: #0f1930;
+  border-radius: 4px;
+}
+
+.modal-container::-webkit-scrollbar-thumb {
+  background: #1f2b49;
+  border-radius: 4px;
+}
+
+.modal-container::-webkit-scrollbar-thumb:hover {
+  background: #2a3a5a;
+}
+
+/* Responsive adjustments for new sections */
+@media (max-width: 768px) {
+  .review-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .review-date {
+    margin-left: 0;
+  }
+
+  .message-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
   }
 }
