@@ -15,6 +15,10 @@ const UserDetail = () => {
   const [showSuspendDialog, setShowSuspendDialog] = useState(false);
   const [showUnsuspendDialog, setShowUnsuspendDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const reviewsPerPage = 5;
 
   const fetchUserDetail = async () => {
     setLoading(true);
@@ -30,8 +34,21 @@ const UserDetail = () => {
     }
   };
 
+  const fetchUserReviews = async () => {
+    setReviewsLoading(true);
+    try {
+      const data = await api(API_BASE, `/usuarios/${userId}/reviews`);
+      setReviews(data.reviews || []);
+    } catch (error) {
+      console.error('Error fetching user reviews:', error);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchUserDetail();
+    fetchUserReviews();
   }, [userId]);
 
   const handleRoleChange = async () => {
@@ -403,6 +420,99 @@ const UserDetail = () => {
           </div>
         </div>
       )}
+
+      {/* User Reviews Section */}
+      <div className="bg-[#141f38] rounded-2xl p-6 space-y-4">
+        <h2 className="text-[#dee5ff] text-base font-semibold">
+          Reseñas Recibidas ({reviews.length})
+        </h2>
+        
+        {reviewsLoading ? (
+          <div className="text-[#a3aac4] text-center py-8">Cargando reseñas...</div>
+        ) : reviews.length === 0 ? (
+          <div className="text-[#a3aac4] text-center py-8">
+            Este usuario no ha recibido reseñas aún
+          </div>
+        ) : (
+          <>
+            <div className="space-y-4">
+              {reviews
+                .slice((currentPage - 1) * reviewsPerPage, currentPage * reviewsPerPage)
+                .map((review) => (
+                  <div
+                    key={review.id}
+                    className="bg-[#1f2b49] rounded-lg p-4 space-y-3"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[#141f38] flex items-center justify-center">
+                          <span className="material-symbols-outlined text-[#a3aac4]">
+                            person
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-[#dee5ff] font-medium">
+                            {review.autor.nombre} {review.autor.apellido}
+                          </p>
+                          <p className="text-[#a3aac4] text-xs">@{review.autor.username}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-yellow-400 text-lg">
+                          star
+                        </span>
+                        <span className="text-[#dee5ff] font-semibold">
+                          {review.calificacion}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {review.comentario && (
+                      <p className="text-[#dee5ff] text-sm">{review.comentario}</p>
+                    )}
+                    
+                    <p className="text-[#a3aac4] text-xs">
+                      {new Date(review.created_at).toLocaleDateString('es-ES', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                ))}
+            </div>
+
+            {/* Pagination */}
+            {reviews.length > reviewsPerPage && (
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-[#1f2b49] text-[#dee5ff] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2a3a5f]"
+                >
+                  Anterior
+                </button>
+                <span className="text-[#a3aac4] text-sm">
+                  Página {currentPage} de {Math.ceil(reviews.length / reviewsPerPage)}
+                </span>
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) =>
+                      Math.min(prev + 1, Math.ceil(reviews.length / reviewsPerPage))
+                    )
+                  }
+                  disabled={currentPage === Math.ceil(reviews.length / reviewsPerPage)}
+                  className="px-4 py-2 bg-[#1f2b49] text-[#dee5ff] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2a3a5f]"
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };
