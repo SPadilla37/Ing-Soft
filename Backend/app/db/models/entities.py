@@ -23,7 +23,7 @@ class Usuario(Base):
     is_suspended = Column(Boolean, nullable=False, default=False, server_default='0', index=True)
 
     __table_args__ = (
-        CheckConstraint("role IN ('user', 'admin', 'superadmin')", name="usuarios_role_check"),
+        CheckConstraint("role IN ('user', 'admin')", name="usuarios_role_check"),
         UniqueConstraint("username", name="uq_usuarios_username"),
     )
 

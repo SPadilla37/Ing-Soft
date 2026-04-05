@@ -32,7 +32,7 @@ async def get_stats(
     """
     Get platform statistics.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Returns total users, completed exchanges, average rating, and total skills.
     """
     db = SessionLocal()
@@ -74,7 +74,7 @@ async def get_users(
     """
     Get paginated list of users.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Returns users ordered by registration date (newest first) with pagination metadata.
     """
     db = SessionLocal()
@@ -133,7 +133,7 @@ async def get_user_detail(
     """
     Get detailed information about a specific user.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Returns complete user profile with exchange statistics, review statistics, and skills.
     """
     db = SessionLocal()
@@ -243,7 +243,7 @@ async def get_user_detail(
 
 
 @router.patch("/users/{user_id}/role")
-@require_superadmin
+@require_admin
 async def update_user_role(
     user_id: int,
     payload: RoleUpdateRequest,
@@ -252,13 +252,13 @@ async def update_user_role(
     current_user_role: str = None
 ):
     """
-    Update user role (superadmin only).
+    Update user role (admin only).
     
-    Requires superadmin role.
+    Requires admin role.
     Validates role value, updates database, and logs the change.
     """
     # Validate role value (Pydantic already validates via pattern, but double-check)
-    if payload.role not in ['user', 'admin', 'superadmin']:
+    if payload.role not in ['user', 'admin']:
         raise HTTPException(status_code=400, detail="Rol inválido")
     
     db = SessionLocal()
@@ -307,7 +307,7 @@ async def get_skills(
     """
     Get all skills with usage statistics.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Returns all skills ordered by name with counts of users offering and seeking each skill.
     """
     db = SessionLocal()
@@ -360,7 +360,7 @@ async def delete_skill(
     """
     Delete a skill if not in use.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Checks for active exchanges using this skill before deletion.
     """
     db = SessionLocal()
@@ -419,7 +419,7 @@ async def get_activity_report(
     """
     Generate activity report for a given period.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Defaults to last 30 days if dates not provided.
     Returns new users, exchanges created/completed, and daily breakdown.
     """
@@ -520,7 +520,7 @@ async def get_skill_categories(
     """
     Get list of unique skill categories.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Returns distinct categories from all skills for autocomplete functionality.
     """
     db = SessionLocal()
@@ -547,7 +547,7 @@ async def create_skill(
     """
     Create a new skill.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Validates that skill name doesn't already exist and that both fields meet requirements:
     - Maximum 20 characters
     - Only letters and spaces allowed
@@ -603,7 +603,7 @@ async def suspend_user(
     """
     Suspend a user account.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Prevents self-suspension.
     Updates is_suspended field to True.
     Cancels all active exchanges (pendiente, aceptado) automatically.
@@ -696,7 +696,7 @@ async def unsuspend_user(
     """
     Reactivate a suspended user account.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Updates is_suspended field to False.
     """
     db = SessionLocal()
@@ -735,7 +735,7 @@ async def unsuspend_user(
 
 
 @router.delete("/users/{user_id}")
-@require_superadmin
+@require_admin
 async def delete_user(
     user_id: int,
     authorization: Annotated[str, Header()],
@@ -745,7 +745,7 @@ async def delete_user(
     """
     Permanently delete a user account.
     
-    Requires superadmin role.
+    Requires admin role.
     Prevents self-deletion.
     Requires the account to be suspended first.
     Handles related data deletion (conversations, messages, reviews, exchanges).
@@ -854,7 +854,7 @@ async def get_reports(
     """
     Get paginated list of reports with optional filtering.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Supports filtering by status and searching by reported username.
     """
     db = SessionLocal()
@@ -921,7 +921,7 @@ async def get_report_stats(
     """
     Get report statistics.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Returns counts of pending and resolved reports.
     """
     db = SessionLocal()
@@ -956,7 +956,7 @@ async def get_report_detail(
     """
     Get detailed information about a specific report.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Returns full report details including reporter information.
     """
     db = SessionLocal()
@@ -1036,7 +1036,7 @@ async def update_report_status(
     """
     Update report status.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Validates status transitions before updating.
     """
     db = SessionLocal()
@@ -1092,7 +1092,7 @@ async def resolve_report(
     """
     Resolve a report with an action.
     
-    Requires admin or superadmin role.
+    Requires admin role.
     Handles suspension/deletion integration and notifications.
     """
     db = SessionLocal()

@@ -11,7 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 const AdminDashboard = () => {
   const { currentUserRecord } = useAuth();
   
-  // Verificar que el usuario tenga rol admin o superadmin
+  // Verificar que el usuario tenga rol admin (legacy superadmin también permitido)
   if (!currentUserRecord || !['admin', 'superadmin'].includes(currentUserRecord.role)) {
     return <Navigate to="/dashboard" replace />;
   }

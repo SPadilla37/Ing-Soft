@@ -58,7 +58,7 @@ class UserDetailResponse(BaseModel):
 
 
 class RoleUpdateRequest(BaseModel):
-    role: str = Field(..., pattern="^(user|admin|superadmin)$")
+    role: str = Field(..., pattern="^(user|admin)$")
 
 
 class SkillWithStats(BaseModel):

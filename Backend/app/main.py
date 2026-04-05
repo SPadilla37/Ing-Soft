@@ -45,6 +45,7 @@ def run_startup_migrations() -> None:
         "app.db.migrations.002_add_is_suspended_to_usuarios",
         "app.db.migrations.003_add_username_unique_constraint",
         "app.db.migrations.004_add_reportes_table",
+        "app.db.migrations.005_consolidate_superadmin_to_admin",
     ]
 
     for module_name in migration_modules:
@@ -56,18 +57,18 @@ def run_startup_migrations() -> None:
             print(f"[startup-migration] Failed: {module_name} -> {exc}")
 
 
-def ensure_bootstrap_superadmin(session) -> None:
-    """Create or update a superadmin account from environment variables."""
-    enabled = os.getenv("BOOTSTRAP_SUPERADMIN_ENABLED", "true").lower() == "true"
+def ensure_bootstrap_admin(session) -> None:
+    """Create or update an admin account from environment variables."""
+    enabled = os.getenv("BOOTSTRAP_ADMIN_ENABLED", "true").lower() == "true"
     if not enabled:
         return
 
-    email = os.getenv("BOOTSTRAP_SUPERADMIN_EMAIL", "superadmin@ingsoft.app").strip().lower()
-    username = os.getenv("BOOTSTRAP_SUPERADMIN_USERNAME", "superadmin").strip()
-    password = os.getenv("BOOTSTRAP_SUPERADMIN_PASSWORD", "SuperAdmin123!")
+    email = os.getenv("BOOTSTRAP_ADMIN_EMAIL", "admin@ingsoft.app").strip().lower()
+    username = os.getenv("BOOTSTRAP_ADMIN_USERNAME", "admin").strip()
+    password = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "Admin123!")
 
     if not email or not username or not password:
-        print("[startup-superadmin] Skipped: missing email/username/password")
+        print("[startup-admin] Skipped: missing email/username/password")
         return
 
     username = username[:25]
@@ -79,26 +80,26 @@ def ensure_bootstrap_superadmin(session) -> None:
             username=username,
             email=email,
             password_hash=hash_password(password),
-            clerk_id="bootstrap-superadmin",
-            nombre="Super",
-            apellido="Admin",
+            clerk_id="bootstrap-admin",
+            nombre="Admin",
+            apellido="User",
             fecha_registro=now,
             ultimo_login=now,
-            role="superadmin",
+            role="admin",
             is_suspended=False,
         )
         session.add(existing)
     else:
         existing.username = username
         existing.password_hash = hash_password(password)
-        existing.role = "superadmin"
+        existing.role = "admin"
         existing.is_suspended = False
         if not existing.clerk_id:
-            existing.clerk_id = "bootstrap-superadmin"
+            existing.clerk_id = "bootstrap-admin"
         if not existing.nombre:
-            existing.nombre = "Super"
+            existing.nombre = "Admin"
         if not existing.apellido:
-            existing.apellido = "Admin"
+            existing.apellido = "User"
         if not existing.fecha_registro:
             existing.fecha_registro = now
 
@@ -108,7 +109,7 @@ def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
     run_startup_migrations()
     with SessionLocal() as session:
-        ensure_bootstrap_superadmin(session)
+        ensure_bootstrap_admin(session)
         seed_default_habilidades(session)
         session.commit()
 

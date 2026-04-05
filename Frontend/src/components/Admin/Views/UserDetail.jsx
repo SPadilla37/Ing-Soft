@@ -223,7 +223,7 @@ const UserDetail = () => {
           <h2 className="text-[#dee5ff] text-base font-semibold">Acciones Administrativas</h2>
           
           {/* Info box about deletion process */}
-          {currentUserRecord?.role === 'superadmin' && !userDetail?.user?.is_suspended && (
+          {!userDetail?.user?.is_suspended && (
             <div className="bg-blue-500/20 text-blue-400 px-4 py-3 rounded-lg text-sm">
               <p className="font-medium mb-1">ℹ️ Proceso de eliminación</p>
               <p className="text-xs">
@@ -249,18 +249,16 @@ const UserDetail = () => {
               </button>
             )}
             
-            {currentUserRecord?.role === 'superadmin' && (
-              <button
-                onClick={() => setShowDeleteDialog(true)}
-                className={`px-6 py-2 rounded-lg ${
-                  userDetail?.user?.is_suspended
-                    ? 'bg-red-500 text-white hover:bg-red-600'
-                    : 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-50'
-                }`}
-              >
-                Eliminar Cuenta
-              </button>
-            )}
+            <button
+              onClick={() => setShowDeleteDialog(true)}
+              className={`px-6 py-2 rounded-lg ${
+                userDetail?.user?.is_suspended
+                  ? 'bg-red-500 text-white hover:bg-red-600'
+                  : 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-50'
+              }`}
+            >
+              Eliminar Cuenta
+            </button>
           </div>
         </div>
       )}
@@ -382,8 +380,8 @@ const UserDetail = () => {
         </div>
       )}
 
-      {/* Role Change (SuperAdmin Only) */}
-      {currentUserRecord?.role === 'superadmin' && (
+      {/* Role Change (Admin Only) */}
+      {(currentUserRecord?.role === 'admin' || currentUserRecord?.role === 'superadmin') && (
         <div className="bg-[#141f38] rounded-2xl p-6 space-y-4">
           <h2 className="text-[#dee5ff] text-base font-semibold">Cambiar Rol</h2>
           <div className="flex items-center gap-4">
@@ -394,7 +392,6 @@ const UserDetail = () => {
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
-              <option value="superadmin">SuperAdmin</option>
             </select>
             <button
               onClick={handleRoleChange}

@@ -41,11 +41,11 @@ def main():
         print(f"Base de datos no encontrada en: {db_path}")
         sys.exit(1)
 
-    print(f"Actualizando rol a superadmin en la base de datos ({db_path})...")
+    print(f"Actualizando rol a admin en la base de datos ({db_path})...")
 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    cursor.execute(f"UPDATE usuarios SET role = 'superadmin' WHERE email = '{email}'")
+    cursor.execute(f"UPDATE usuarios SET role = 'admin' WHERE email = '{email}'")
     conn.commit()
 
     if cursor.rowcount == 0:
@@ -55,7 +55,7 @@ def main():
 
     conn.close()
 
-    print(f"\nUsuario '{username}' creado exitosamente con rol 'superadmin'.")
+    print(f"\nUsuario '{username}' creado exitosamente con rol 'admin'.")
 
 
 if __name__ == "__main__":

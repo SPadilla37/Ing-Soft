@@ -56,7 +56,7 @@ const AdminSidebar = () => {
               {currentUserRecord?.username}
             </div>
             <div className="text-[#a3aac4] text-xs">
-              {currentUserRecord?.role === 'superadmin' ? 'Super Admin' : 'Admin'}
+              Admin
             </div>
           </div>
           <button
