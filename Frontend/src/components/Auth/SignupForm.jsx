@@ -108,7 +108,7 @@ const SignupForm = ({ onLoginTab }) => {
             placeholder="correo@ejemplo.com" 
             value={formData.email} 
             onChange={handleChange} 
-            maxLength={25}
+            maxLength={50}
             className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
           />
           {emailError && <span className="text-error text-xs mt-1 block">{emailError}</span>}
