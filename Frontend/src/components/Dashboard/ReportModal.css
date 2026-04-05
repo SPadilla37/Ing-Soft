@@ -147,6 +147,13 @@
   text-align: right;
 }
 
+.field-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #fbbf24;
+  font-style: italic;
+}
+
 .warning-box {
   background-color: rgba(251, 191, 36, 0.1);
   border: 1px solid rgba(251, 191, 36, 0.3);

@@ -42,6 +42,12 @@ export default function ReportModal({ isOpen, onClose, reportedUserId, reportedU
       return;
     }
 
+    // Validate description is required when "Otro motivo" is selected
+    if (reason === 'Otro motivo' && !description.trim()) {
+      setError('La descripción es obligatoria cuando seleccionas "Otro motivo"');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -119,19 +125,31 @@ export default function ReportModal({ isOpen, onClose, reportedUserId, reportedU
             </div>
 
             <div className="form-group">
-              <label htmlFor="description">Descripción (opcional)</label>
+              <label htmlFor="description">
+                Descripción {reason === 'Otro motivo' ? '*' : '(opcional)'}
+              </label>
               <textarea
                 id="description"
                 value={description}
                 onChange={handleDescriptionChange}
-                placeholder="Proporciona detalles adicionales sobre el problema..."
+                placeholder={
+                  reason === 'Otro motivo'
+                    ? 'Por favor describe el motivo del reporte...'
+                    : 'Proporciona detalles adicionales sobre el problema...'
+                }
                 disabled={isSubmitting}
                 className="form-textarea"
                 rows="4"
+                required={reason === 'Otro motivo'}
               />
               <div className="character-counter">
                 {description.length} / {MAX_DESCRIPTION_LENGTH} caracteres
               </div>
+              {reason === 'Otro motivo' && (
+                <div className="field-hint">
+                  La descripción es obligatoria para "Otro motivo"
+                </div>
+              )}
             </div>
 
             <div className="warning-box">
@@ -158,7 +176,7 @@ export default function ReportModal({ isOpen, onClose, reportedUserId, reportedU
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || !reason}
+                disabled={isSubmitting || !reason || (reason === 'Otro motivo' && !description.trim())}
                 className="btn btn-primary"
               >
                 {isSubmitting ? 'Enviando...' : 'Enviar Reporte'}
