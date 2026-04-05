@@ -132,30 +132,22 @@ const IncomingMatchesView = ({ onBadgeUpdate }) => {
           items.map(item => {
             const matchDetails = getMatchDetails(item);
             return (
-              <div key={item.id} className="relative">
-                <MarketplaceCard
-                  request={{ ...item, viewer_match_state: item.viewer_match_state || 'received' }}
-                  matchDetails={matchDetails}
-                  onAccept={() => handleAccept(item.id)}
-                  onReject={() => handleReject(item.id)}
-                  onProfile={(userId) => setProfileUserId(userId)}
-                />
-                <button
-                  onClick={() => {
-                    const reportedUserId = item.usuario_emisor_id || item.other_user_id || item.id;
-                    setReportTarget({
-                      userId: reportedUserId,
-                      username: item.username || item.nombre || `Usuario ${reportedUserId}`
-                    });
-                    setShowReportModal(true);
-                  }}
-                  className="absolute top-4 right-14 w-8 h-8 rounded-full hover:bg-surface-container-low flex items-center justify-center transition-colors z-10"
-                  aria-label="Reportar usuario"
-                  title="Reportar usuario"
-                >
-                  <span className="material-symbols-outlined text-error text-lg">flag</span>
-                </button>
-              </div>
+              <MarketplaceCard
+                key={item.id}
+                request={{ ...item, viewer_match_state: item.viewer_match_state || 'received' }}
+                matchDetails={matchDetails}
+                onAccept={() => handleAccept(item.id)}
+                onReject={() => handleReject(item.id)}
+                onProfile={(userId) => setProfileUserId(userId)}
+                onReport={() => {
+                  const reportedUserId = item.usuario_emisor_id || item.other_user_id || item.id;
+                  setReportTarget({
+                    userId: reportedUserId,
+                    username: item.username || item.nombre || `Usuario ${reportedUserId}`
+                  });
+                  setShowReportModal(true);
+                }}
+              />
 
             );
           })

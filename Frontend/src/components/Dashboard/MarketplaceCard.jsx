@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReportModal from './ReportModal';
 
-const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject }) => {
+const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject, onReport }) => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const author = [request.nombre, request.apellido].filter(Boolean).join(' ').trim() || `Usuario ${request.id}`;
@@ -51,32 +51,43 @@ const MarketplaceCard = ({ request, matchDetails, onAccept, onProfile, onReject 
                 Match
               </span>
             )}
-            <div className="relative">
+            {onReport ? (
               <button
-                onClick={() => setShowMenu(!showMenu)}
+                onClick={onReport}
                 className="w-8 h-8 rounded-full hover:bg-surface-container-low flex items-center justify-center transition-colors"
-                aria-label="Más opciones"
+                aria-label="Reportar usuario"
+                title="Reportar usuario"
               >
-                <span className="material-symbols-outlined text-on-surface-variant">more_vert</span>
+                <span className="material-symbols-outlined text-error">flag</span>
               </button>
-              {showMenu && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                  <div className="absolute right-0 top-10 bg-surface-container-highest rounded-lg shadow-lg border border-outline-variant/20 py-2 min-w-[160px] z-20">
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        setShowReportModal(true);
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-surface-container-low transition-colors flex items-center gap-2 text-error"
-                    >
-                      <span className="material-symbols-outlined text-sm">flag</span>
-                      <span className="text-sm font-medium">Reportar usuario</span>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            ) : (
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="w-8 h-8 rounded-full hover:bg-surface-container-low flex items-center justify-center transition-colors"
+                  aria-label="Más opciones"
+                >
+                  <span className="material-symbols-outlined text-on-surface-variant">more_vert</span>
+                </button>
+                {showMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                    <div className="absolute right-0 top-10 bg-surface-container-highest rounded-lg shadow-lg border border-outline-variant/20 py-2 min-w-[160px] z-20">
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          setShowReportModal(true);
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-surface-container-low transition-colors flex items-center gap-2 text-error"
+                      >
+                        <span className="material-symbols-outlined text-sm">flag</span>
+                        <span className="text-sm font-medium">Reportar usuario</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
