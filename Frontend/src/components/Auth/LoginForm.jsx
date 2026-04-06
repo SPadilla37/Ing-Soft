@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api as apiRequest } from '../../services/api';
 import { API_BASE } from '../../config/constants';
+import SupportModal from './SupportModal';
 
 const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -15,6 +16,7 @@ const LoginForm = ({ onSignupTab }) => {
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [showSuspendedPopup, setShowSuspendedPopup] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   const isEmailValid = validateEmail(email);
   const canSubmit = email.trim() !== '' && password.trim() !== '' && isEmailValid && !loading;
@@ -48,11 +50,14 @@ const LoginForm = ({ onSignupTab }) => {
   };
 
   return (
-    <div className="bg-surface-container/50 backdrop-blur-sm rounded-2xl p-6 border border-outline-variant/10 flex-1 flex flex-col">
-      <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">Bienvenido de nuevo</h2>
-      <p className="text-on-surface-variant mb-6">
-        Ingresa con tu correo para continuar en tu dashboard de intercambios.
-      </p>
+    <>
+      <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
+      
+      <div className="bg-surface-container/50 backdrop-blur-sm rounded-2xl p-6 border border-outline-variant/10 flex-1 flex flex-col">
+        <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">Bienvenido de nuevo</h2>
+        <p className="text-on-surface-variant mb-6">
+          Ingresa con tu correo para continuar en tu dashboard de intercambios.
+        </p>
       
       <div className="space-y-4 flex-1">
         <div>
@@ -97,6 +102,21 @@ const LoginForm = ({ onSignupTab }) => {
         {loading ? 'Cargando...' : 'Entrar'}
       </button>
 
+      {/* Support Link */}
+      <div className="mt-6 pt-6 border-t border-outline-variant/20">
+        <div className="flex items-center justify-center gap-2 text-sm">
+          <span className="text-on-surface-variant">¿Necesitas ayuda?</span>
+          <button
+            type="button"
+            onClick={() => setShowSupportModal(true)}
+            className="text-primary font-semibold hover:underline flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-lg">support_agent</span>
+            Contactar soporte
+          </button>
+        </div>
+      </div>
+
       {showSuspendedPopup && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-surface-container rounded-2xl p-6 max-w-md border border-outline-variant/10">
@@ -118,7 +138,8 @@ const LoginForm = ({ onSignupTab }) => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

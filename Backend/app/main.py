@@ -13,6 +13,7 @@ from app.api.routes.matches import router as matches_router
 from app.api.routes.notifications import router as notifications_router
 from app.api.routes.reports import router as reports_router
 from app.api.routes.requests import router as requests_router
+from app.api.routes.support import router as support_router
 from app.api.routes.users import router as users_router
 from app.api.routes.websocket import router as websocket_router
 from app.core.skills_seed import seed_default_habilidades
@@ -120,6 +121,7 @@ app.include_router(habilidades_router)
 app.include_router(matches_router)
 app.include_router(reports_router)
 app.include_router(requests_router)
+app.include_router(support_router)
 app.include_router(users_router)
 app.include_router(websocket_router)
 app.include_router(conversations_router)

@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api as apiRequest } from '../../services/api';
 import { API_BASE } from '../../config/constants';
 import { parseModerationErrorMessage, validateUsernameText } from '../../utils/textModeration';
+import SupportModal from './SupportModal';
 
 const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -19,6 +20,7 @@ const SignupForm = ({ onLoginTab }) => {
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [usernameError, setUsernameError] = useState('');
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -80,11 +82,14 @@ const SignupForm = ({ onLoginTab }) => {
   };
 
   return (
-    <div className="bg-surface-container/50 backdrop-blur-sm rounded-2xl p-6 border border-outline-variant/10 flex-1 flex flex-col">
-      <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">Crea tu cuenta</h2>
-      <p className="text-on-surface-variant mb-6">
-        Ingresa usuario, correo y contraseña. En el siguiente paso completas tu perfil.
-      </p>
+    <>
+      <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
+      
+      <div className="bg-surface-container/50 backdrop-blur-sm rounded-2xl p-6 border border-outline-variant/10 flex-1 flex flex-col">
+        <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">Crea tu cuenta</h2>
+        <p className="text-on-surface-variant mb-6">
+          Ingresa usuario, correo y contraseña. En el siguiente paso completas tu perfil.
+        </p>
       
       <div className="space-y-4 flex-1">
         <div>
@@ -136,7 +141,23 @@ const SignupForm = ({ onLoginTab }) => {
       >
         {loading ? 'Cargando...' : 'Crear cuenta'}
       </button>
-    </div>
+
+      {/* Support Link */}
+      <div className="mt-6 pt-6 border-t border-outline-variant/20">
+        <div className="flex items-center justify-center gap-2 text-sm">
+          <span className="text-on-surface-variant">¿Necesitas ayuda?</span>
+          <button
+            type="button"
+            onClick={() => setShowSupportModal(true)}
+            className="text-primary font-semibold hover:underline flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-lg">support_agent</span>
+            Contactar soporte
+          </button>
+        </div>
+      </div>
+      </div>
+    </>
   );
 };
 
