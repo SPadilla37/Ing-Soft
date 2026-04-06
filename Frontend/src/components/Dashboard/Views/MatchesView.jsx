@@ -15,6 +15,8 @@ const MatchesView = ({ searchQuery }) => {
   const [popup, setPopup] = useState('');
   const [currentUserProfile, setCurrentUserProfile] = useState(null);
   const [localSearch, setLocalSearch] = useState('');
+  const [conversationsCount, setConversationsCount] = useState(0);
+  const [completedMatchesCount, setCompletedMatchesCount] = useState(0);
 
   const loadMarketplace = async () => {
     if (!currentUser) return;
@@ -48,8 +50,27 @@ const MatchesView = ({ searchQuery }) => {
     }
   };
 
+  const loadStats = async () => {
+    if (!currentUser) return;
+    try {
+      // Cargar conversaciones del usuario
+      const conversationsResult = await apiRequest(API_BASE, `/conversations/${currentUser}`);
+      const conversations = conversationsResult.conversations || [];
+      setConversationsCount(conversations.length);
+
+      // Cargar matches del usuario y filtrar los completados
+      const matchesResult = await apiRequest(API_BASE, `/matches/${currentUser}`);
+      const allMatches = matchesResult.matches || [];
+      const completedMatches = allMatches.filter(match => match.estado === 'completado');
+      setCompletedMatchesCount(completedMatches.length);
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  };
+
   useEffect(() => {
     loadMarketplace();
+    loadStats();
   }, [currentUser, searchQuery]);
 
   useEffect(() => {
@@ -190,7 +211,7 @@ const MatchesView = ({ searchQuery }) => {
         <div className="bg-surface-container-high p-8 rounded-lg flex items-center justify-between group hover:bg-surface-bright transition-all cursor-default">
           <div>
             <p className="text-on-surface-variant text-sm font-medium mb-1">Tus conversaciones</p>
-            <h3 className="text-4xl font-headline font-extrabold text-on-surface">0</h3>
+            <h3 className="text-4xl font-headline font-extrabold text-on-surface">{conversationsCount}</h3>
           </div>
           <div className="w-14 h-14 rounded-full bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
             <span className="material-symbols-outlined text-3xl">chat_bubble</span>
@@ -199,7 +220,7 @@ const MatchesView = ({ searchQuery }) => {
         <div className="bg-surface-container-high p-8 rounded-lg flex items-center justify-between group hover:bg-surface-bright transition-all cursor-default">
           <div>
             <p className="text-on-surface-variant text-sm font-medium mb-1">Habilidades ganadas</p>
-            <h3 className="text-4xl font-headline font-extrabold text-on-surface">0</h3>
+            <h3 className="text-4xl font-headline font-extrabold text-on-surface">{completedMatchesCount}</h3>
           </div>
           <div className="w-14 h-14 rounded-full bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:scale-110 transition-transform">
             <span className="material-symbols-outlined text-3xl">school</span>
