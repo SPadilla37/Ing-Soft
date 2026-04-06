@@ -78,7 +78,35 @@ const SupportModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface-container-high rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-outline-variant/20 shadow-2xl">
+      <style>{`
+        /* Custom scrollbar styles for support modal */
+        .support-modal-content::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        .support-modal-content::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.05);
+          border-radius: 10px;
+        }
+        
+        .support-modal-content::-webkit-scrollbar-thumb {
+          background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+          border-radius: 10px;
+          transition: background 0.3s ease;
+        }
+        
+        .support-modal-content::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        }
+        
+        /* Firefox scrollbar */
+        .support-modal-content {
+          scrollbar-width: thin;
+          scrollbar-color: #6366f1 rgba(0, 0, 0, 0.05);
+        }
+      `}</style>
+      
+      <div className="support-modal-content bg-surface-container-high rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-outline-variant/20 shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-br from-primary-dim to-primary p-6 flex items-center justify-between border-b border-white/10">
           <div className="flex items-center gap-3">

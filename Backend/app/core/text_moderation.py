@@ -39,6 +39,7 @@ _HATE_TERMS = {
     "homo",
     "pansy",
     "negro de mierda",
+    "mierda",
     "sudaca",
     "veneco",
     "tiraflechas",
@@ -161,8 +162,6 @@ _SENSITIVE_ENTITY_TERMS = {
 }
 
 _NEUTRAL_STANDALONE_TERMS = {
-    "negro",
-    "negra",
     "negros",
     "negras",
 }
@@ -353,3 +352,12 @@ def assert_text_is_allowed(field_name: str, text: Optional[str]) -> None:
     if not reason:
         return
     raise ValueError(f"{field_name}: {reason}")
+
+
+# Alias for convenience
+def moderate_text(text: Optional[str]) -> Optional[str]:
+    """
+    Alias for get_text_policy_error.
+    Returns error message if text violates policy, None otherwise.
+    """
+    return get_text_policy_error(text)
