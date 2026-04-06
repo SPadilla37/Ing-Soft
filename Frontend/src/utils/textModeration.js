@@ -3,10 +3,10 @@ const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/;
 const BIO_REGEX = /^[\w\sáéíóúÁÉÍÓÚñÑ+*=/%^.,!?:;()"'\\/-]*$/;
 
 const HATE_TERMS = [
-  "odio", "racista", "nazi", "matar", "muerte", "xenofobo",
+  "odio", "racista", "nazi", "matar", "muerte", "xenofobo", "marico",
   "maricon", "marica", "traba", "tortillera", "comepijas", "tragaleche", "sodomita", "maraco",
   "faggot", "fag", "dyke", "dyae", "tranny", "queer", "homo", "pansy",
-  "negro de mierda", "sudaca", "veneco", "tiraflechas", "indio", "saltamuros", "gachupin",
+  "negro de mierda","mierda", "sudaca", "veneco", "tiraflechas", "indio", "saltamuros", "gachupin",
   "nigger", "nigga", "spic", "wetback", "chink", "raghead", "gook", "coon",
   "retrasado", "mogolico", "down", "subnormal", "invalido", "deficiente", "mongolo", "vegetal",
   "retard", "tard", "spastic", "spaz", "special ed", "moron",

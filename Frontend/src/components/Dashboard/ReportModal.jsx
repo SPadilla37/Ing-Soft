@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../../services/api';
 import { API_BASE } from '../../config/constants';
+import { validateReviewCommentText } from '../../utils/textModeration';
 import './ReportModal.css';
 
 const PREDEFINED_REASONS = [
@@ -19,6 +20,7 @@ export default function ReportModal({ isOpen, onClose, reportedUserId, reportedU
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [moderationError, setModerationError] = useState(null);
 
   const handleReasonChange = (e) => {
     setReason(e.target.value);
@@ -30,6 +32,10 @@ export default function ReportModal({ isOpen, onClose, reportedUserId, reportedU
     if (value.length <= MAX_DESCRIPTION_LENGTH) {
       setDescription(value);
       setError(null);
+      
+      // Validate text moderation
+      const modError = validateReviewCommentText(value, MAX_DESCRIPTION_LENGTH);
+      setModerationError(modError || null);
     }
   };
 
@@ -45,6 +51,12 @@ export default function ReportModal({ isOpen, onClose, reportedUserId, reportedU
     // Validate description is required when "Otro motivo" is selected
     if (reason === 'Otro motivo' && !description.trim()) {
       setError('La descripción es obligatoria cuando seleccionas "Otro motivo"');
+      return;
+    }
+
+    // Check for moderation errors
+    if (moderationError) {
+      setError(moderationError);
       return;
     }
 
@@ -81,6 +93,7 @@ export default function ReportModal({ isOpen, onClose, reportedUserId, reportedU
     setReason('');
     setDescription('');
     setError(null);
+    setModerationError(null);
     onClose();
   };
 
@@ -145,6 +158,11 @@ export default function ReportModal({ isOpen, onClose, reportedUserId, reportedU
               <div className="character-counter">
                 {description.length} / {MAX_DESCRIPTION_LENGTH} caracteres
               </div>
+              {moderationError && (
+                <div className="moderation-error">
+                  ⚠️ {moderationError}
+                </div>
+              )}
               {reason === 'Otro motivo' && (
                 <div className="field-hint">
                   La descripción es obligatoria para "Otro motivo"
@@ -176,7 +194,7 @@ export default function ReportModal({ isOpen, onClose, reportedUserId, reportedU
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || !reason || (reason === 'Otro motivo' && !description.trim())}
+                disabled={isSubmitting || !reason || (reason === 'Otro motivo' && !description.trim()) || moderationError}
                 className="btn btn-primary"
               >
                 {isSubmitting ? 'Enviando...' : 'Enviar Reporte'}
