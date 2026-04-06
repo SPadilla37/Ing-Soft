@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
+import logo from '../../assets/Logo.jpeg';
 
 const AuthScreen = () => {
   const [mode, setMode] = useState('login');
@@ -16,8 +17,12 @@ const AuthScreen = () => {
         <div className="bg-gradient-to-br from-primary-dim/30 via-surface-container-high/60 to-surface-container/40 backdrop-blur-xl border border-outline-variant/20 rounded-3xl p-8 md:p-12 flex flex-col justify-between min-h-[650px] shadow-2xl">
           <div>
             <div className="flex items-center gap-3 mb-8">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-dim to-primary flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                H
+              <div className="w-14 h-14 rounded-xl overflow-hidden shadow-lg">
+                <img 
+                  src={logo} 
+                  alt="Habilio Logo" 
+                  className="w-full h-full object-cover scale-150"
+                />
               </div>
               <span className="font-headline font-bold text-2xl text-on-surface">Habilio</span>
             </div>
