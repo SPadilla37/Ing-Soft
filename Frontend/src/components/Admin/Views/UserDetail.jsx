@@ -217,8 +217,9 @@ const UserDetail = () => {
         </div>
       )}
 
-      {/* Admin Actions */}
-      {(currentUserRecord?.role === 'admin' || currentUserRecord?.role === 'superadmin') && (
+      {/* Admin Actions - Hide if viewing own profile */}
+      {(currentUserRecord?.role === 'admin' || currentUserRecord?.role === 'superadmin') && 
+       userDetail?.user?.id !== currentUserRecord?.id && (
         <div className="bg-[#141f38] rounded-2xl p-6 space-y-4">
           <h2 className="text-[#dee5ff] text-base font-semibold">Acciones Administrativas</h2>
           
