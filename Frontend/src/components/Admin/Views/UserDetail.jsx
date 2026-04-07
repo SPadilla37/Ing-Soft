@@ -10,7 +10,6 @@ const UserDetail = () => {
   const { currentUserRecord } = useAuth();
   const [userDetail, setUserDetail] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedRole, setSelectedRole] = useState('');
   const [alert, setAlert] = useState(null);
   const [showSuspendDialog, setShowSuspendDialog] = useState(false);
   const [showUnsuspendDialog, setShowUnsuspendDialog] = useState(false);
@@ -25,7 +24,6 @@ const UserDetail = () => {
     try {
       const data = await api(API_BASE, `/admin/users/${userId}`);
       setUserDetail(data);
-      setSelectedRole(data.user?.role || 'user');
     } catch (error) {
       console.error('Error fetching user detail:', error);
       setAlert({ type: 'error', message: error.message });
@@ -50,21 +48,6 @@ const UserDetail = () => {
     fetchUserDetail();
     fetchUserReviews();
   }, [userId]);
-
-  const handleRoleChange = async () => {
-    try {
-      await api(API_BASE, `/admin/users/${userId}/role`, {
-        method: 'PATCH',
-        body: JSON.stringify({ role: selectedRole }),
-      });
-      setAlert({ type: 'success', message: 'Rol actualizado exitosamente' });
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (error) {
-      setAlert({ type: 'error', message: error.message });
-    }
-  };
 
   const handleSuspend = async () => {
     try {
@@ -393,30 +376,6 @@ const UserDetail = () => {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Role Change (Admin Only) */}
-      {(currentUserRecord?.role === 'admin' || currentUserRecord?.role === 'superadmin') && (
-        <div className="bg-[#141f38] rounded-2xl p-6 space-y-4">
-          <h2 className="text-[#dee5ff] text-base font-semibold">Cambiar Rol</h2>
-          <div className="flex items-center gap-4">
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              className="px-4 py-2 bg-[#1f2b49] text-[#dee5ff] rounded-lg outline-none focus:ring-2 focus:ring-[#4967f4]"
-            >
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button
-              onClick={handleRoleChange}
-              disabled={selectedRole === user.role}
-              className="px-6 py-2 bg-[#4967f4] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#99a9ff]"
-            >
-              Actualizar Rol
-            </button>
           </div>
         </div>
       )}
